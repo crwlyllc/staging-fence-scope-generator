@@ -31,6 +31,7 @@
   .sp-btn.primary{background:var(--sp-green);color:#fff;border-color:var(--sp-green)}
   .sp-btn.ghost{background:#fff}
   .sp-btn.danger{background:#fff;color:#b91c1c;border-color:#fecaca}
+  .sp-btn.danger.is-confirm{background:#b91c1c;color:#fff;border-color:#b91c1c}
 
   .sp-sections{display:grid;gap:16px}
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
@@ -1495,7 +1496,34 @@ document.addEventListener('DOMContentLoaded', function(){
       refreshTitle();
       labelInput.addEventListener('input', refreshTitle);
 
-      $('.sp-del', card).addEventListener('click', ()=>{ removeSection(s.id); persist(); });
+      const deleteBtn = $('.sp-del', card);
+      if(deleteBtn){
+        let confirmTimer = null;
+        const resetConfirm = ()=>{
+          deleteBtn.dataset.confirm = '';
+          deleteBtn.textContent = 'Remove';
+          deleteBtn.classList.remove('is-confirm');
+          if(confirmTimer){
+            clearTimeout(confirmTimer);
+            confirmTimer = null;
+          }
+        };
+        deleteBtn.addEventListener('click', ()=>{
+          if(deleteBtn.dataset.confirm === 'true'){
+            resetConfirm();
+            removeSection(s.id);
+            persist();
+            return;
+          }
+          deleteBtn.dataset.confirm = 'true';
+          deleteBtn.textContent = 'Confirm Remove';
+          deleteBtn.classList.add('is-confirm');
+          if(confirmTimer){
+            clearTimeout(confirmTimer);
+          }
+          confirmTimer = setTimeout(()=>{ resetConfirm(); }, 4000);
+        });
+      }
       $('.sp-dup', card).addEventListener('click', ()=>{ duplicateSection(s.id); persist(); });
 
       const toggleBtn = $('.sp-toggle', card);
