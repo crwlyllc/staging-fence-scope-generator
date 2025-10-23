@@ -1,0 +1,2849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scope Generator</title>
+  <link rel="icon" type="image/jpeg" sizes="32x32" href="https://cdn.prod.website-files.com/6594928d27a68dfdb6474334/66e8a1e05c9e00dea43e9a1b_Strong-Perimeter-Logo-32.jpg" />
+  <style>
+  :root{
+    --sp-green:#004B3D;
+    --sp-ink:#1d1d1f;
+    --sp-muted:#6b7280;
+    --sp-border:#e5e7eb;
+    --sp-bg:#f8fafc;
+    --sp-card:#ffffff;
+    --sp-radius:14px;
+  }
+  #sp-scope{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji";color:var(--sp-ink)}
+  #sp-scope *{box-sizing:border-box}
+
+  body{margin:0;background:var(--sp-bg);}
+  .sp-container{max-width:1100px;margin:0 auto;padding:24px 24px 40px}
+  .sp-header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;margin-bottom:18px}
+  .sp-title{font-size:22px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;gap:10px;line-height:1.2}
+  .sp-badge{background:var(--sp-green);color:#fff;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+
+  .sp-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .sp-btn{appearance:none;border:1px solid var(--sp-border);background:#fff;color:var(--sp-ink);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .02s ease,border-color .2s ease,background .2s ease;min-height:44px}
+  .sp-btn:active{transform:translateY(1px)}
+  .sp-btn.primary{background:var(--sp-green);color:#fff;border-color:var(--sp-green)}
+  .sp-btn.ghost{background:#fff}
+  .sp-btn.danger{background:#fff;color:#b91c1c;border-color:#fecaca}
+
+  .sp-sections{display:grid;gap:16px}
+  .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .sp-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .sp-card-title{font-size:16px;font-weight:800}
+  .sp-card.is-collapsed .sp-grid{display:none}
+
+  .sp-grid{display:grid;gap:12px}
+  @media(min-width:720px){
+    .sp-grid{grid-template-columns:repeat(12,1fr)}
+    .col-6{grid-column:span 6}
+    .col-4{grid-column:span 4}
+    .col-3{grid-column:span 3}
+    .col-2{grid-column:span 2}
+    .col-8{grid-column:span 8}
+    .col-12{grid-column:span 12}
+  }
+  @media(max-width:719px){
+    .sp-container{padding:20px 16px 36px}
+    .sp-header{flex-direction:column;align-items:flex-start;gap:16px}
+    .sp-title{font-size:20px}
+    .sp-actions{width:100%;flex-direction:column;align-items:stretch}
+    .sp-btn{width:100%}
+    .sp-sections{gap:12px}
+    .sp-card{padding:14px}
+    .sp-card-header{flex-direction:column;align-items:flex-start;gap:10px}
+    .sp-card-header .sp-row{width:100%;justify-content:flex-start}
+    .sp-card-title{font-size:18px}
+    .sp-grid{gap:10px}
+    .col-6,.col-4,.col-3,.col-2,.col-8,.col-12{grid-column:span 12}
+    .sp-copy-row{flex-direction:column}
+    .sp-copy-row .sp-btn{width:100%}
+    .sp-row{width:100%;justify-content:flex-start}
+    .sp-number{width:100%}
+  }
+
+  .sp-field{display:flex;flex-direction:column;gap:6px}
+  .sp-label{font-size:12px;font-weight:800;color:var(--sp-muted);letter-spacing:.4px;text-transform:uppercase}
+  .sp-input,.sp-select,.sp-textarea{border:1px solid var(--sp-border);border-radius:12px;padding:10px 12px;background:#fff;font-size:14px;width:100%}
+  .sp-textarea{min-height:68px;resize:vertical}
+  .sp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+  /* Rail row (Rails count + all rail blocks on one row, top-aligned) */
+  .sp-rail-row{
+    display:grid;
+    gap:12px;
+    align-items:start;
+  }
+  .sp-rail-row > .sp-field{ align-self:start; }
+
+  @media(min-width:720px){
+    .sp-rail-row{ grid-template-columns: var(--rail-cols, repeat(3, minmax(200px,1fr))); }
+  }
+  @media(max-width:719px){
+    .sp-rail-row{ grid-template-columns: 1fr; }
+  }
+
+  /* Number control */
+  .sp-number{display:flex;align-items:stretch;border:1px solid var(--sp-border);border-radius:12px;overflow:hidden}
+  .sp-number input{border:0;flex:1;min-width:0;padding:10px 12px;font-size:14px;-moz-appearance:textfield}
+  .sp-number input::-webkit-outer-spin-button,.sp-number input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .sp-step{min-width:46px;font-weight:900;display:grid;place-items:center;border:0;background:var(--sp-bg);cursor:pointer}
+  .sp-step:active{filter:brightness(.95)}
+
+  .sp-small{font-size:12px;color:var(--sp-muted)}
+  .sp-output{margin-top:18px; display:grid; gap:16px}
+  .sp-output textarea{width:100%;min-height:200px;border:1px solid var(--sp-border);border-radius:12px;padding:12px;background:#fff;font-size:14px}
+  .sp-service-list{display:grid;gap:14px}
+  .sp-service-line{display:grid;gap:12px}
+  .sp-copy-row{display:flex;gap:8px;align-items:stretch}
+  .sp-copy-row .sp-input,
+  .sp-copy-row .sp-textarea{flex:1}
+  .sp-copy-row .sp-textarea{min-height:80px}
+  .sp-copy-row .sp-btn{white-space:nowrap}
+  .sp-hint{font-size:12px;color:var(--sp-muted);margin-top:6px}
+  .sp-divider{height:1px;background:var(--sp-border);margin:12px 0}
+  .sp-chip{border:1px dashed var(--sp-border);padding:4px 8px;border-radius:999px;font-size:12px;color:var(--sp-muted)}
+  .sp-chip.is-success{background:#ecfdf5;color:#047857;border-color:#bbf7d0}
+  .sp-chip.is-error{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+  .sp-chip.is-info{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+  .sp-chip.is-warn{background:#fffbeb;color:#b45309;border-color:#fde68a}
+  /* Floating back-to-top button */
+  .sp-top{
+    position:fixed;
+    right:16px;
+    bottom:16px;
+    z-index:9999;
+    border:1px solid var(--sp-border);
+    background:var(--sp-card);
+    color:var(--sp-ink);
+    padding:10px 12px;
+    border-radius:999px;
+    font-weight:800;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+    cursor:pointer;
+  }
+  .sp-top:active{ transform:translateY(1px); }
+  @media(max-width:719px){
+    .sp-top{ right:12px; bottom:12px; }
+  }
+  </style>
+</head>
+<body>
+
+<div id="sp-scope">
+  <div class="sp-container">
+    <div class="sp-header">
+      <div class="sp-title">Wrought Iron Restoration – Scope Generator</div>
+      <div class="sp-actions">
+        <button class="sp-btn ghost" id="sp-reset" type="button">Reset</button>
+        <button class="sp-btn" id="sp-add" type="button">+ Add Section</button>
+        <button class="sp-btn primary" id="sp-complete" type="button">Complete → Generate Notes</button>
+      </div>
+    </div>
+
+    <div class="sp-small" style="margin-bottom:10px">
+      Tip: Use the big + / – buttons on number fields to bump by 1. Add as many sections as you need (front, left side, pool run, etc.).
+    </div>
+
+    <div id="sp-sections" class="sp-sections"></div>
+
+    <div class="sp-output" id="sp-output" style="display:none">
+      <div class="sp-card">
+        <div class="sp-card-header">
+          <div class="sp-card-title">Notes</div>
+          <div class="sp-row">
+            <span class="sp-chip" id="sp-totals-chip" title="Auto-calculated across sections">Totals included</span>
+            <button class="sp-btn" id="sp-copy" type="button">Copy Notes</button>
+          </div>
+        </div>
+        <textarea id="sp-notes" readonly></textarea>
+        <div class="sp-hint">These notes are formatted for easy paste into your CRM or internal documentation.</div>
+      </div>
+
+      <div class="sp-card" id="sp-sub">
+        <div class="sp-card-header">
+          <div class="sp-card-title">Notes for Sub</div>
+          <div class="sp-row">
+            <button class="sp-btn" id="sp-copy-sub" type="button">Copy Notes</button>
+          </div>
+        </div>
+        <textarea id="sp-notes-sub" readonly></textarea>
+        <div class="sp-hint">Crew-facing summary: duration, materials, and total repairs.</div>
+      </div>
+
+      <div class="sp-card" id="sp-service-card" style="display:none">
+        <div class="sp-card-header">
+          <div class="sp-card-title">Service Line Items</div>
+          <div class="sp-row">
+            <button class="sp-btn" id="sp-copy-service" type="button" disabled>Copy All</button>
+          </div>
+        </div>
+        <div class="sp-service-list" id="sp-service-lines"></div>
+        <div class="sp-hint">Use the copy buttons to grab titles or descriptions individually.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="sp-top" id="sp-top-btn" type="button" aria-label="Back to top">↑ Top</button>
+<script src="https://cdn.jsdelivr.net/npm/iframe-resizer/js/iframeResizer.contentWindow.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  document.title = 'Scope Generator';
+  // Set favicon
+  (function setFavicon(){
+    var href = 'https://cdn.prod.website-files.com/6594928d27a68dfdb6474334/66e8a1e05c9e00dea43e9a1b_Strong-Perimeter-Logo-32.jpg';
+    var head = document.head || document.getElementsByTagName('head')[0];
+    if (!head) return;
+    var olds = head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+    olds.forEach(function(el){ el.parentNode.removeChild(el); });
+    var link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/jpeg';
+    link.sizes = '32x32';
+    link.href = href;
+    head.appendChild(link);
+  })();
+(function(){
+  const $  = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  const SEED = {
+    style:["Flat Top","Extended Picket","Extended Picket w/ Finials"],
+    height:["3ft","4ft","5ft","6ft","8ft"],
+    railSize:["1\u201D","1 \u00BC\u201D","1 \u00BD\u201D","1 \u00BE\u201D","1x2\u201D","2\u201D","3\u201D","Flat Bar 1/4\" x 1\""],
+    picketSize:["1/2\u201D","5/8\u201D","3/4\u201D","1\u201D"],
+    postSize:["1 1/2\" x 1 1/2\"","2x2","3x3","4x4"],
+    postRealignSize:["2x2","3x3"],
+    puppy:["None","Puppy Pickets","Puppy Pickets w/ Finials","Puppy Pickets Full Height","Puppy Pickets Full Height w/ Finials"],
+    // NEW: finials
+    finialStyles:["Quad Star","Banana Split","Boy Scout","Ball"],
+    finialMaterials:["Cast Iron","Aluminum","Plastic"],
+    // NEW: post caps
+    capStyles:["Pyramid","Pressed","Ball"],
+    capMaterials:["Cast Iron","Plastic","Metal"],
+    capPostSizes:["1 1/2\" x 1 1/2\"","2x2","3x3","4x4"],
+  };
+
+  const GATE = {
+    latchTypes: [
+      'Gravity Latch',
+      'Short Pool Latch',
+      'Tall Pool Latch',
+      'Single Lock Box',
+      'Double Lock Box'
+    ],
+    hingeTypes: [
+      'Door Hinges',
+      'Bat Wing Hinges',
+      'Auto Close Hinges'
+    ]
+  };
+
+  const state = { sections: [] };
+
+  const sectionsEl = $('#sp-sections');
+  const outputEl   = $('#sp-output');
+  const notesEl    = $('#sp-notes');
+  const notesSubEl = $('#sp-notes-sub');
+  const serviceCardEl = $('#sp-service-card');
+  const serviceListEl = $('#sp-service-lines');
+  const serviceCopyAllBtn = $('#sp-copy-service');
+  let lastServiceLines = [];
+
+  function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
+
+  function escapeHtml(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escapeAttr(t){ return escapeHtml(t).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  function createSelect(options){
+    return options.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join('');
+  }
+
+  function numberControl(name, placeholder='', min=0){
+    return (
+      '<div class="sp-number" data-field="'+name+'">'+
+        '<button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>'+
+        '<input type="number" inputmode="numeric" step="1" min="'+min+'" value="" placeholder="'+placeholder+'" />'+
+        '<button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>'+
+      '</div>'
+    );
+  }
+
+  function sectionTemplate(id, index){
+    return `
+    <div class="sp-card" data-id="${id}">
+      <div class="sp-card-header">
+        <div class="sp-card-title">Section ${index+1}</div>
+        <div class="sp-row">
+          <button class="sp-btn ghost sp-toggle" type="button" aria-expanded="true">Collapse</button>
+          <button class="sp-btn ghost sp-dup" type="button">Duplicate</button>
+          <button class="sp-btn danger sp-del" type="button">Remove</button>
+        </div>
+      </div>
+      <div class="sp-grid">
+        <!-- ========== GROUP: Section Details ========== -->
+        <div class="sp-field col-6">
+          <label class="sp-label">Section Label (e.g., Front Right, Right Side, Back Right, etc)</label>
+          <input class="sp-input" data-field="label" placeholder="Enter a label" />
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Style</label>
+          <select class="sp-select" data-field="style">${createSelect(SEED.style)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Height</label>
+          <select class="sp-select" data-field="height">${createSelect(SEED.height)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Post Size</label>
+          <select class="sp-select" data-field="postSize">${createSelect(SEED.postSize)}</select>
+        </div>
+
+        <!-- Move these up directly after Post Size -->
+        <div class="sp-field col-3">
+          <label class="sp-label">Section Length (ft)</label>
+          ${numberControl('length','e.g., 48')}
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">LF Over Hardscape</label>
+          ${numberControl('hardscape','e.g., 12')}
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">LF to Trim</label>
+          ${numberControl('trim','e.g., 6')}
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">LF to Dig Out</label>
+          ${numberControl('digOut','e.g., 10')}
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Painting</label>
+          <select class="sp-select" data-field="painting">
+            <option value="Paint Section">Paint Section</option>
+            <option value="Prime and Paint">Prime and Paint</option>
+            <option value="Spot Paint Welds">Spot Paint Welds</option>
+            <option value="None">None</option>
+          </select>
+        </div>
+
+        <div class="col-12 sp-divider"></div>
+
+        <!-- ========== GROUP: Rails ========== -->
+        <div class="sp-field col-12" data-rails-wrap>
+          <div class="sp-rail-row" data-rails-row>
+            <div class="sp-field" data-rail-count>
+              <label class="sp-label">Rails</label>
+              <select class="sp-select" data-field="railsCount">
+                <option value="2">2 Rail</option>
+                <option value="3">3 Rail</option>
+                <option value="4">4 Rail</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== GROUP: Pickets & Finials ========== -->
+        <div class="sp-field col-3">
+          <label class="sp-label">Picket Size</label>
+          <select class="sp-select" data-field="picketSize">${createSelect(SEED.picketSize)}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Picket Height (inches) — leave blank to auto-use fence height</label>
+          ${numberControl('picketHeight','e.g., 54')}
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Puppy Pickets</label>
+          <select class="sp-select" data-field="puppy">${createSelect(SEED.puppy)}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label"># Pickets to Replace</label>
+          ${numberControl('wiPickets','0')}
+        </div>
+
+        <!-- Finial replacements (kept as a block) -->
+        <div class="sp-field col-12">
+          <label class="sp-label">Finial Replacements</label>
+          <div data-finials></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-finial-add>+ Add Finial Replacement</button>
+            <span class="sp-hint">Each replacement adds ~30 seconds of labor. Unit cost: $1.25.</span>
+          </div>
+        </div>
+
+        <!-- ========== GROUP: Posts & Caps ========== -->
+        <div class="sp-field col-12">
+          <label class="sp-label">Post Replacements</label>
+          <div data-post-replacements></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-post-replacement-add>+ Add Post Replacement</button>
+            <span class="sp-hint">List each post size and quantity to replace.</span>
+          </div>
+        </div>
+
+        <div class="sp-field col-12">
+          <label class="sp-label">Post Realignments</label>
+          <div data-post-realign></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-post-realign-add>+ Add Post Realignment</button>
+            <span class="sp-hint">Track leaning posts by size for realignment.</span>
+          </div>
+        </div>
+
+        <!-- Post Cap replacements (kept as a block) -->
+        <div class="sp-field col-12">
+          <label class="sp-label">Post Cap Replacements</label>
+          <div data-caps></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-cap-add>+ Add Cap Replacement</button>
+            <span class="sp-hint">Each cap adds ~20 seconds of labor. Pricing varies by size & style.</span>
+          </div>
+        </div>
+
+        <div class="col-12 sp-divider"></div>
+
+        <!-- ========== GROUP: Panel Replacements ========== -->
+        <div class="sp-field col-12">
+          <label class="sp-label">Panel Replacements</label>
+          <div data-panels></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-panel-add>+ Add Panel Replacement</button>
+            <span class="sp-hint">Prefab panel eligible if width ≤ 96&quot; (8 ft), 1&quot; rails, and 1/2&quot; or 5/8&quot; pickets. Install = 30 min per panel; custom build+paint = 1.5 hr per panel.</span>
+          </div>
+        </div>
+
+        <div class="col-12 sp-divider"></div>
+
+        <!-- ========== GROUP: Gates (unchanged, follows after above groups) ========== -->
+        <div class="sp-field col-3">
+          <label class="sp-label"># Walk Gates</label>
+          ${numberControl('walkGates','0')}
+        </div>
+        <div class="sp-field col-12" data-wg-wrap style="display:none">
+          <div class="sp-grid">
+            <div class="sp-field col-3">
+              <label class="sp-label"># Walk Gates to Realign</label>
+              ${numberControl('walkGatesRealign','0')}
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label"># Walk Gate Hardware Replacements</label>
+              ${numberControl('walkGatesHardware','0')}
+            </div>
+            <div class="sp-field col-6" data-wg-hw-wrap style="display:none">
+              <div class="sp-grid">
+                <div class="sp-field col-6">
+                  <label class="sp-label">Latch Type</label>
+                  <select class="sp-select" data-field="walkLatch">${createSelect(GATE.latchTypes)}</select>
+                </div>
+                <div class="sp-field col-6">
+                  <label class="sp-label">Hinges</label>
+                  <select class="sp-select" data-field="walkHinges">${createSelect(GATE.hingeTypes)}</select>
+                </div>
+              </div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label"># Walk Gates to Rebuild</label>
+              ${numberControl('walkGatesRebuild','0')}
+            </div>
+            <div class="sp-field col-12" data-wg-rebuild-wrap style="display:none">
+              <div class="sp-grid">
+                <div class="sp-field col-3">
+                  <label class="sp-label">Gate Frame Size</label>
+                  <select class="sp-select" data-field="walkRebuildFrame">${createSelect(SEED.railSize)}</select>
+                </div>
+                <div class="sp-field col-3">
+                  <label class="sp-label">Gate Picket Size</label>
+                  <select class="sp-select" data-field="walkRebuildPicket">${createSelect(SEED.picketSize)}</select>
+                </div>
+                <div class="sp-field col-3">
+                  <label class="sp-label">Latch Type</label>
+                  <select class="sp-select" data-field="walkRebuildLatch">${createSelect(GATE.latchTypes)}</select>
+                </div>
+                <div class="sp-field col-3">
+                  <label class="sp-label">Hinges</label>
+                  <select class="sp-select" data-field="walkRebuildHinges">${createSelect(GATE.hingeTypes)}</select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NEW: Add a Walk Gate (into existing fence) -->
+        <div class="sp-field col-3">
+          <label class="sp-label"># Walk Gates to Add</label>
+          ${numberControl('walkGatesAdd','0')}
+        </div>
+        <div class="sp-field col-12" data-wg-add-wrap style="display:none">
+          <div class="sp-grid">
+            <div class="sp-field col-3">
+              <label class="sp-label">Method</label>
+              <select class="sp-select" data-field="walkAddMethod">
+                <option value="Reuse Existing Panel">Reuse Existing Panel</option>
+                <option value="Build New Panel">Build New Panel</option>
+              </select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Gate Post Size</label>
+              <select class="sp-select" data-field="walkAddPostSize">${createSelect(SEED.postSize)}</select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Gate Frame Size</label>
+              <select class="sp-select" data-field="walkAddFrameSize">${createSelect(SEED.railSize)}</select>
+            </div>
+            <div class="sp-field col-3" data-wg-add-pickets>
+              <label class="sp-label">Gate Picket Size</label>
+              <select class="sp-select" data-field="walkAddPicketSize">${createSelect(SEED.picketSize)}</select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Latch Type</label>
+              <select class="sp-select" data-field="walkAddLatch">${createSelect(GATE.latchTypes)}</select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Hinges</label>
+              <select class="sp-select" data-field="walkAddHinges">${createSelect(GATE.hingeTypes)}</select>
+            </div>
+          </div>
+          <div class="sp-hint">Reuse: 1 post, 1 bag concrete, hinges, latch, 2× 12ft frame sticks per gate. Build New: 1 post, 1 bag concrete, hinges, latch, 4× 12ft frame sticks, plus material for 25 pickets per gate. Labor: ~4 hours per added gate (1 person).</div>
+        </div>
+
+        <!-- Notes (section-specific) - LAST -->
+        <div class="sp-field col-12">
+          <label class="sp-label">Notes (section-specific)</label>
+          <textarea class="sp-textarea" data-field="notes" placeholder="Any custom notes for this section..."></textarea>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function addSection(data={}){
+    syncStateFromDOM();
+    const id = uid();
+    state.sections.push({
+      id,
+      collapsed:false,
+      railsCount:2,
+      rails:[
+        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
+        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
+      ],
+      postSize: '2x2',
+      postReplacements: [],
+      postRealignments: [],
+      walkGates: 0,
+      walkGatesRealign: 0,
+      walkGatesHardware: 0,
+      walkGatesRebuild: 0,
+      walkLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      walkRebuildFrame: SEED.railSize[0],
+      walkRebuildPicket: SEED.picketSize[0],
+      walkRebuildLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkRebuildHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+
+      // NEW: Add Walk Gate fields
+      walkGatesAdd: 0,
+      walkAddMethod: 'Reuse Existing Panel',
+      walkAddPostSize: '2x2',
+      walkAddFrameSize: SEED.railSize[0],
+      walkAddPicketSize: SEED.picketSize[0],
+      walkAddLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkAddHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+
+      // NEW: Finials
+      finials: [],
+      // NEW: Post Caps
+      caps: [],
+      // NEW: Panel Replacements
+      panels: [],
+
+      ...data
+    });
+    render();
+  }
+  function duplicateSection(id){
+    syncStateFromDOM();
+    const src = state.sections.find(s=>s.id===id);
+    if(!src) return;
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.id = uid();
+    copy.collapsed = false;
+    state.sections.push(copy);
+    render();
+  }
+  function removeSection(id){
+    syncStateFromDOM();
+    state.sections = state.sections.filter(s=>s.id!==id);
+    render();
+  }
+
+  function readSectionFromDOM(card){
+    const id = card.getAttribute('data-id');
+    function val(field){
+      const el = card.querySelector(`[data-field="${field}"]`);
+      if(!el) return '';
+      if(el.classList.contains('sp-number')){
+        return parseInt(el.querySelector('input').value||'0',10) || 0;
+      }
+      if(el.type==='checkbox'){ return !!el.checked; }
+      if(el.tagName==='INPUT' || el.tagName==='TEXTAREA' || el.tagName==='SELECT') return el.value;
+      return '';
+    }
+
+    const railsCount = parseInt(val('railsCount') || '2', 10);
+    const rails = [];
+    for(let i=0;i<railsCount;i++){
+      rails.push({
+        size: val(`railSize_${i}`),
+        stacked: !!val(`railStacked_${i}`),
+        size2: val(`railSize2_${i}`),
+        patches: val(`railPatches_${i}`),
+        replacements: val(`railRepl_${i}`)
+      });
+    }
+
+    // NEW: Finials (dynamic rows)
+    const finials = [];
+    const finCont = card.querySelector('[data-finials]');
+    if (finCont){
+      const rows = Array.from(finCont.querySelectorAll('[data-finial-row]'));
+      rows.forEach(row => {
+        const qty = parseInt((row.querySelector('[data-finial-qty] input')?.value)||'0',10) || 0;
+        const style = (row.querySelector('[data-finial-style]')?.value) || (SEED.finialStyles && SEED.finialStyles[0]);
+        const material = (row.querySelector('[data-finial-material]')?.value) || (SEED.finialMaterials && SEED.finialMaterials[0]);
+        const picketSize = (row.querySelector('[data-finial-picket]')?.value) || (SEED.picketSize && SEED.picketSize[0]);
+        if(qty>0){ finials.push({ qty, style, material, picketSize }); }
+      });
+    }
+
+    // NEW: Caps (dynamic rows)
+    const caps = [];
+    const capCont = card.querySelector('[data-caps]');
+    if (capCont){
+      const rows = Array.from(capCont.querySelectorAll('[data-cap-row]'));
+      rows.forEach(row => {
+        const qty = parseInt((row.querySelector('[data-cap-qty] input')?.value)||'0',10) || 0;
+        const style = (row.querySelector('[data-cap-style]')?.value) || (SEED.capStyles && SEED.capStyles[0]);
+        const material = (row.querySelector('[data-cap-material]')?.value) || (SEED.capMaterials && SEED.capMaterials[0]);
+        const postSize = (row.querySelector('[data-cap-post]')?.value) || (SEED.capPostSizes && SEED.capPostSizes[0]);
+        if(qty>0){ caps.push({ qty, style, material, postSize }); }
+      });
+    }
+
+    // PANELs (dynamic rows)
+    const panels = [];
+    const panelsCont = card.querySelector('[data-panels]');
+    if(panelsCont){
+      const rows = Array.from(panelsCont.querySelectorAll('[data-panel-row]'));
+      rows.forEach(row=>{
+        const qty = parseInt((row.querySelector('[data-panel-qty] input')?.value)||'0',10) || 0;
+        const height = (row.querySelector('[data-panel-height]')?.value) || SEED.height[1];
+        const style  = (row.querySelector('[data-panel-style]')?.value) || SEED.style[0];
+        const railSize = (row.querySelector('[data-panel-rail]')?.value) || SEED.railSize[0];
+        const picketSize = (row.querySelector('[data-panel-picket]')?.value) || SEED.picketSize[0];
+        const widthIn = parseInt((row.querySelector('[data-panel-width] input')?.value)||'0',10) || 0;
+        const finialStyle = (row.querySelector('[data-panel-finial-style]')?.value) || SEED.finialStyles[0];
+        if(qty>0){ panels.push({ qty, height, style, railSize, picketSize, widthIn, finialStyle }); }
+      });
+    }
+
+    const postReplacements = [];
+    const postRepCont = card.querySelector('[data-post-replacements]');
+    if(postRepCont){
+      const rows = Array.from(postRepCont.querySelectorAll('[data-post-replacement-row]'));
+      rows.forEach(row=>{
+        const qty = parseInt((row.querySelector('[data-post-replacement-qty] input')?.value)||'0',10) || 0;
+        const size = (row.querySelector('[data-post-replacement-size]')?.value) || SEED.postSize[0];
+        if(qty>0){ postReplacements.push({ qty, size }); }
+      });
+    }
+
+    const postRealignments = [];
+    const postRealignCont = card.querySelector('[data-post-realign]');
+    if(postRealignCont){
+      const rows = Array.from(postRealignCont.querySelectorAll('[data-post-realign-row]'));
+      rows.forEach(row=>{
+        const qty = parseInt((row.querySelector('[data-post-realign-qty] input')?.value)||'0',10) || 0;
+        const size = (row.querySelector('[data-post-realign-size]')?.value) || SEED.postRealignSize[0];
+        if(qty>0){ postRealignments.push({ qty, size }); }
+      });
+    }
+
+    return {
+      id,
+      label: val('label').trim(),
+      style: val('style'),
+      height: val('height'),
+      postSize: val('postSize'),
+      postReplacements,
+      postRealignments,
+
+      railsCount,
+      rails,
+
+      railSize: rails[0]?.size || '',
+      railStacked: !!rails[0]?.stacked,
+      railSize2: rails[0]?.size2 || '',
+
+      picketSize: val('picketSize'),
+      picketHeight: val('picketHeight'),
+      puppy: val('puppy'),
+      painting: val('painting'),
+      length: val('length'),
+      hardscape: val('hardscape'),
+      trim: val('trim'),
+      digOut: val('digOut'),
+      wiPickets: val('wiPickets'),
+      walkGates: val('walkGates'),
+      walkGatesRealign: val('walkGatesRealign'),
+      walkGatesHardware: val('walkGatesHardware'),
+      walkGatesRebuild: val('walkGatesRebuild'),
+      walkLatch: val('walkLatch'),
+      walkHinges: val('walkHinges'),
+      walkRebuildFrame: val('walkRebuildFrame'),
+      walkRebuildPicket: val('walkRebuildPicket'),
+      walkRebuildLatch: val('walkRebuildLatch'),
+      walkRebuildHinges: val('walkRebuildHinges'),
+
+      // NEW
+      walkGatesAdd: val('walkGatesAdd'),
+      walkAddMethod: val('walkAddMethod'),
+      walkAddPostSize: val('walkAddPostSize'),
+      walkAddFrameSize: val('walkAddFrameSize'),
+      walkAddPicketSize: val('walkAddPicketSize'),
+      walkAddLatch: val('walkAddLatch'),
+      walkAddHinges: val('walkAddHinges'),
+
+      // NEW: finials
+      finials,
+      // NEW: caps
+      caps,
+      // NEW: panels
+      panels,
+
+      notes: val('notes').trim()
+    };
+  }
+
+  function syncStateFromDOM(){
+    const cards = $$('.sp-card', sectionsEl);
+    if(!cards.length) return;
+    const newSections = cards.map(readSectionFromDOM);
+    newSections.forEach(ns=>{
+      const old = state.sections.find(s=>s.id===ns.id);
+      if(old){
+        if('collapsed' in old) ns.collapsed = old.collapsed;
+      }
+    });
+    state.sections = newSections;
+  }
+
+  function writeSectionToDOM(card, data){
+    function set(field, value){
+      const el = card.querySelector(`[data-field="${field}"]`);
+      if(!el) return;
+      if(el.classList.contains('sp-number')){
+        el.querySelector('input').value = value ?? '';
+      } else if(el.type==='checkbox'){
+        el.checked = Boolean(value);
+      } else if(el.tagName==='SELECT' || el.tagName==='INPUT' || el.tagName==='TEXTAREA'){
+        el.value = value ?? '';
+      }
+    }
+    set('label', data.label||'');
+    set('style', data.style||SEED.style[0]);
+    set('height', data.height||'4ft');
+    set('postSize', data.postSize||'2x2');
+
+    set('railsCount', data.railsCount || 2);
+    renderRailsControls(card, data);
+
+    set('picketSize', data.picketSize||SEED.picketSize[0]);
+    set('picketHeight', data.picketHeight||'');
+    set('puppy', data.puppy||SEED.puppy[0]);
+    set('painting', data.painting||'Paint Section');
+    set('length', data.length||'');
+    set('hardscape', data.hardscape||'');
+    set('trim', data.trim||'');
+    set('digOut', data.digOut||'');
+    set('wiPickets', data.wiPickets||'');
+    set('walkGates', data.walkGates||'');
+    set('walkGatesRealign', data.walkGatesRealign||'');
+    set('walkGatesHardware', data.walkGatesHardware||'');
+    set('walkGatesRebuild', data.walkGatesRebuild||'');
+    set('walkLatch', data.walkLatch || (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
+    set('walkHinges', data.walkHinges || (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+    set('walkRebuildFrame', data.walkRebuildFrame || SEED.railSize[0]);
+    set('walkRebuildPicket', data.walkRebuildPicket || SEED.picketSize[0]);
+    set('walkRebuildLatch', data.walkRebuildLatch || (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
+    set('walkRebuildHinges', data.walkRebuildHinges || (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+
+    set('walkGatesAdd', data.walkGatesAdd||'');
+    set('walkAddMethod', data.walkAddMethod || 'Reuse Existing Panel');
+    set('walkAddPostSize', data.walkAddPostSize || data.postSize || '2x2');
+    set('walkAddFrameSize', data.walkAddFrameSize || SEED.railSize[0]);
+    set('walkAddPicketSize', data.walkAddPicketSize || SEED.picketSize[0]);
+    set('walkAddLatch', data.walkAddLatch || (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
+    set('walkAddHinges', data.walkAddHinges || (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+
+    set('notes', data.notes||'');
+
+    // NEW: render post groups
+    renderPostReplacementControls(card, data);
+    renderPostRealignControls(card, data);
+    // NEW: render finial rows
+    renderFinialsControls(card, data);
+    // NEW: render cap rows
+    renderCapsControls(card, data);
+    // NEW: render panel rows
+    renderPanelsControls(card, data);
+    const toggleBtn = card.querySelector('.sp-toggle');
+    const isCollapsed = Boolean(data.collapsed);
+    card.classList.toggle('is-collapsed', isCollapsed);
+    if(toggleBtn){
+      toggleBtn.textContent = isCollapsed ? 'Expand' : 'Collapse';
+      toggleBtn.setAttribute('aria-expanded', (!isCollapsed).toString());
+    }
+  }
+  // === NEW: cap row rendering & persistence ===
+  function renderPostGroups(card, data, cfg){
+    const cont = card.querySelector(cfg.container);
+    if(!cont) return;
+    cont.innerHTML = '';
+    const options = Array.isArray(cfg.options) && cfg.options.length ? cfg.options : SEED.postSize;
+    const arr = Array.isArray(data[cfg.prop]) ? data[cfg.prop] : [];
+
+    arr.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute(cfg.rowAttr, '');
+      row.innerHTML = `
+        <div class="sp-field col-3">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" ${cfg.qtyAttr}>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${item.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-4">
+          <label class="sp-label">Post Size</label>
+          <select class="sp-select" ${cfg.sizeAttr}>${createSelect(options)}</select>
+        </div>
+        <div class="sp-field col-2" style="align-self:end">
+          <button class="sp-btn danger" ${cfg.removeAttr} type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const sizeSel = row.querySelector(cfg.sizeSel);
+      if(sizeSel){
+        sizeSel.value = item.size || options[0];
+      }
+    });
+
+    const addBtn = card.querySelector(cfg.addBtn);
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s[cfg.prop])) s[cfg.prop] = [];
+        const defaultSize = typeof cfg.defaultSize === 'function'
+          ? cfg.defaultSize(s)
+          : cfg.defaultSize;
+        const nextSize = defaultSize || options[0] || '';
+        s[cfg.prop].push({ qty: 1, size: nextSize });
+        renderPostGroups(card, s, cfg);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest(cfg.removeSel);
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll(cfg.rowSel));
+      const row = btn.closest(cfg.rowSel);
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s[cfg.prop])) return;
+      if(idx >= 0){
+        s[cfg.prop].splice(idx,1);
+        renderPostGroups(card, s, cfg);
+        attachNumberHandlers(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.matches(cfg.sizeSel)){
+        persistPostGroupsFromDOM(card, cfg);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest(cfg.qtySel)){
+        persistPostGroupsFromDOM(card, cfg);
+        persist();
+      }
+    });
+  }
+
+  function persistPostGroupsFromDOM(card, cfg){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector(cfg.container);
+    const rows = cont ? Array.from(cont.querySelectorAll(cfg.rowSel)) : [];
+    const options = Array.isArray(cfg.options) && cfg.options.length ? cfg.options : SEED.postSize;
+    s[cfg.prop] = rows.map(row=>{
+      const qty = parseInt((row.querySelector(`${cfg.qtySel} input`)?.value)||'0',10) || 0;
+      const size = (row.querySelector(cfg.sizeSel)?.value) || options[0] || '';
+      return { qty, size };
+    });
+  }
+
+  function renderPostReplacementControls(card, data){
+    renderPostGroups(card, data, {
+      prop: 'postReplacements',
+      container: '[data-post-replacements]',
+      rowAttr: 'data-post-replacement-row',
+      rowSel: '[data-post-replacement-row]',
+      qtyAttr: 'data-post-replacement-qty',
+      qtySel: '[data-post-replacement-qty]',
+      sizeAttr: 'data-post-replacement-size',
+      sizeSel: '[data-post-replacement-size]',
+      removeAttr: 'data-post-replacement-remove',
+      removeSel: '[data-post-replacement-remove]',
+      addBtn: '[data-post-replacement-add]',
+      options: SEED.postSize,
+      defaultSize: (section)=> section.postSize || SEED.postSize[0]
+    });
+  }
+
+  function renderPostRealignControls(card, data){
+    renderPostGroups(card, data, {
+      prop: 'postRealignments',
+      container: '[data-post-realign]',
+      rowAttr: 'data-post-realign-row',
+      rowSel: '[data-post-realign-row]',
+      qtyAttr: 'data-post-realign-qty',
+      qtySel: '[data-post-realign-qty]',
+      sizeAttr: 'data-post-realign-size',
+      sizeSel: '[data-post-realign-size]',
+      removeAttr: 'data-post-realign-remove',
+      removeSel: '[data-post-realign-remove]',
+      addBtn: '[data-post-realign-add]',
+      options: SEED.postRealignSize,
+      defaultSize: ()=> SEED.postRealignSize[0] || '2x2'
+    });
+  }
+
+  const POST_SIZE_KEY = {
+    '1 1/2" x 1 1/2"': 'posts1p5',
+    '2x2': 'posts2x2',
+    '3x3': 'posts3x3',
+    '4x4': 'posts4x4'
+  };
+
+  function postSizeKey(size){
+    const raw = String(size||'').trim();
+    if(POST_SIZE_KEY[raw]) return POST_SIZE_KEY[raw];
+    const compact = raw
+      .toLowerCase()
+      .replace(/×/g,'x')
+      .replace(/\s+/g,'')
+      .replace(/inch|\"/g,'');
+    if(compact === '11/2x11/2' || compact === '1.5x1.5') return 'posts1p5';
+    if(compact === '2x2') return 'posts2x2';
+    if(compact === '3x3') return 'posts3x3';
+    if(compact === '4x4') return 'posts4x4';
+    return null;
+  }
+
+  function countPostGroups(arr){
+    const counts = { posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 };
+    (Array.isArray(arr) ? arr : []).forEach(item=>{
+      const qty = parseInt(item?.qty,10) || 0;
+      if(qty <= 0) return;
+      const key = postSizeKey(item?.size || item?.postSize);
+      if(key && Object.prototype.hasOwnProperty.call(counts, key)){
+        counts[key] += qty;
+      }
+    });
+    return counts;
+  }
+
+  function addPostCounts(target, counts){
+    Object.keys(counts).forEach(key=>{
+      target[key] = (target[key]||0) + (parseInt(counts[key],10) || 0);
+    });
+  }
+
+  function renderCapsControls(card, data){
+    const cont = card.querySelector('[data-caps]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const arr = Array.isArray(data.caps) ? data.caps : [];
+    arr.forEach((c)=>{
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-cap-row','');
+      row.innerHTML = `
+        <div class="sp-field col-2">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-cap-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${c.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Style</label>
+          <select class="sp-select" data-cap-style>${createSelect(SEED.capStyles)}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Material</label>
+          <select class="sp-select" data-cap-material>${createSelect(SEED.capMaterials)}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Post Size</label>
+          <select class="sp-select" data-cap-post>${createSelect(SEED.capPostSizes)}</select>
+        </div>
+        <div class="sp-field col-1" style="align-self:end">
+          <button class="sp-btn danger" data-cap-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const styleSel = row.querySelector('[data-cap-style]'); if(styleSel) styleSel.value = c.style || SEED.capStyles[0];
+      const matSel   = row.querySelector('[data-cap-material]'); if(matSel) matSel.value = c.material || SEED.capMaterials[0];
+      const postSel  = row.querySelector('[data-cap-post]'); if(postSel) postSel.value = c.postSize || SEED.capPostSizes[0];
+    });
+
+    const addBtn = card.querySelector('[data-cap-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s.caps)) s.caps = [];
+        s.caps.push({ qty: 1, style: SEED.capStyles[0], material: SEED.capMaterials[0], postSize: SEED.capPostSizes[0] });
+        renderCapsControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-cap-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-cap-row]'));
+      const row = btn.closest('[data-cap-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.caps)) return;
+      s.caps.splice(idx,1);
+      renderCapsControls(card, s);
+      attachNumberHandlers(card);
+      persist();
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.matches('[data-cap-style], [data-cap-material], [data-cap-post]')){
+        persistCapsFromDOM(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-cap-qty]')){
+        persistCapsFromDOM(card);
+        persist();
+      }
+    });
+  }
+
+  function persistCapsFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-caps]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-cap-row]')) : [];
+    s.caps = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-cap-qty] input')?.value)||'0',10) || 0;
+      const style = (row.querySelector('[data-cap-style]')?.value) || SEED.capStyles[0];
+      const material = (row.querySelector('[data-cap-material]')?.value) || SEED.capMaterials[0];
+      const postSize = (row.querySelector('[data-cap-post]')?.value) || SEED.capPostSizes[0];
+      return { qty, style, material, postSize };
+    });
+  }
+
+  // ===== Rails helpers/handlers =====
+  function railLabels(count){
+    const n = parseInt(count||2,10);
+    if(n===4) return ['Top Rail','Second Rail','Third Rail','Bottom Rail'];
+    if(n===3) return ['Top Rail','Middle Rail','Bottom Rail'];
+    return ['Top Rail','Bottom Rail'];
+  }
+
+  function renderRailsControls(card, data){
+    const row  = card.querySelector('[data-rails-row]');
+    if(!row) return;
+    $$('[data-rail-block]', row).forEach(el=> el.remove());
+    const count = parseInt((data.railsCount!=null?data.railsCount:2),10);
+    const labels = railLabels(count);
+    const rails = Array.isArray(data.rails) ? data.rails : [];
+    row.style.setProperty('--rail-cols', `repeat(${count+1}, minmax(200px, 1fr))`);
+    labels.forEach((label,i)=>{
+      const block = document.createElement('div');
+      block.className = `sp-field`;
+      block.setAttribute('data-rail-block','');
+      const patchesHtml = numberControl('railPatches_'+i,'0');
+      const replHtml    = numberControl('railRepl_'+i,'0');
+      block.innerHTML = `
+        <label class="sp-label">${label} Size</label>
+        <select class="sp-select" data-field="railSize_${i}">${createSelect(SEED.railSize)}</select>
+        <div class="sp-row" style="margin-top:6px">
+          <label class="sp-row" style="gap:6px; align-items:center">
+            <input type="checkbox" data-field="railStacked_${i}" />
+            <span>Stacked</span>
+          </label>
+        </div>
+        <div class="sp-field" data-if="railStacked_${i}" style="display:none; margin-top:6px">
+          <label class="sp-label">Second ${label} Size</label>
+          <select class="sp-select" data-field="railSize2_${i}">${createSelect(SEED.railSize)}</select>
+        </div>
+        <div class="sp-field" style="margin-top:6px">
+          <label class="sp-label"># Rail Patches (${label})</label>
+          ${patchesHtml}
+        </div>
+        <div class="sp-field" style="margin-top:6px">
+          <label class="sp-label"># Full Rail Replacements (${label})</label>
+          ${replHtml}
+        </div>
+      `;
+      row.appendChild(block);
+      const r = rails[i] || {};
+      const sizeEl    = card.querySelector(`[data-field="railSize_${i}"]`);
+      const stackEl   = card.querySelector(`[data-field="railStacked_${i}"]`);
+      const size2El   = card.querySelector(`[data-field="railSize2_${i}"]`);
+      const patchesBox= card.querySelector(`[data-field="railPatches_${i}"]`);
+      const replBox   = card.querySelector(`[data-field="railRepl_${i}"]`);
+      if(sizeEl) sizeEl.value = r.size || SEED.railSize[0];
+      if(stackEl) stackEl.checked = Boolean(r.stacked);
+      if(size2El) size2El.value = r.size2 || SEED.railSize[0];
+      if(patchesBox) patchesBox.querySelector('input').value = r.patches || 0;
+      if(replBox)    replBox.querySelector('input').value    = r.replacements || 0;
+      const cond = card.querySelector(`[data-if="railStacked_${i}"]`);
+      if(cond && stackEl) cond.style.display = stackEl.checked ? 'block' : 'none';
+    });
+  }
+
+  // === NEW: finial row rendering & persistence ===
+  // === PANEL REPLACEMENTS: row rendering & persistence ===
+  function renderPanelsControls(card, data){
+    const cont = card.querySelector('[data-panels]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const arr = Array.isArray(data.panels) ? data.panels : [];
+
+    arr.forEach((p)=>{
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-panel-row','');
+      row.innerHTML = `
+        <div class="sp-field col-2">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-panel-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${p.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Height</label>
+          <select class="sp-select" data-panel-height>${createSelect(SEED.height)}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Style</label>
+          <select class="sp-select" data-panel-style>${createSelect(SEED.style)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Rail Size</label>
+          <select class="sp-select" data-panel-rail>${createSelect(SEED.railSize)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Picket Size</label>
+          <select class="sp-select" data-panel-picket>${createSelect(SEED.picketSize)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Panel Width (in)</label>
+          <div class="sp-number" data-panel-width>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="1" value="${p.widthIn||96}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-3" data-panel-finial-wrap style="display:none">
+          <label class="sp-label">Finial Style (26 / panel)</label>
+          <select class="sp-select" data-panel-finial-style>${createSelect(SEED.finialStyles)}</select>
+        </div>
+        <div class="sp-field col-1" style="align-self:end">
+          <button class="sp-btn danger" data-panel-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+
+      // set defaults
+      row.querySelector('[data-panel-height]').value = p.height || SEED.height[1];
+      row.querySelector('[data-panel-style]').value  = p.style  || SEED.style[0];
+      row.querySelector('[data-panel-rail]').value   = p.railSize || SEED.railSize[0];
+      row.querySelector('[data-panel-picket]').value = p.picketSize || SEED.picketSize[0];
+      const finWrap = row.querySelector('[data-panel-finial-wrap]');
+      const styleSel = row.querySelector('[data-panel-style]');
+      const finSel = row.querySelector('[data-panel-finial-style]');
+      if(styleSel){
+        const show = /Finials/i.test(styleSel.value);
+        finWrap.style.display = show ? 'block' : 'none';
+      }
+      if(finSel){ finSel.value = p.finialStyle || SEED.finialStyles[0]; }
+    });
+
+    const addBtn = card.querySelector('[data-panel-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s.panels)) s.panels = [];
+        s.panels.push({ qty:1, height: SEED.height[1], style: SEED.style[0], railSize: SEED.railSize[0], picketSize: SEED.picketSize[0], widthIn: 96, finialStyle: SEED.finialStyles[0]});
+        renderPanelsControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-panel-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-panel-row]'));
+      const row = btn.closest('[data-panel-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.panels)) return;
+      s.panels.splice(idx,1);
+      renderPanelsControls(card, s);
+      attachNumberHandlers(card);
+      persist();
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.matches('[data-panel-style], [data-panel-height], [data-panel-rail], [data-panel-picket], [data-panel-finial-style]')){
+        // Toggle finial picker visibility
+        if(e.target.matches('[data-panel-style]')){
+          const wrap = e.target.closest('[data-panel-row]').querySelector('[data-panel-finial-wrap]');
+          wrap.style.display = /Finials/i.test(e.target.value) ? 'block' : 'none';
+        }
+        persistPanelsFromDOM(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-panel-qty]') || e.target.closest('[data-panel-width]')){
+        persistPanelsFromDOM(card);
+        persist();
+      }
+    });
+  }
+
+  function persistPanelsFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-panels]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-panel-row]')) : [];
+    s.panels = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-panel-qty] input')?.value)||'0',10) || 0;
+      const height = (row.querySelector('[data-panel-height]')?.value) || SEED.height[1];
+      const style  = (row.querySelector('[data-panel-style]')?.value) || SEED.style[0];
+      const railSize = (row.querySelector('[data-panel-rail]')?.value) || SEED.railSize[0];
+      const picketSize = (row.querySelector('[data-panel-picket]')?.value) || SEED.picketSize[0];
+      const widthIn = parseInt((row.querySelector('[data-panel-width] input')?.value)||'0',10) || 0;
+      const finialStyle = (row.querySelector('[data-panel-finial-style]')?.value) || SEED.finialStyles[0];
+      return { qty, height, style, railSize, picketSize, widthIn, finialStyle };
+    });
+  }
+  function renderFinialsControls(card, data){
+    const cont = card.querySelector('[data-finials]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const arr = Array.isArray(data.finials) ? data.finials : [];
+    arr.forEach((f)=>{
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-finial-row','');
+      row.innerHTML = `
+        <div class="sp-field col-2">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-finial-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${f.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Style</label>
+          <select class="sp-select" data-finial-style>${createSelect(SEED.finialStyles)}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Material</label>
+          <select class="sp-select" data-finial-material>${createSelect(SEED.finialMaterials)}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Picket Size</label>
+          <select class="sp-select" data-finial-picket>${createSelect(SEED.picketSize)}</select>
+        </div>
+        <div class="sp-field col-1" style="align-self:end">
+          <button class="sp-btn danger" data-finial-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const styleSel = row.querySelector('[data-finial-style]'); if(styleSel) styleSel.value = f.style || SEED.finialStyles[0];
+      const matSel   = row.querySelector('[data-finial-material]'); if(matSel)  matSel.value  = f.material || SEED.finialMaterials[0];
+      const pickSel  = row.querySelector('[data-finial-picket]'); if(pickSel)   pickSel.value = f.picketSize || SEED.picketSize[0];
+    });
+
+    const addBtn = card.querySelector('[data-finial-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s.finials)) s.finials = [];
+        s.finials.push({ qty: 1, style: SEED.finialStyles[0], material: SEED.finialMaterials[0], picketSize: s.picketSize || SEED.picketSize[0] });
+        renderFinialsControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-finial-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-finial-row]'));
+      const row = btn.closest('[data-finial-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.finials)) return;
+      s.finials.splice(idx,1);
+      renderFinialsControls(card, s);
+      attachNumberHandlers(card);
+      persist();
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.matches('[data-finial-style], [data-finial-material], [data-finial-picket]')){
+        persistFinialsFromDOM(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-finial-qty]')){
+        persistFinialsFromDOM(card);
+        persist();
+      }
+    });
+  }
+
+  function persistFinialsFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-finials]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-finial-row]')) : [];
+    s.finials = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-finial-qty] input')?.value)||'0',10) || 0;
+      const style = (row.querySelector('[data-finial-style]')?.value) || SEED.finialStyles[0];
+      const material = (row.querySelector('[data-finial-material]')?.value) || SEED.finialMaterials[0];
+      const picketSize = (row.querySelector('[data-finial-picket]')?.value) || SEED.picketSize[0];
+      return { qty, style, material, picketSize };
+    });
+  }
+
+  function attachRailsHandlers(card){
+    const countSel = card.querySelector('[data-field="railsCount"]');
+    if(countSel){
+      countSel.addEventListener('change', ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId) || {};
+        const newCount = parseInt(countSel.value||'2',10);
+        s.railsCount = newCount;
+        if(!Array.isArray(s.rails)) s.rails = [];
+        const labels = railLabels(newCount);
+        s.rails = labels.map((_, i)=> s.rails[i] || { size: SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0});
+        renderRailsControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      });
+    }
+
+    card.addEventListener('change', (e)=>{
+      const t = e.target;
+      if(!t) return;
+      if(t.matches('input[data-field^="railStacked_"]')){
+        const key = t.getAttribute('data-field');
+        const cond = card.querySelector(`[data-if="${key}"]`);
+        if(cond) cond.style.display = t.checked ? 'block' : 'none';
+      }
+      updateWalkGateConditional(card);
+      persist();
+    });
+  }
+
+  function attachNumberHandlers(card){
+    $$(".sp-number", card).forEach(box=>{
+      const input = $('input', box);
+      $$(".sp-step", box).forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const dir = parseInt(btn.getAttribute('data-dir'),10);
+          const current = parseInt(input.value||'0',10) || 0;
+          const min = parseInt(input.getAttribute('min')||'0',10) || 0;
+          const next = Math.max(min, current + dir);
+          input.value = next;
+          updateWalkGateConditional(card);
+          persist();
+        });
+      });
+      input.addEventListener('change', ()=>{
+        const val = parseInt(input.value||'0',10) || 0;
+        const min = parseInt(input.getAttribute('min')||'0',10)||0;
+        input.value = Math.max(min, val);
+        updateWalkGateConditional(card);
+        persist();
+      });
+    });
+  }
+
+  function updateWalkGateConditional(card){
+    const getN = (f)=>{
+      const box = card.querySelector(`.sp-number[data-field="${f}"] input`);
+      return parseInt((box && box.value) || '0',10) || 0;
+    };
+    const wg = getN('walkGates');
+    const hw = getN('walkGatesHardware');
+    const rb = getN('walkGatesRebuild');
+    const add = getN('walkGatesAdd');
+
+    const wrap = card.querySelector('[data-wg-wrap]');
+    if(wrap){ wrap.style.display = wg>0 ? 'block' : 'none'; }
+    const hwWrap = card.querySelector('[data-wg-hw-wrap]');
+    if(hwWrap){ hwWrap.style.display = (wg>0 && hw>0) ? 'block' : 'none'; }
+    const rbWrap = card.querySelector('[data-wg-rebuild-wrap]');
+    if(rbWrap){ rbWrap.style.display = (wg>0 && rb>0) ? 'block' : 'none'; }
+
+    const addWrap = card.querySelector('[data-wg-add-wrap]');
+    if(addWrap){ addWrap.style.display = add>0 ? 'block' : 'none'; }
+    const methodSel = card.querySelector('[data-field="walkAddMethod"]');
+    const pickWrap  = card.querySelector('[data-wg-add-pickets]');
+    if(pickWrap && methodSel){
+      pickWrap.style.display = (add>0 && methodSel.value === 'Build New Panel') ? 'block' : 'none';
+    }
+  }
+
+  function render(){
+    const sectionsEl = document.getElementById('sp-sections');
+    sectionsEl.innerHTML = '';
+    state.sections.forEach((s, idx)=>{
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = sectionTemplate(s.id, idx);
+      const card = wrapper.firstElementChild;
+      sectionsEl.appendChild(card);
+      writeSectionToDOM(card, s);
+      attachNumberHandlers(card);
+      attachRailsHandlers(card);
+      updateWalkGateConditional(card);
+
+      const titleEl = $('.sp-card-title', card);
+      const labelInput = card.querySelector('[data-field="label"]');
+      function refreshTitle(){
+        const v = (labelInput.value||'').trim();
+        titleEl.textContent = `Section ${idx+1}${v ? ' - ' + v : ''}`;
+      }
+      refreshTitle();
+      labelInput.addEventListener('input', refreshTitle);
+
+      $('.sp-del', card).addEventListener('click', ()=>{ removeSection(s.id); persist(); });
+      $('.sp-dup', card).addEventListener('click', ()=>{ duplicateSection(s.id); persist(); });
+
+      const toggleBtn = $('.sp-toggle', card);
+      if(toggleBtn){
+        toggleBtn.addEventListener('click', ()=>{
+          const next = !card.classList.contains('is-collapsed');
+          card.classList.toggle('is-collapsed', next);
+          toggleBtn.textContent = next ? 'Expand' : 'Collapse';
+          toggleBtn.setAttribute('aria-expanded', (!next).toString());
+          const sec = state.sections.find(x=>x.id===s.id);
+          if(sec){ sec.collapsed = next; }
+          persist();
+        });
+      }
+
+      $$('input, select, textarea', card).forEach(el=>{
+        el.addEventListener('input', ()=>{ persist(); });
+        el.addEventListener('change', ()=>{
+          updateWalkGateConditional(card);
+          persist();
+        });
+      });
+    });
+  }
+
+  function feetFromStr(h){
+    const m = String(h||'').match(/(\\d+)/);
+    return m ? parseInt(m[1],10) : 0;
+  }
+  function styleFactor(v){
+    if(v === 'Flat Top') return 2;
+    if(v === 'Extended Picket') return 1.75;
+    return 1.5;
+  }
+  function railPacePenalty(count){
+    const rails = parseInt(count, 10);
+    if(!rails || rails <= 2) return 0;
+    return (rails - 2) * 0.25;
+  }
+  function puppyAdj(v){
+    if(v === 'Puppy Pickets') return 0.25;
+    if(v === 'Puppy Pickets w/ Finials') return 0.5;
+    return 0;
+  }
+  function addMat(map, label, qty){
+    if(!qty || qty <= 0) return;
+    map[label] = (map[label]||0) + qty;
+  }
+
+  function normalizeSize(txt){
+    return String(txt||'')
+      .replace(/\\u201D|”/g,'\"')
+      .replace(/\\u00BC|¼/g,'1/4')
+      .replace(/\\u00BD|½/g,'1/2')
+      .replace(/\\u00BE|¾/g,'3/4')
+      .trim();
+  }
+
+  const PRICE_FT = {
+    '1/2\"': 0.57,
+    '5/8\"': 0.68,
+    '3/4\"': 0.74,
+    '1\"':   1.07,
+    '1x2\"': 1.65,
+    '1 1/2\"': 1.46,
+    '1 1/4\"': 1.46,
+    '1 3/4\"': 2.57,
+    '2x2\"': 2.57,
+    '3x3\"': 6.00,
+    '4x4': 11.6441666667,
+    '2\"': 2.57,
+    '3\"': 6.00,
+    'Flat Bar 1/4\" x 1\"': 0.58
+  };
+
+  const PRICE_MISC = {
+    'Gravity Latch': 5,
+    'Short Pool Latch': 80,
+    'Tall Pool Latch': 90,
+    'Single Lock Box': 5,
+    'Double Lock Box': 10,
+    'Pair of Door Hinges': 5,
+    'Pair of Bat Wing Hinges': 5,
+    'Pair of Auto Close Hinges': 50,
+    // NEW
+    'replacement finial': 1.25,
+    'prefab gate panel': 0
+  };
+
+  const PRICE = {
+    paintGallon: 50,
+    paintCan: 8,
+    primerGallon: 50,
+    primerCan: 8,
+    concrete: 12,
+    post2x2: { 8:18, 9:24 }
+  };
+  function laborCost(crew){
+    if(crew<=0) return 0;
+    if(crew===1) return 350;
+    if(crew===2) return 600;
+    if(crew===3) return 800;
+    return 800 + (crew-3)*200;
+  }
+  function money(n){ return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+  const RATES = {
+    netTarget:  0.20,
+    overhead:   0.08,
+    commission: 0.25,
+    cac:        500,
+    mcor:       0.20
+  };
+
+  function computeChargeRevenue(B1_directCosts){
+    const B1 = B1_directCosts;
+    const B4 = RATES.netTarget;
+    const B5 = RATES.overhead;
+    const B6 = RATES.commission;
+    const B7 = RATES.cac;
+    const B8 = RATES.mcor;
+
+    const denom1 = (1-B4)*(1-B6) - B8 - B5;
+    if (denom1 <= 0) return { revenue: NaN, mode: 'invalid' };
+
+    const candidateA = ((1-B4) * B1) / denom1;
+    const candidateB = (B1 + 100/B4) / (1 - B6);
+    const rev1 = Math.max(candidateA, candidateB);
+
+    if (B8 * rev1 <= B7){
+      return { revenue: rev1, mode: 'percent' };
+    } else {
+      const denom2 = (1-B4)*(1-B6) - B5;
+      if (denom2 <= 0) return { revenue: NaN, mode: 'invalid' };
+      const candidateC = (((1-B4) * B1) + B7) / denom2;
+      const candidateD = (B1 + 75/B4) / (1 - B6);
+      const rev2 = Math.max(candidateC, candidateD);
+      return { revenue: rev2, mode: 'capped' };
+    }
+  }
+
+  function generateNotes(){
+    syncStateFromDOM();
+
+    // --- PANEL REPLACEMENT helpers ---
+    const PANEL_PRICE = {
+      // keyed as: `${feet}ft|p${psize}|style`
+      // style key: 'base' for standard/extended (no finials); 'finials' when Extended Picket w/ Finials
+      '3|p1/2"|base': 59.91,
+      '3|p5/8"|base': 59.91,
+      '4|p1/2"|base': 64.48,
+      '4|p5/8"|base': 72.11,
+      '5|p1/2"|base': 66.39,
+      '5|p5/8"|base': 66.39,
+      '5|p1/2"|finials': 72.63,
+      '5|p5/8"|finials': 91.75,
+      '6|p1/2"|base': 76.35,
+      '6|p5/8"|base': 91.13,
+    };
+    function feetFromHeightStr(h){ const m = String(h||'').match(/(\d+)/); return m? parseInt(m[1],10):0; }
+    function pkey(feet, picketSize, style){
+      const ps = normalizeSize(picketSize);
+      const p = (ps==='1/2"')? 'p1/2"' : (ps==='5/8"'? 'p5/8"' : `p${ps}`);
+      const sKey = /Finials/i.test(style) ? 'finials' : 'base';
+      return `${feet}|${p}|${sKey}`;
+    }
+    function isPrefabEligible(widthIn, railSize, picketSize){
+      const rs = normalizeSize(railSize);
+      const ps = normalizeSize(picketSize);
+      return (parseInt(widthIn,10)||0) <= 96 && rs === '1"' && (ps==='1/2"' || ps==='5/8"');
+    }
+    function picketCountForWidth(widthIn, picketSize){
+      const gap = 3 + 15/16; // 3.9375
+      const ps = normalizeSize(picketSize);
+      const widths = { '1/2"': 0.5, '5/8"': 0.625, '3/4"': 0.75, '1"': 1 };
+      const pw = widths[ps] || 0.5;
+      const stride = pw + gap/12; // inches to feet then combine? keep inches to avoid rounding
+      // Work fully in inches
+      const strideIn = (pw*1) * 1.0 + 3.9375; // picket width inches + gap inches
+      return Math.max(1, Math.floor( (parseFloat(widthIn)||0 + 3.9375) / strideIn ));
+    }
+
+    const lines = [];
+    const serviceLines = [];
+    function addServiceLine(name, desc){
+      if(!name || !desc) return;
+      serviceLines.push({ name: name.trim(), desc: desc.trim() });
+    }
+    function describeCount(count, singular, plural){
+      const n = parseInt(count,10) || 0;
+      if(n <= 0) return '';
+      const label = n === 1 ? singular : (plural || singular + 's');
+      return `${n} ${label}`;
+    }
+    function joinParts(parts){
+      const clean = parts.filter(Boolean);
+      if(clean.length === 0) return '';
+      if(clean.length === 1) return clean[0];
+      if(clean.length === 2) return `${clean[0]} and ${clean[1]}`;
+      return `${clean.slice(0,-1).join(', ')}, and ${clean[clean.length-1]}`;
+    }
+    const totals = {
+      length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
+      wiPickets:0, wiPatches:0, wiRails:0,
+      posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0,
+      walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
+      walkGateAdds:0,
+      panelsPrefab:0, panelsCustom:0
+    };
+    const materials = {};
+    let manHours = 0;
+    let welderHours = 0;
+    let helperHours = 0;
+
+    state.sections.forEach((s, idx)=>{
+      const title  = s.label ? `Section ${idx+1} - ${s.label}` : `Section ${idx+1}`;
+      const picket = s.picketHeight ? `${s.picketSize} (height ${s.picketHeight} in)` : `${s.picketSize}`;
+
+      const railsDesc = (Array.isArray(s.rails) && s.rails.length)
+        ? (()=>{
+            const labels = railLabels(s.railsCount || s.rails.length);
+            return s.rails.slice(0, s.railsCount || s.rails.length).map((r,i)=>
+              r && r.stacked
+                ? `${labels[i]}: ${r.size} + ${r.size2} (stacked)`
+                : `${labels[i]}: ${r.size}`
+            ).join('; ');
+          })()
+        : (s.railStacked ? `${s.railSize} + ${s.railSize2} (stacked)` : `${s.railSize}`);
+
+      const sectionPatchTotal = (s.rails||[]).slice(0, s.railsCount||0)
+        .reduce((acc,r)=> acc + (parseInt(r?.patches||0,10)||0), 0);
+      const sectionReplTotal = (s.rails||[]).slice(0, s.railsCount||0)
+        .reduce((acc,r)=> acc + (parseInt(r?.replacements||0,10)||0), 0);
+
+      lines.push(`${title}`);
+      lines.push(`- Style: ${s.style}`);
+      lines.push(`- Height: ${s.height}`);
+      lines.push(`- Rails: ${railsDesc}`);
+      lines.push(`- Picket: ${picket}`);
+      lines.push(`- Puppy Pickets: ${s.puppy}`);
+      lines.push(`- Painting: ${s.painting || 'Paint Section'}`);
+
+      lines.push(`- Length: ${numOrDash(s.length)} ft`);
+      if (s.hardscape > 0) lines.push(`- Over hardscape: ${s.hardscape} lf`);
+      if (s.trim > 0)      lines.push(`- Trim: ${s.trim} lf`);
+      if (s.digOut > 0)    lines.push(`- Dig out: ${s.digOut} lf`);
+
+      const i = (v)=> (parseInt(v||0,10) || 0);
+      lines.push(`- Repairs:`);
+      lines.push(`  - Pickets to replace: ${i(s.wiPickets)}`);
+      lines.push(`  - Rail patches: ${sectionPatchTotal}`);
+      lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
+      const replaceCounts = countPostGroups(s.postReplacements);
+      const realignCounts = countPostGroups(s.postRealignments);
+      lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
+      lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
+      lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
+      lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
+      lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
+      lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
+
+      // NEW: Finials
+      const finArr = Array.isArray(s.finials) ? s.finials : [];
+      const finCount = finArr.reduce((acc,f)=> acc + (parseInt(f?.qty||0,10) || 0), 0);
+      if(finCount){
+        lines.push(`- Finial replacements: ${finCount}`);
+        finArr.forEach(f=>{
+          const q = parseInt(f?.qty||0,10) || 0; if(!q) return;
+          lines.push(`  - ${q} × ${f.material} ${f.style} on ${f.picketSize} pickets`);
+        });
+      }
+
+      // PANEL REPLACEMENTS (per-row)
+      const panelArr = Array.isArray(s.panels) ? s.panels : [];
+      if(panelArr.length){ lines.push(`- Panel replacements:`); }
+      panelArr.forEach(p=>{
+        const q = parseInt(p?.qty||0,10)||0; if(!q) return;
+        const feet = feetFromHeightStr(p.height);
+        const eligible = isPrefabEligible(p.widthIn, p.railSize, p.picketSize);
+        const isFin = /Finials/i.test(p.style);
+        lines.push(`  - ${q} × ${p.widthIn||0}" wide panel — ${p.height}, ${p.style}, rails ${p.railSize}, pickets ${p.picketSize} ${eligible?'(prefab eligible)':'(build on site)'}`);
+        // Labor
+        const panelHours = eligible ? q * 0.5 : q * 1.5;
+        manHours += panelHours;
+        welderHours += panelHours;
+        if(eligible){ totals.panelsPrefab += q; }
+        else        { totals.panelsCustom += q; }
+
+        // Materials / Costing accumulators handled after loop below
+        // Store a scratch list on section to pick up later
+        if(!s._panelCalc) s._panelCalc = []; s._panelCalc.push({
+          qty:q, feet, eligible, style:p.style, picketSize:p.picketSize, railSize:p.railSize, widthIn: parseInt(p.widthIn,10)||0, finialStyle: p.finialStyle
+        });
+
+        if(isFin && !eligible){
+          // custom build w/ finials -> add 26 per panel to materials
+          addMat(materials, `finials - Cast Iron - ${p.finialStyle} (${p.picketSize})`, q*26);
+        }
+      });
+
+      // NEW: Caps
+      const capArr = Array.isArray(s.caps) ? s.caps : [];
+      const capCount = capArr.reduce((acc,c)=> acc + (parseInt(c?.qty||0,10) || 0), 0);
+      if(capCount){
+        lines.push(`- Post cap replacements: ${capCount}`);
+        capArr.forEach(c=>{
+          const q = parseInt(c?.qty||0,10) || 0; if(!q) return;
+          lines.push(`  - ${q} × ${c.material} ${c.style} caps for ${c.postSize} posts`);
+        });
+      }
+
+      // Walk gate details
+      const wg  = i(s.walkGates);
+      const wgr = i(s.walkGatesRealign);
+      const wgh = i(s.walkGatesHardware);
+      const wgb = i(s.walkGatesRebuild);
+      if (wg || wgr || wgh || wgb){
+        lines.push(`- Walk gates: ${wg}`);
+        if (wgr) lines.push(`  - Realign: ${wgr}`);
+        if (wgh) lines.push(`  - Hardware replacements: ${wgh} (Latch: ${s.walkLatch||'-'}, Hinges: ${s.walkHinges||'-'})`);
+        if (wgb) lines.push(`  - Rebuild: ${wgb} (Frame: ${s.walkRebuildFrame}, Pickets: ${s.walkRebuildPicket}, Latch: ${s.walkRebuildLatch}, Hinges: ${s.walkRebuildHinges})`);
+      }
+
+      // Add walk gate into existing fence
+      const wga = i(s.walkGatesAdd);
+      if (wga){
+        lines.push(`- Add walk gate(s): ${wga} — ${s.walkAddMethod}`);
+        lines.push(`  - Post: ${s.walkAddPostSize}; Frame: ${s.walkAddFrameSize}; Pickets: ${s.walkAddPicketSize}; Latch: ${s.walkAddLatch}; Hinges: ${s.walkAddHinges}`);
+      }
+
+      if (s.notes) lines.push(`- Notes: ${s.notes}`);
+      lines.push('');
+
+      totals.length       += i(s.length);
+      totals.hardscape    += i(s.hardscape);
+      totals.trim         += i(s.trim);
+      totals.digOut       += i(s.digOut);
+      totals.finials      += finCount;
+      totals.wiPickets    += i(s.wiPickets);
+      totals.wiPatches    += sectionPatchTotal;
+      totals.wiRails      += sectionReplTotal;
+      addPostCounts(totals, replaceCounts);
+      totals.postsRealign2x2 += realignCounts.posts2x2;
+      totals.postsRealign3x3 += realignCounts.posts3x3;
+      totals.walkGates   += wg;
+      totals.walkRealign += wgr;
+      totals.walkHardware+= wgh;
+      totals.walkRebuild += wgb;
+      totals.walkGateAdds += wga;
+      totals.caps        += capCount;
+    });
+
+    if (state.sections.length){
+      const t = totals;
+      lines.push(`TOTALS`);
+      lines.push(`- Sections: ${state.sections.length}`);
+      lines.push(`- Length: ${t.length} ft`);
+      if (t.hardscape)     lines.push(`- Over hardscape: ${t.hardscape} lf`);
+      if (t.trim)          lines.push(`- Trim: ${t.trim} lf`);
+      if (t.digOut)        lines.push(`- Dig out: ${t.digOut} lf`);
+      if (t.finials)       lines.push(`- Finials to replace: ${t.finials}`);
+      if (t.caps)          lines.push(`- Post caps to replace: ${t.caps}`);
+      if (t.wiPickets)     lines.push(`- Pickets to replace: ${t.wiPickets}`);
+      if (t.wiPatches)     lines.push(`- Rail patches: ${t.wiPatches}`);
+      if (t.wiRails)       lines.push(`- Full rail replacements: ${t.wiRails}`);
+      if (t.posts2x2)      lines.push(`- 2x2 posts: ${t.posts2x2}`);
+      if (t.posts3x3)      lines.push(`- 3x3 posts: ${t.posts3x3}`);
+      if (t.posts1p5)      lines.push(`- 1 1/2" x 1 1/2" posts: ${t.posts1p5}`);
+      if (t.posts4x4)      lines.push(`- 4x4 posts: ${t.posts4x4}`);
+      if (t.postsRealign2x2) lines.push(`- 2x2 posts to realign: ${t.postsRealign2x2}`);
+      if (t.postsRealign3x3) lines.push(`- 3x3 posts to realign: ${t.postsRealign3x3}`);
+      if (t.walkGates)     lines.push(`- Walk gates: ${t.walkGates}`);
+      if (t.walkRealign)   lines.push(`- Walk gates to realign: ${t.walkRealign}`);
+      if (t.walkHardware)  lines.push(`- Walk gate hardware replacements: ${t.walkHardware}`);
+      if (t.walkRebuild)   lines.push(`- Walk gates to rebuild: ${t.walkRebuild}`);
+      if (t.walkGateAdds)  lines.push(`- Walk gates to add: ${t.walkGateAdds}`);
+      if (t.panelsPrefab) lines.push(`- Prefab panels to install: ${t.panelsPrefab}`);
+      if (t.panelsCustom) lines.push(`- Panels to custom-build: ${t.panelsCustom}`);
+    }
+
+    const paintingSummary = state.sections.reduce((acc, s)=>{
+      const len = parseInt(s.length||0,10) || 0;
+      if(len > 0){
+        const hardscape = parseInt(s.hardscape||0,10) || 0;
+        const trim = parseInt(s.trim||0,10) || 0;
+        if(s.painting === 'Paint Section'){
+          acc.full.len += len;
+          acc.full.hardscape += hardscape;
+          acc.full.trim += trim;
+        } else if (s.painting === 'Prime and Paint'){
+          acc.primePaint.len += len;
+          acc.primePaint.hardscape += hardscape;
+          acc.primePaint.trim += trim;
+        } else if (s.painting === 'Spot Paint Welds'){
+          acc.spot += len;
+        }
+      }
+      return acc;
+    }, { full: { len: 0, hardscape: 0, trim: 0 }, primePaint: { len: 0, hardscape: 0, trim: 0 }, spot: 0 });
+
+    if (paintingSummary.full.len || paintingSummary.primePaint.len || paintingSummary.spot){
+      const segments = [];
+      if(paintingSummary.full.len){
+        let detail = `Prep and apply gloss black oil-based paint to approximately ${paintingSummary.full.len} linear feet of fence`;
+        const extras = [];
+        if(paintingSummary.full.hardscape) extras.push(`${paintingSummary.full.hardscape} lf over hardscape`);
+        if(paintingSummary.full.trim) extras.push(`${paintingSummary.full.trim} lf of trim detail`);
+        if(extras.length) detail += ` (${extras.join(', ')})`;
+        segments.push(detail);
+      }
+      if(paintingSummary.primePaint.len){
+        let detail = `Prime with red oxide primer, then apply gloss black oil-based paint to approximately ${paintingSummary.primePaint.len} linear feet of fence`;
+        const extras = [];
+        if(paintingSummary.primePaint.hardscape) extras.push(`${paintingSummary.primePaint.hardscape} lf over hardscape`);
+        if(paintingSummary.primePaint.trim) extras.push(`${paintingSummary.primePaint.trim} lf of trim detail`);
+        if(extras.length) detail += ` (${extras.join(', ')})`;
+        detail += ` with two mobilizations: prime on day one and return after cure for the finish coat`;
+        segments.push(detail);
+      }
+      if(paintingSummary.spot){
+        segments.push(`Spot prep and apply gloss black oil-based paint to weld areas along ${paintingSummary.spot} linear feet`);
+      }
+      addServiceLine('Surface Preparation & Painting', segments.join('; ') + '.');
+    }
+
+    if (totals.digOut > 0){
+      addServiceLine('Dig Out Encroaching Soil', `Remove built-up soil along ${totals.digOut} linear feet to expose fence bottoms and prevent corrosion.`);
+    }
+    if (totals.wiPickets > 0){
+      addServiceLine('Replace Damaged Pickets', `Cut out rusted members and weld in ${describeCount(totals.wiPickets, 'matching picket', 'matching pickets')} to match the existing pattern.`);
+    }
+    if (totals.wiPatches > 0){
+      addServiceLine('Rail Patch Repairs', `Cut out rusted sections and weld in ${describeCount(totals.wiPatches, 'steel patch', 'steel patches')} on horizontal rails.`);
+    }
+    if (totals.wiRails > 0){
+      addServiceLine('Full Rail Replacement', `Fabricate and install ${describeCount(totals.wiRails, 'new rail', 'new rails')} to match the original profile.`);
+    }
+    if (totals.posts2x2 > 0 || totals.posts3x3 > 0 || totals.posts1p5 > 0 || totals.posts4x4 > 0){
+      const parts = [];
+      if(totals.posts2x2 > 0) parts.push(describeCount(totals.posts2x2, '2x2 post', '2x2 posts'));
+      if(totals.posts3x3 > 0) parts.push(describeCount(totals.posts3x3, '3x3 post', '3x3 posts'));
+      if(totals.posts1p5 > 0) parts.push(describeCount(totals.posts1p5, '1 1/2" x 1 1/2" post', '1 1/2" x 1 1/2" posts'));
+      if(totals.posts4x4 > 0) parts.push(describeCount(totals.posts4x4, '4x4 post', '4x4 posts'));
+      const partText = joinParts(parts);
+      if(partText) addServiceLine('Replace Fence Posts', `Set new ${partText} in concrete and tie into existing panels.`);
+    }
+    if (totals.postsRealign2x2 > 0 || totals.postsRealign3x3 > 0){
+      const parts = [];
+      if(totals.postsRealign2x2 > 0) parts.push(describeCount(totals.postsRealign2x2, '2x2 post', '2x2 posts'));
+      if(totals.postsRealign3x3 > 0) parts.push(describeCount(totals.postsRealign3x3, '3x3 post', '3x3 posts'));
+      const partText = joinParts(parts);
+      if(partText) addServiceLine('Realign Leaning Posts', `Plumb and secure ${partText} without replacement.`);
+    }
+    if (totals.finials > 0){
+      addServiceLine('Finial Replacement', `Install ${describeCount(totals.finials, 'new finial', 'new finials')} to restore decorative picket tops.`);
+    }
+    if (totals.caps > 0){
+      addServiceLine('Post Cap Replacement', `Install ${describeCount(totals.caps, 'new post cap', 'new post caps')} to protect posts and match the existing style.`);
+    }
+    if (totals.panelsPrefab > 0){
+      addServiceLine('Install Prefab Panels', `Swap in ${describeCount(totals.panelsPrefab, 'prefabricated panel', 'prefabricated panels')} and secure them to existing posts.`);
+    }
+    if (totals.panelsCustom > 0){
+      addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(totals.panelsCustom, 'custom panel', 'custom panels')} on site to match the wrought iron design.`);
+    }
+    if (totals.walkRealign > 0){
+      addServiceLine('Realign Walk Gates', `Adjust and plumb ${describeCount(totals.walkRealign, 'walk gate', 'walk gates')} for smooth swing and latch.`);
+    }
+    if (totals.walkHardware > 0){
+      addServiceLine('Replace Walk Gate Hardware', `Install new latch and hinge hardware on ${describeCount(totals.walkHardware, 'walk gate', 'walk gates')}.`);
+    }
+    if (totals.walkRebuild > 0){
+      addServiceLine('Rebuild Walk Gates', `Rebuild ${describeCount(totals.walkRebuild, 'walk gate', 'walk gates')} with new frame and pickets to match the fence.`);
+    }
+    if (totals.walkGateAdds > 0){
+      addServiceLine('Add New Walk Gate', `Cut in and install ${describeCount(totals.walkGateAdds, 'new walk gate', 'new walk gates')} complete with posts, frame, and hardware.`);
+    }
+
+    renderServiceLineNotes(serviceLines);
+
+    // ==== Materials aggregation ====
+    let paintLenTotal = 0;
+    let paintGallons = 0;
+    let paintCans = 0;
+    let primerGallons = 0;
+    let primerCans = 0;
+
+    const weldRepairHours = (
+      totals.wiPickets*12 +
+      totals.wiPatches*20 +
+      totals.wiRails*30 +
+      totals.posts1p5*60 +
+      totals.posts2x2*60 +
+      totals.posts3x3*90 +
+      totals.posts4x4*120 +
+      (totals.postsRealign2x2 + totals.postsRealign3x3)*30
+    )/60;
+    manHours += weldRepairHours;
+    welderHours += weldRepairHours;
+    const gateRepairHours = totals.walkRealign * 1 + totals.walkHardware * 1 + totals.walkRebuild * 3;
+    manHours += gateRepairHours;
+    welderHours += gateRepairHours;
+    // Dig out: 5 minutes per LF
+    const digHours = totals.digOut * (5/60);
+    manHours += digHours;
+    helperHours += digHours;
+    // Finials: 0.5 minutes each
+    const finialHours = totals.finials * (0.5/60);
+    manHours += finialHours;
+    welderHours += finialHours;
+    // Caps: 20 seconds each
+    const capHours = totals.caps * (20/60);
+    manHours += capHours;
+    helperHours += capHours;
+    // Added gates: 4 hours each
+    const addedGateHours = totals.walkGateAdds * 4;
+    manHours += addedGateHours;
+    welderHours += addedGateHours;
+
+    // posts (1.5" x 1.5" raw sticks)
+    let raw1p5Total = 0;
+    state.sections.forEach(s=>{
+      const hft = feetFromStr(s.height);
+      const postLen = Math.max(8, hft + 3);
+      const repCounts = countPostGroups(s.postReplacements);
+      const count = repCounts.posts1p5 || 0;
+      if(count>0){
+        const perStick = Math.max(1, Math.floor(12 / Math.max(1, postLen)));
+        raw1p5Total += Math.ceil(count / perStick);
+      }
+      const addG = parseInt(s.walkGatesAdd||0,10) || 0;
+      if(addG>0 && (s.walkAddPostSize||'').trim() === '1 1/2" x 1 1/2"'){
+        const perStickAdd = Math.max(1, Math.floor(12 / Math.max(1, postLen)));
+        raw1p5Total += Math.ceil(addG / perStickAdd);
+      }
+    });
+    if(raw1p5Total>0){ addMat(materials, '1.5x1.5x12 raw steel', raw1p5Total); }
+
+    // posts (2x2 by length)
+    const posts2x2ByLenCalc = {};
+    state.sections.forEach(s=>{
+      const hft = feetFromStr(s.height);
+      const postLen = Math.max(8, hft + 3);
+      const repCounts = countPostGroups(s.postReplacements);
+      const nReplace = repCounts.posts2x2 || 0;
+      if(nReplace>0){ posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + nReplace; }
+      const addG = parseInt(s.walkGatesAdd||0,10) || 0;
+      if(addG>0 && (s.walkAddPostSize||'').trim() === '2x2'){
+        posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + addG;
+      }
+    });
+    Object.keys(posts2x2ByLenCalc).sort((a,b)=>parseInt(a,10)-parseInt(b,10)).forEach(len=>{
+      addMat(materials, `2x2x${len} posts`, posts2x2ByLenCalc[len]);
+    });
+
+    // 3x3 raw sticks (12ft) incl. gate adds
+    const posts3x3ByLenCalc = {};
+    state.sections.forEach(s=>{
+      const repCounts = countPostGroups(s.postReplacements);
+      const count = repCounts.posts3x3 || 0;
+      const L = feetFromStr(s.height) + 3;
+      if(count>0){
+        const perStick = Math.max(1, Math.floor(12 / Math.max(1, L)));
+        const sticks = Math.ceil(count / perStick);
+        posts3x3ByLenCalc[L] = (posts3x3ByLenCalc[L]||0) + sticks;
+      }
+      const addG = parseInt(s.walkGatesAdd||0,10) || 0;
+      if(addG>0 && (s.walkAddPostSize||'').trim() === '3x3'){
+        const perStickAdd = Math.max(1, Math.floor(12 / Math.max(1, L)));
+        const sticksAdd = Math.ceil(addG / perStickAdd);
+        posts3x3ByLenCalc[L] = (posts3x3ByLenCalc[L]||0) + sticksAdd;
+      }
+    });
+    let raw3x3Total = 0;
+    Object.values(posts3x3ByLenCalc).forEach(v=>{ raw3x3Total += v; });
+    if(raw3x3Total>0){ addMat(materials, '3x3x12 raw steel', raw3x3Total); }
+
+    // 4x4 raw sticks (12ft) incl. gate adds
+    const posts4x4ByLenCalc = {};
+    state.sections.forEach(s=>{
+      const repCounts = countPostGroups(s.postReplacements);
+      const count = repCounts.posts4x4 || 0;
+      const L = feetFromStr(s.height) + 3;
+      if(count>0){
+        const perStick = Math.max(1, Math.floor(12 / Math.max(1, L)));
+        const sticks = Math.ceil(count / perStick);
+        posts4x4ByLenCalc[L] = (posts4x4ByLenCalc[L]||0) + sticks;
+      }
+      const addG = parseInt(s.walkGatesAdd||0,10) || 0;
+      if(addG>0 && (s.walkAddPostSize||'').trim() === '4x4'){
+        const perStickAdd = Math.max(1, Math.floor(12 / Math.max(1, L)));
+        const sticksAdd = Math.ceil(addG / perStickAdd);
+        posts4x4ByLenCalc[L] = (posts4x4ByLenCalc[L]||0) + sticksAdd;
+      }
+    });
+    let raw4x4Total = 0;
+    Object.values(posts4x4ByLenCalc).forEach(v=>{ raw4x4Total += v; });
+    if(raw4x4Total>0){ addMat(materials, '4x4x12 raw steel', raw4x4Total); }
+
+    // Concrete
+    const concreteBagsCalc = totals.posts2x2 + totals.posts3x3 + totals.posts1p5 + totals.posts4x4 + Math.ceil((totals.postsRealign2x2 + totals.postsRealign3x3) * 0.5) + totals.walkRealign + totals.walkGateAdds;
+
+    // Gate bits + gate materials
+    const latchCounts = {};
+    const hingeCounts = {};
+    state.sections.forEach(s=>{
+      const hw = parseInt(s.walkGatesHardware||0,10) || 0;
+      const rb = parseInt(s.walkGatesRebuild||0,10) || 0;
+      if(hw>0){
+        if(s.walkLatch) latchCounts[s.walkLatch] = (latchCounts[s.walkLatch]||0) + hw;
+        if(s.walkHinges) hingeCounts[s.walkHinges] = (hingeCounts[s.walkHinges]||0) + hw;
+      }
+      if(rb>0){
+        if(s.walkRebuildLatch) latchCounts[s.walkRebuildLatch] = (latchCounts[s.walkRebuildLatch]||0) + rb;
+        if(s.walkRebuildHinges) hingeCounts[s.walkRebuildHinges] = (hingeCounts[s.walkRebuildHinges]||0) + rb;
+        const frame = s.walkRebuildFrame || '';
+        const pick  = s.walkRebuildPicket || '';
+        const fN = normalizeSize(frame);
+        const pN = normalizeSize(pick);
+        if(fN === '1\"' && (pN === '1/2\"' || pN === '5/8\"')){
+          addMat(materials, 'prefab gate panel', rb);
+          addMat(materials, `12ft rail sticks (${frame})`, rb * 2);
+        } else {
+          addMat(materials, `12ft rail sticks (${frame})`, rb * 2);
+          addMat(materials, `12ft picket sticks (${pick})`, rb * 2);
+        }
+      }
+      const addG = parseInt(s.walkGatesAdd||0,10) || 0;
+      if(addG>0){
+        if(s.walkAddLatch) latchCounts[s.walkAddLatch] = (latchCounts[s.walkAddLatch]||0) + addG;
+        if(s.walkAddHinges) hingeCounts[s.walkAddHinges] = (hingeCounts[s.walkAddHinges]||0) + addG;
+        const frame = s.walkAddFrameSize || '';
+        if ((s.walkAddMethod||'') === 'Reuse Existing Panel'){
+          addMat(materials, `12ft rail sticks (${frame})`, addG * 2);
+        } else {
+          addMat(materials, `12ft rail sticks (${frame})`, addG * 4);
+          let ph = parseInt(s.picketHeight||0,10) || 0;
+          if (ph <= 0) {
+            const hf = feetFromStr(s.height);
+            if (hf > 0) ph = hf * 12;
+          }
+          if (ph <= 0) ph = 54;
+          const perStick = Math.max(1, Math.floor(144 / ph));
+          const totalPickets = 25 * addG;
+          const sticks = Math.ceil(totalPickets / perStick);
+          addMat(materials, `12ft picket sticks (${s.walkAddPicketSize})`, sticks);
+        }
+      }
+    });
+
+    // Add latches/hinges
+    Object.keys(latchCounts).forEach(k=> addMat(materials, k, latchCounts[k]));
+    const hingeLabel = (k)=> k==='Door Hinges' ? 'Pair of Door Hinges'
+                            : k==='Bat Wing Hinges' ? 'Pair of Bat Wing Hinges'
+                            : k==='Auto Close Hinges' ? 'Pair of Auto Close Hinges'
+                            : k;
+    Object.keys(hingeCounts).forEach(k=> addMat(materials, hingeLabel(k), hingeCounts[k]));
+
+    addMat(materials, 'Maximizer bags of concrete', concreteBagsCalc);
+
+    // WI picket sticks from replacements
+    const picketBySizeCalc = {};
+    state.sections.forEach(s=>{
+      const need = parseInt(s.wiPickets||0,10) || 0;
+      if(!need) return;
+      let ph = parseInt(s.picketHeight||0,10) || 0; // inches
+      if (ph <= 0) {
+        const hf = feetFromStr(s.height);
+        if (hf > 0) ph = hf * 12;
+      }
+      if (ph <= 0) ph = 54;
+      const perStick = Math.max(1, Math.floor(144 / ph));
+      const sticks = Math.ceil(need / perStick);
+      const size = s.picketSize;
+      picketBySizeCalc[size] = (picketBySizeCalc[size]||0) + sticks;
+    });
+    Object.entries(picketBySizeCalc).forEach(([size, qty])=>{
+      addMat(materials, `12ft picket sticks (${size})`, qty);
+    });
+
+    // Rails: patches & replacements → sticks
+    const railStickBySizeMat = {};
+    const patchBySizeMat = {};
+    const replBySizeMat = {};
+    function inc(map, key, delta){ if(!key) return; map[key] = (map[key]||0) + (delta||0); }
+
+    state.sections.forEach(s=>{
+      const rCount = s.railsCount || (s.rails||[]).length || 0;
+      for(let i=0;i<rCount;i++){
+        const r = (s.rails||[])[i] || {};
+        const p = parseInt(r.patches||0,10) || 0;
+        const rep = parseInt(r.replacements||0,10) || 0;
+        if(p>0){
+          inc(patchBySizeMat, r.size, p);
+          if(r.stacked) inc(patchBySizeMat, r.size2, p);
+        }
+        if(rep>0){
+          inc(replBySizeMat, r.size, rep);
+          if(r.stacked) inc(replBySizeMat, r.size2, rep);
+        }
+      }
+    });
+
+    Object.entries(replBySizeMat).forEach(([size, rep])=>{
+      if(rep>0) inc(railStickBySizeMat, size, rep);
+    });
+
+    Object.entries(patchBySizeMat).forEach(([size, pcount])=>{
+      const credits = replBySizeMat[size] || 0;
+      const remaining = Math.max(0, (pcount||0) - credits);
+      if(remaining>0){
+        inc(railStickBySizeMat, size, Math.ceil(remaining/6));
+      }
+    });
+
+    Object.keys(railStickBySizeMat).forEach(size=>{
+      addMat(materials, `12ft rail sticks (${size})`, railStickBySizeMat[size]);
+    });
+
+    // Paint estimates
+    let totalLenPaint = 0;
+    let totalLenPrimePaint = 0;
+    let totalLenSpot  = 0;
+    state.sections.forEach(s=>{
+      const len = (parseInt(s.length||0,10) || 0);
+      if(!len) return;
+      if (s.painting === 'Paint Section') {
+        totalLenPaint += len;
+      } else if (s.painting === 'Prime and Paint') {
+        totalLenPaint += len;
+        totalLenPrimePaint += len;
+      } else if (s.painting === 'Spot Paint Welds') {
+        totalLenSpot += len;
+      }
+    });
+    paintLenTotal = totalLenPaint;
+    paintGallons  = Math.ceil(totalLenPaint / 100);
+    if (paintGallons > 0) paintCans += Math.ceil(paintGallons * 0.5);
+    primerGallons = Math.ceil(totalLenPrimePaint / 100);
+    if (primerGallons > 0) primerCans += Math.ceil(primerGallons * 0.5);
+    if (totalLenSpot > 0) {
+      const unitsSpot = Math.ceil(totalLenSpot / 100);
+      paintCans += Math.max(1, Math.ceil(unitsSpot * 0.5));
+    }
+    if (paintGallons > 0) addMat(materials, 'gallons of gloss black paint', paintGallons);
+    if (paintCans > 0)    addMat(materials, 'spray cans (gloss black)', paintCans);
+    if (primerGallons > 0) addMat(materials, 'gallons of red oxide primer', primerGallons);
+    if (primerCans > 0)    addMat(materials, 'spray cans (red oxide primer)', primerCans);
+
+    // Finials (descriptive labels) for MATERIALS list
+    state.sections.forEach(s=>{
+      const arr = Array.isArray(s.finials) ? s.finials : [];
+      arr.forEach(f=>{
+        const q = parseInt(f?.qty||0,10) || 0; if(!q) return;
+        addMat(materials, `finials - ${f.material} - ${f.style} (${f.picketSize})`, q);
+      });
+    });
+    // Caps (descriptive labels) for MATERIALS list
+    state.sections.forEach(s=>{
+      const arr = Array.isArray(s.caps) ? s.caps : [];
+      arr.forEach(c=>{
+        const q = parseInt(c?.qty||0,10) || 0; if(!q) return;
+        addMat(materials, `caps - ${c.material} - ${c.style} (${c.postSize})`, q);
+      });
+    });
+
+    // ===== Panel purchase vs build materials & direct costs =====
+    let costPanels = 0;
+    state.sections.forEach(s=>{
+      const lst = s._panelCalc || [];
+      lst.forEach(p=>{
+        if(p.eligible){
+          const price = PANEL_PRICE[pkey(p.feet, p.picketSize, p.style)];
+          const unit = (typeof price==='number') ? price : 0;
+          costPanels += p.qty * unit;
+          addMat(materials, `prefab fence panel ${p.height} ${/Finials/i.test(p.style)?'(finials)':''} (${p.picketSize})`, p.qty);
+          // No extra raw steel for prefab
+        } else {
+          // Build on site: rails (2 per panel) and pickets per width
+          const totalRailInches = 2 * p.widthIn * p.qty; // two horizontals
+          const railFeet = totalRailInches / 12;
+          const railSticks = Math.ceil(railFeet / 12);
+          addMat(materials, `12ft rail sticks (${p.railSize})`, railSticks);
+
+          const picketsPerPanel = picketCountForWidth(p.widthIn, p.picketSize);
+          // assume picket height = selected panel height in inches (fallback 54)
+          let ph = p.feet>0 ? p.feet*12 : 54;
+          const perStick = Math.max(1, Math.floor(144 / ph));
+          const totalPickets = picketsPerPanel * p.qty;
+          const picketSticks = Math.ceil(totalPickets / perStick);
+          addMat(materials, `12ft picket sticks (${p.picketSize})`, picketSticks);
+        }
+      });
+    });
+
+    // ===== Costing =====
+    let unpriced = false;
+    const matBreak = [];
+    let costMaterials = 0;
+
+    // PRICE_MISC line-items
+    Object.entries(materials).forEach(([label, qty])=>{
+      if(Object.prototype.hasOwnProperty.call(PRICE_MISC, label)){
+        const unit = PRICE_MISC[label] || 0;
+        const c = qty * unit;
+        costMaterials += c;
+        matBreak.push(`  - ${label}: ${qty} x $${money(unit)} = $${money(c)}`);
+      }
+    });
+
+    if(costPanels>0){
+      costMaterials += costPanels;
+      matBreak.push('  - Prefab fence panels: $'+money(costPanels));
+    }
+
+    if(paintGallons>0){
+      const c = paintGallons * PRICE.paintGallon;
+      costMaterials += c;
+      matBreak.push('  - Paint (gallons): '+paintGallons+' x $'+money(PRICE.paintGallon)+' = $'+money(c));
+    }
+    if(paintCans>0){
+      const c = paintCans * PRICE.paintCan;
+      costMaterials += c;
+      matBreak.push('  - Paint (spray cans): '+paintCans+' x $'+money(PRICE.paintCan)+' = $'+money(c));
+    }
+    if(primerGallons>0){
+      const c = primerGallons * PRICE.primerGallon;
+      costMaterials += c;
+      matBreak.push('  - Red oxide primer (gallons): '+primerGallons+' x $'+money(PRICE.primerGallon)+' = $'+money(c));
+    }
+    if(primerCans>0){
+      const c = primerCans * PRICE.primerCan;
+      costMaterials += c;
+      matBreak.push('  - Red oxide primer (spray cans): '+primerCans+' x $'+money(PRICE.primerCan)+' = $'+money(c));
+    }
+
+    const concreteBagsMat = (materials['Maximizer bags of concrete']||0);
+    if(concreteBagsMat>0){
+      const c = concreteBagsMat * PRICE.concrete;
+      costMaterials += c;
+      matBreak.push('  - Concrete (Maximizer): '+concreteBagsMat+' x $'+money(PRICE.concrete)+' = $'+money(c));
+    }
+
+    const posts2x2CountsCost = {};
+    Object.keys(materials).forEach(k=>{
+      const m = k.match(/^2x2x(\\d+)\\s+posts$/);
+      if(m){ posts2x2CountsCost[m[1]] = (posts2x2CountsCost[m[1]]||0) + materials[k]; }
+    });
+    Object.entries(posts2x2CountsCost).forEach(([lenStr, qty])=>{
+      const len = parseInt(lenStr,10) || 0;
+      let unit = PRICE.post2x2[len];
+      if(unit==null){
+        const perFt = PRICE_FT['2x2\"']||0;
+        unit = perFt * len;
+      }
+      const c = qty * (unit||0);
+      if((unit||0)===0) unpriced = true;
+      costMaterials += c;
+      matBreak.push('  - 2x2x'+len+' posts: '+qty+' x $'+money(unit)+' = $'+money(c));
+    });
+
+    const raw1p5Count = Object.keys(materials).reduce((acc,k)=>{
+      const m = k.match(/^1\.5x1\.5x12 raw steel/);
+      return acc + (m ? materials[k] : 0);
+    },0);
+    if(raw1p5Count>0){
+      const perFt1p5 = PRICE_FT['1 1/2\"'] || 0;
+      const unit1p5 = 12 * perFt1p5;
+      if(perFt1p5 === 0) unpriced = true;
+      const c = raw1p5Count * unit1p5;
+      costMaterials += c;
+      matBreak.push('  - 1.5x1.5 raw steel sticks: '+raw1p5Count+' x 12ft x $'+money(perFt1p5)+'/ft = $'+money(c));
+    }
+
+    const raw3x3Count = Object.keys(materials).reduce((acc,k)=>{
+      const m = k.match(/^3x3x12 raw steel/);
+      return acc + (m ? materials[k] : 0);
+    },0);
+    if(raw3x3Count>0){
+      const unit3x3 = 12 * (PRICE_FT['3x3\"']||0);
+      const c = raw3x3Count * unit3x3;
+      costMaterials += c;
+      matBreak.push('  - 3x3 raw steel sticks: '+raw3x3Count+' x 12ft x $'+money(PRICE_FT['3x3\"']||0)+'/ft = $'+money(c));
+    }
+
+    const raw4x4Count = Object.keys(materials).reduce((acc,k)=>{
+      const m = k.match(/^4x4x12 raw steel/);
+      return acc + (m ? materials[k] : 0);
+    },0);
+    if(raw4x4Count>0){
+      const unit4x4 = 139.73;
+      const c = raw4x4Count * unit4x4;
+      costMaterials += c;
+      matBreak.push('  - 4x4 raw steel sticks: '+raw4x4Count+' x $'+money(unit4x4)+' = $'+money(c));
+    }
+
+    const picketLine = /^12ft picket sticks \\((.+?)\\)/;
+    Object.entries(materials).forEach(([label, qty])=>{
+      const m = label.match(picketLine);
+      if(!m) return;
+      const s = normalizeSize(m[1]);
+      const perFt = PRICE_FT[s]||0;
+      const c = qty * 12 * perFt;
+      if(perFt===0) unpriced = true;
+      costMaterials += c;
+      matBreak.push('  - 12ft picket sticks '+s+': '+qty+' x 12ft x $'+money(perFt)+'/ft = $'+money(c));
+    });
+
+    const railLine = /^12ft rail sticks \\((.+?)\\)/;
+    Object.entries(materials).forEach(([label, qty])=>{
+      const m = label.match(railLine);
+      if(!m) return;
+      const s = normalizeSize(m[1]);
+      const perFt = PRICE_FT[s]||0;
+      const c = qty * 12 * perFt;
+      if(perFt===0) unpriced = true;
+      costMaterials += c;
+      matBreak.push('  - 12ft rail sticks '+s+': '+qty+' x 12ft x $'+money(perFt)+'/ft = $'+money(c));
+    });
+
+    // NEW: Finials cost (flat $1.25 each via total of descriptive labels)
+    const finialsPricedUnit = PRICE_MISC['replacement finial'] || 0;
+    const finialsTotalForCost = Object.keys(materials).reduce((acc,k)=>{
+      if(k.startsWith('finials - ')) return acc + (materials[k]||0);
+      return acc;
+    }, 0);
+    if(finialsTotalForCost>0){
+      const c = finialsTotalForCost * finialsPricedUnit;
+      costMaterials += c;
+      matBreak.push('  - Replacement finials: '+finialsTotalForCost+' x $'+money(finialsPricedUnit)+' = $'+money(c));
+    }
+
+    // NEW: Caps cost by size/style
+    const capLabelRe = /^caps - (.+?) - (.+?) \((.+?)\)$/; // material, style, postSize
+    Object.entries(materials).forEach(([label, qty])=>{
+      const m = label.match(capLabelRe);
+      if(!m) return;
+      const style = m[2];
+      const postSize = m[3];
+      let unit = 0;
+      // Normalize style to handle typos like "bal" -> "ball"
+      const styleNorm = String(style||'').toLowerCase();
+      const isBall = /ball/.test(styleNorm);
+      if(postSize === '1 1/2" x 1 1/2"' || postSize === '2x2'){
+        unit = isBall ? 4 : 1;
+      } else if(postSize === '3x3'){
+        unit = isBall ? 7 : 2;
+      } else if(postSize === '4x4'){
+        unit = isBall ? 15 : 8;
+      } else {
+        unit = 0;
+        unpriced = true;
+      }
+      const c = qty * unit;
+      costMaterials += c;
+      matBreak.push(`  - ${label}: ${qty} x $${money(unit)} = $${money(c)}`);
+    });
+
+    // Labor + totals
+    let primePaintReturnHours = 0;
+    const paintingHours = state.sections.reduce((acc, s)=>{
+      if (s.painting !== 'Paint Section' && s.painting !== 'Prime and Paint') return acc;
+      const len = parseInt(s.length||0,10) || 0;
+      if(!len) return acc;
+      const railsPenalty = railPacePenalty(s.railsCount || (s.rails||[]).length || 0);
+      const denom = styleFactor(s.style) - puppyAdj(s.puppy) - railsPenalty;
+      const baseHours = (len/8) / Math.max(0.5, denom);
+      const hardscapeHours = (parseInt(s.hardscape||0,10)||0) / 20;
+      const trimHours = (parseInt(s.trim||0,10)||0) / 50;
+      const totalSectionHours = baseHours + hardscapeHours + trimHours;
+      if (s.painting === 'Prime and Paint'){
+        primePaintReturnHours += totalSectionHours;
+      }
+      return acc + totalSectionHours;
+    }, 0);
+    manHours += paintingHours + primePaintReturnHours;
+    helperHours += paintingHours + primePaintReturnHours;
+
+    function describeCrewSplit(welders, helpers){
+      const parts = [];
+      if(welders > 0){ parts.push(`${welders} ${welders === 1 ? 'welder' : 'welders'}`); }
+      if(helpers > 0){ parts.push(`${helpers} ${helpers === 1 ? 'helper' : 'helpers'}`); }
+      return parts.join(' + ');
+    }
+
+    const primePaintScheduled = totalLenPrimePaint > 0;
+    const day2Hours = primePaintReturnHours;
+    const day1Hours = Math.max(0, manHours - day2Hours);
+
+    const day1Crew = day1Hours > 0 ? Math.max(1, Math.ceil(day1Hours / 8)) : 0;
+    const day2Crew = primePaintScheduled && day2Hours > 0 ? Math.max(1, Math.ceil(day2Hours / 8)) : 0;
+
+    const helperHoursDay2 = day2Hours;
+    const helperHoursDay1 = Math.max(0, helperHours - helperHoursDay2);
+
+    let welderCountDay1 = 0;
+    if(day1Crew > 0 && welderHours > 0){
+      const trackedDay1Hours = welderHours + helperHoursDay1;
+      const share = trackedDay1Hours > 0 ? welderHours / trackedDay1Hours : 1;
+      welderCountDay1 = Math.max(1, Math.round(day1Crew * share));
+      welderCountDay1 = Math.min(welderCountDay1, day1Crew);
+    }
+    let helperCountDay1 = day1Crew > 0 ? Math.max(0, day1Crew - welderCountDay1) : 0;
+    if(helperHoursDay1 > 0 && helperCountDay1 === 0 && day1Crew > 1){
+      helperCountDay1 = 1;
+      welderCountDay1 = Math.max(0, day1Crew - helperCountDay1);
+    }
+
+    const day1Split = day1Crew > 0 ? describeCrewSplit(welderCountDay1, helperCountDay1) : '';
+    const day2Split = day2Crew > 0 ? describeCrewSplit(0, day2Crew) : '';
+    const crewLabelWithMix = (count, split) => {
+      if(count <= 0) return '';
+      const word = count === 1 ? 'guy' : 'guys';
+      return split ? `${count} ${word} (${split})` : `${count} ${word}`;
+    };
+    const day1CrewLabel = crewLabelWithMix(day1Crew, day1Split);
+    const day2CrewLabel = crewLabelWithMix(day2Crew, day2Split);
+
+    let durationStr = 'TBD';
+    if(day1Crew > 0 && day2Crew > 0){
+      durationStr = `2 days of work: ${day1CrewLabel} on day 1 (prime/repairs), ${day2CrewLabel} on day 2 (return for finish coat)`;
+    } else if(day1Crew > 0){
+      durationStr = `1 day of work: ${day1CrewLabel}`;
+    } else if(day2Crew > 0){
+      durationStr = `1 day of work: ${day2CrewLabel}`;
+    }
+
+    lines.push('');
+    lines.push('CREW');
+    if(day1Crew > 0 && day2Crew > 0){
+      lines.push(`- Day 1 (prime/repairs): ${day1CrewLabel}`);
+      lines.push(`- Day 2 (return for finish coat): ${day2CrewLabel}`);
+    } else if(day1Crew > 0){
+      lines.push(`- 1 day of work: ${day1CrewLabel}`);
+    } else if(day2Crew > 0){
+      lines.push(`- 1 day of work: ${day2CrewLabel}`);
+    } else {
+      lines.push('- Crew: TBD');
+    }
+
+    const sub = [];
+    sub.push('JOB DURATION');
+    sub.push('- '+durationStr);
+    sub.push('');
+    sub.push('MATERIALS');
+    Object.keys(materials).sort((a,b)=>a.localeCompare(b)).forEach(label=>{
+      sub.push('- '+materials[label]+'x '+label);
+    });
+
+    sub.push('');
+    sub.push('GO BAG (bring in addition to above)');
+    const postSizesSet = new Set(state.sections.map(s => (s.postSize||'').trim()).filter(Boolean));
+    const maxHft = Math.max(0, ...state.sections.map(s => feetFromStr(s.height)));
+    const goPostLen = Math.max(8, (maxHft>0 ? maxHft + 3 : 8));
+    if(postSizesSet.size === 0){ postSizesSet.add('2x2'); }
+    postSizesSet.forEach(ps => {
+      if(ps === '2x2'){
+        sub.push(`- 3x 2x2x${goPostLen} posts`);
+      } else if(ps === '3x3'){
+        sub.push(`- 3x 3x3x12 raw steel (for posts)`);
+      } else if(ps === '1 1/2" x 1 1/2"'){
+        sub.push(`- 3x 1.5x1.5x12 raw steel (for posts)`);
+      } else if(ps === '4x4'){
+        sub.push(`- 3x 4x4x12 raw steel (for posts)`);
+      } else {
+        sub.push(`- 3x ${ps} posts`);
+      }
+    });
+    sub.push(`- 3x Maximizer bags of concrete`);
+    sub.push('- 1x gallon of gloss black paint');
+    sub.push('- 1x spray can (gloss black)');
+    if (totalLenPrimePaint > 0) {
+      sub.push('- 1x gallon of red oxide primer');
+      sub.push('- 1x spray can (red oxide primer)');
+    }
+
+      const railSizesSet = new Set();
+    state.sections.forEach(s => {
+      const rCount = s.railsCount || (s.rails||[]).length || 0;
+      for(let i=0;i<rCount;i++){
+        const r = (s.rails||[])[i] || {};
+        if(r && r.size) railSizesSet.add(r.size);
+        if(r && r.stacked && r.size2) railSizesSet.add(r.size2);
+      }
+    });
+    const picketSizesSet = new Set(state.sections.map(s => s.picketSize).filter(Boolean));
+    railSizesSet.forEach(size => sub.push(`- 3x 12ft rail sticks (${size})`));
+    picketSizesSet.forEach(size => sub.push(`- 3x 12ft picket sticks (${size})`));
+
+    sub.push('');
+    sub.push('SCOPE (Totals)');
+    if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
+    if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
+    if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
+    if (totals.posts2x2 > 0)        sub.push('- 2x2 posts to replace: '+totals.posts2x2);
+    if (totals.posts3x3 > 0)        sub.push('- 3x3 posts to replace: '+totals.posts3x3);
+    if (totals.posts1p5 > 0)        sub.push('- 1 1/2" x 1 1/2" posts to replace: '+totals.posts1p5);
+    if (totals.posts4x4 > 0)        sub.push('- 4x4 posts to replace: '+totals.posts4x4);
+    if (totals.postsRealign2x2 > 0) sub.push('- 2x2 posts to realign: '+totals.postsRealign2x2);
+    if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
+    if (totals.walkGates > 0)       sub.push('- Walk gates: '+totals.walkGates);
+    if (totals.walkRealign > 0)     sub.push('- Walk gates to realign: '+totals.walkRealign);
+    if (totals.walkHardware > 0)    sub.push('- Walk gate hardware replacements: '+totals.walkHardware);
+    if (totals.walkRebuild > 0)     sub.push('- Walk gates to rebuild: '+totals.walkRebuild);
+    if (totals.walkGateAdds > 0)    sub.push('- Walk gates to add: '+totals.walkGateAdds);
+    if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
+    if (totals.caps > 0)            sub.push('- Post caps to replace: '+totals.caps);
+    if (totals.digOut > 0)          sub.push('- Dig out: '+totals.digOut+' lf');
+    if (totals.panelsPrefab > 0)    sub.push('- Prefab panels to install: '+totals.panelsPrefab);
+    if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
+    if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then hand paint '+paintLenTotal+' ft of fence');
+    if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
+
+    if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
+
+    const crewCost = (day1Crew > 0 ? laborCost(day1Crew) : 0) + (day2Crew > 0 ? laborCost(day2Crew) : 0);
+    const directCosts = crewCost + costMaterials;
+    const revenueRes = computeChargeRevenue(directCosts);
+    const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
+    const commissionFormula$ = isFinite(revenue)
+      ? (RATES.commission * (((1 - RATES.overhead) * revenue) - directCosts))
+      : NaN;
+
+    const cost = [];
+    cost.push('ESTIMATED COST');
+    const crewScheduleDetail = [];
+    if(day1Crew > 0){
+      const suffix = primePaintScheduled ? ' (prime/repairs)' : '';
+      const base = day1Split ? `${day1Crew} ${day1Crew === 1 ? 'guy' : 'guys'} — ${day1Split}` : day1CrewLabel;
+      crewScheduleDetail.push(`Day 1: ${base}${suffix}`);
+    }
+    if(day2Crew > 0){
+      const suffix = primePaintScheduled ? ' (finish coat)' : '';
+      const base = day2Split ? `${day2Crew} ${day2Crew === 1 ? 'guy' : 'guys'} — ${day2Split}` : day2CrewLabel;
+      crewScheduleDetail.push(`Day 2: ${base}${suffix}`);
+    }
+    const laborDetailWithDays = crewScheduleDetail.length ? crewScheduleDetail.join('; ') : 'TBD';
+    cost.push('- Labor: $'+money(crewCost)+' ('+laborDetailWithDays+')');
+    cost.push('- Materials: $'+money(costMaterials));
+    matBreak.forEach(line=> cost.push(line));
+    cost.push('- Total: $'+money(crewCost + costMaterials));
+    if (unpriced) cost.push('  - Note: Some sizes have no price mapping and were counted as $0.');
+
+    cost.push('');
+    cost.push('WHAT TO CHARGE');
+    if (!isFinite(revenue)){
+      cost.push('⚠️ Pricing inputs produce an invalid result. Check RATES (commission, net target, overhead, MCOR, CAC).');
+    } else {
+      cost.push('- Price to charge: $'+money(revenue));
+      cost.push('- Commission (per formula): $'+money(commissionFormula$));
+    }
+
+    const idxTotals = lines.indexOf('TOTALS');
+    const outLines = (idxTotals >= 0)
+      ? [...lines.slice(idxTotals), '', ...lines.slice(0, idxTotals)]
+      : lines;
+    const fullNotes = [...outLines, '', ...cost];
+
+    notesEl.value = fullNotes.join('\n');
+    outputEl.style.display = 'grid';
+    if (window.parentIFrame && typeof window.parentIFrame.size === 'function') {
+      try { window.parentIFrame.size(); } catch(e){}
+    }
+    scrollTo(outputEl);
+    persist();
+  }
+
+  function renderServiceLineNotes(items){
+    lastServiceLines = Array.isArray(items) ? items.map(item=>({ ...item })) : [];
+
+    if(!serviceListEl || !serviceCardEl){
+      return;
+    }
+
+    serviceListEl.innerHTML = '';
+
+    if(!lastServiceLines.length){
+      serviceCardEl.style.display = 'none';
+      if(serviceCopyAllBtn){
+        serviceCopyAllBtn.disabled = true;
+        serviceCopyAllBtn.textContent = 'Copy All';
+      }
+      return;
+    }
+
+    serviceCardEl.style.display = 'block';
+    if(serviceCopyAllBtn){
+      serviceCopyAllBtn.disabled = false;
+      serviceCopyAllBtn.textContent = 'Copy All';
+    }
+
+    lastServiceLines.forEach((item, index)=>{
+      const lineEl = document.createElement('div');
+      lineEl.className = 'sp-service-line';
+      lineEl.dataset.index = String(index);
+
+      const titleField = document.createElement('div');
+      titleField.className = 'sp-field';
+      const titleLabel = document.createElement('label');
+      titleLabel.className = 'sp-label';
+      titleLabel.textContent = 'Line Item Title';
+      const titleRow = document.createElement('div');
+      titleRow.className = 'sp-copy-row';
+      const titleInput = document.createElement('input');
+      titleInput.className = 'sp-input';
+      titleInput.readOnly = true;
+      titleInput.value = item.name || '';
+      const titleBtn = document.createElement('button');
+      titleBtn.className = 'sp-btn ghost sp-copy-service';
+      titleBtn.type = 'button';
+      titleBtn.textContent = 'Copy';
+      titleBtn.dataset.text = item.name || '';
+      titleBtn.dataset.kind = 'title';
+      titleRow.appendChild(titleInput);
+      titleRow.appendChild(titleBtn);
+      titleField.appendChild(titleLabel);
+      titleField.appendChild(titleRow);
+
+      const descField = document.createElement('div');
+      descField.className = 'sp-field';
+      const descLabel = document.createElement('label');
+      descLabel.className = 'sp-label';
+      descLabel.textContent = 'Description';
+      const descRow = document.createElement('div');
+      descRow.className = 'sp-copy-row';
+      const descTextarea = document.createElement('textarea');
+      descTextarea.className = 'sp-textarea';
+      descTextarea.readOnly = true;
+      descTextarea.value = item.desc || '';
+      const descBtn = document.createElement('button');
+      descBtn.className = 'sp-btn ghost sp-copy-service';
+      descBtn.type = 'button';
+      descBtn.textContent = 'Copy';
+      descBtn.dataset.text = item.desc || '';
+      descBtn.dataset.kind = 'description';
+      descRow.appendChild(descTextarea);
+      descRow.appendChild(descBtn);
+      descField.appendChild(descLabel);
+      descField.appendChild(descRow);
+
+      lineEl.appendChild(titleField);
+      lineEl.appendChild(descField);
+
+      serviceListEl.appendChild(lineEl);
+    });
+  }
+
+  function copyTextToClipboard(text){
+    const value = (typeof text === 'string') ? text : String(text || '');
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function'){
+      return navigator.clipboard.writeText(value);
+    }
+
+    return new Promise((resolve, reject)=>{
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if(ok) resolve();
+        else reject(new Error('Copy command was rejected.'));
+      } catch(err){
+        document.body.removeChild(textarea);
+        reject(err);
+      }
+    });
+  }
+
+  function flashButton(btn, message='Copied!', options){
+    if(!btn) return;
+    const opts = Object.assign({ revertMs: 1200, disable: true }, options || {});
+    const originalText = btn.textContent;
+    const originalDisabled = btn.disabled;
+    btn.textContent = message;
+    if(opts.disable){
+      btn.disabled = true;
+    }
+    window.setTimeout(()=>{
+      btn.textContent = originalText;
+      if(opts.disable){
+        btn.disabled = originalDisabled;
+      }
+    }, opts.revertMs);
+  }
+
+  function copyAllServiceLines(){
+    if(!lastServiceLines.length || !serviceCopyAllBtn){
+      return;
+    }
+    const text = lastServiceLines.map(item=>`${item.name}: ${item.desc}`).join('\n');
+    copyTextToClipboard(text)
+      .then(()=>flashButton(serviceCopyAllBtn))
+      .catch(()=>flashButton(serviceCopyAllBtn, 'Copy failed', { revertMs: 1600, disable: false }));
+  }
+
+  function handleServiceListClick(event){
+    const btn = event.target.closest('.sp-copy-service');
+    if(!btn){
+      return;
+    }
+    const text = btn.dataset && typeof btn.dataset.text !== 'undefined' ? btn.dataset.text : '';
+    copyTextToClipboard(text)
+      .then(()=>flashButton(btn))
+      .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
+  }
+
+  function numOrDash(v){ const n = parseInt(v,10); return isNaN(n)?'—':n; }
+  function scrollTo(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
+
+  function copyNotes(){
+    const btn = document.getElementById('sp-copy');
+    if(!notesEl || !btn) return;
+    notesEl.select();
+    copyTextToClipboard(notesEl.value)
+      .then(()=>flashButton(btn))
+      .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
+  }
+
+  function copySubNotes(){
+    const btn = document.getElementById('sp-copy-sub');
+    if(!notesSubEl || !btn) return;
+    notesSubEl.select();
+    copyTextToClipboard(notesSubEl.value)
+      .then(()=>flashButton(btn))
+      .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
+  }
+
+  const KEY = 'sp_scope_v1';
+  function persist(){}
+
+  function restore(){
+    try { localStorage.removeItem(KEY); } catch(e){}
+    return false;
+  }
+  function resetAll(){
+    if(!confirm('Clear all sections?')) return;
+    state.sections = [];
+    localStorage.removeItem(KEY);
+    render();
+    outputEl.style.display='none';
+    renderServiceLineNotes([]);
+  }
+
+  document.getElementById('sp-add').addEventListener('click', ()=>{ addSection(); persist(); });
+  document.getElementById('sp-complete').addEventListener('click', generateNotes);
+  document.getElementById('sp-copy').addEventListener('click', copyNotes);
+  document.getElementById('sp-copy-sub').addEventListener('click', copySubNotes);
+  if(serviceCopyAllBtn){ serviceCopyAllBtn.addEventListener('click', copyAllServiceLines); }
+  if(serviceListEl){ serviceListEl.addEventListener('click', handleServiceListClick); }
+  document.getElementById('sp-reset').addEventListener('click', resetAll);
+
+  const backTopBtn = document.getElementById('sp-top-btn');
+  if (backTopBtn){
+    backTopBtn.addEventListener('click', ()=> window.scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+
+  if(!restore()){ addSection(); }
+})();
+});
+</script>
+</body>
+</html>
