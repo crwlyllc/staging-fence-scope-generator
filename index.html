@@ -2881,7 +2881,7 @@ document.addEventListener('DOMContentLoaded', function(){
         payload.serviceLines = serviceLinesPayload;
       }
 
-      const response = await fetch('https://n8n.strongclicks.io/webhook-test/add-notes-to-hcp-estimate', {
+      const response = await fetch('https://n8n.strongclicks.io/webhook/add-notes-to-hcp-estimate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
