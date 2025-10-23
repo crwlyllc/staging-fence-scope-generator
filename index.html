@@ -2847,6 +2847,15 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const notes = (notesEl && notesEl.value || '').trim();
+    const notesSub = (notesSubEl && notesSubEl.value || '').trim();
+    const serviceLinesPayload = Array.isArray(lastServiceLines)
+      ? lastServiceLines
+          .map(item=>({
+            title: (item && item.name ? String(item.name).trim() : ''),
+            description: (item && item.desc ? String(item.desc).trim() : ''),
+          }))
+          .filter(item=>item.title || item.description)
+      : [];
     if(!notes){
       alert('There are no notes to send yet. Generate notes first.');
       return;
@@ -2862,10 +2871,20 @@ document.addEventListener('DOMContentLoaded', function(){
     pushHcpBtn.textContent = 'Pushing...';
 
     try{
+      const payload = {
+        estimateNumber,
+        notes,
+        notesSub,
+      };
+
+      if(serviceLinesPayload.length){
+        payload.serviceLines = serviceLinesPayload;
+      }
+
       const response = await fetch('https://n8n.strongclicks.io/webhook-test/add-notes-to-hcp-estimate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estimateNumber, notes })
+        body: JSON.stringify(payload)
       });
 
       if(!response.ok){
