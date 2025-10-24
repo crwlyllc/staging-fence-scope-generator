@@ -2047,7 +2047,29 @@ document.addEventListener('DOMContentLoaded', function(){
       postsReplace: zeroPostCounts()
     };
     const materials = {};
+    const picketStickTotals = {};
+    const railStickTotals = {};
     const steelStickTotals = { raw1p5:0, raw3x3:0, raw4x4:0 };
+
+    const addPicketSticks = (size, qty) => {
+      if(!qty || qty <= 0) return;
+      const normalized = normalizeSize(size);
+      const labelSize = normalized || normalizeLabelText(size);
+      addMat(materials, `12ft picket sticks (${labelSize})`, qty);
+      if(normalized){
+        picketStickTotals[normalized] = (picketStickTotals[normalized]||0) + qty;
+      }
+    };
+
+    const addRailSticks = (size, qty) => {
+      if(!qty || qty <= 0) return;
+      const normalized = normalizeSize(size);
+      const labelSize = normalized || normalizeLabelText(size);
+      addMat(materials, `12ft rail sticks (${labelSize})`, qty);
+      if(normalized){
+        railStickTotals[normalized] = (railStickTotals[normalized]||0) + qty;
+      }
+    };
     let manHours = 0;
     let welderHours = 0;
     let helperHours = 0;
@@ -2716,10 +2738,10 @@ document.addEventListener('DOMContentLoaded', function(){
           if((s.walkRebuildPicket||'').trim()){ gateDescParts.push(`pickets ${s.walkRebuildPicket.trim()}`); }
           const gateDesc = gateDescParts.length ? ` (${gateDescParts.join(', ')})` : '';
           addMat(materials, `prefab gate panel${gateDesc}`, rb);
-          addMat(materials, `12ft rail sticks (${frame})`, rb * 2);
+          addRailSticks(frame, rb * 2);
         } else {
-          addMat(materials, `12ft rail sticks (${frame})`, rb * 2);
-          addMat(materials, `12ft picket sticks (${pick})`, rb * 2);
+          addRailSticks(frame, rb * 2);
+          addPicketSticks(pick, rb * 2);
         }
       }
       const addG = parseInt(s.walkGatesAdd||0,10) || 0;
@@ -2732,7 +2754,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const frame = s.walkAddFrameSize || '';
         const railsToCount = sectionRails.length ? sectionRails : (frame ? [frame] : []);
         railsToCount.forEach(size=>{
-          addMat(materials, `12ft rail sticks (${size})`, addG * perGateRail);
+          addRailSticks(size, addG * perGateRail);
         });
       }
     });
@@ -2764,7 +2786,7 @@ document.addEventListener('DOMContentLoaded', function(){
       picketBySizeCalc[size] = (picketBySizeCalc[size]||0) + sticks;
     });
     Object.entries(picketBySizeCalc).forEach(([size, qty])=>{
-      addMat(materials, `12ft picket sticks (${size})`, qty);
+      addPicketSticks(size, qty);
     });
 
     // Rails: patches & replacements → sticks
@@ -2803,7 +2825,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     Object.keys(railStickBySizeMat).forEach(size=>{
-      addMat(materials, `12ft rail sticks (${size})`, railStickBySizeMat[size]);
+      addRailSticks(size, railStickBySizeMat[size]);
     });
 
     // Paint estimates
@@ -2878,7 +2900,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const totalRailInches = 2 * p.widthIn * p.qty; // two horizontals
           const railFeet = totalRailInches / 12;
           const railSticks = Math.ceil(railFeet / 12);
-          addMat(materials, `12ft rail sticks (${p.railSize})`, railSticks);
+          addRailSticks(p.railSize, railSticks);
 
           const picketsPerPanel = picketCountForWidth(p.widthIn, p.picketSize);
           // assume picket height = selected panel height in inches (fallback 54)
@@ -2886,7 +2908,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const perStick = Math.max(1, Math.floor(144 / ph));
           const totalPickets = picketsPerPanel * p.qty;
           const picketSticks = Math.ceil(totalPickets / perStick);
-          addMat(materials, `12ft picket sticks (${p.picketSize})`, picketSticks);
+          addPicketSticks(p.picketSize, picketSticks);
         }
       });
     });
@@ -2983,28 +3005,22 @@ document.addEventListener('DOMContentLoaded', function(){
       matBreak.push('  - 4x4 raw steel sticks: '+raw4x4Count+' x $'+money(unit4x4)+' = $'+money(c));
     }
 
-    const picketLine = /^12ft picket sticks \\((.+?)\\)/;
-    Object.entries(materials).forEach(([label, qty])=>{
-      const m = label.match(picketLine);
-      if(!m) return;
-      const s = normalizeSize(m[1]);
-      const perFt = PRICE_FT[s]||0;
+    Object.keys(picketStickTotals).sort().forEach(size=>{
+      const qty = picketStickTotals[size];
+      const perFt = PRICE_FT[size]||0;
       const c = qty * 12 * perFt;
       if(perFt===0) unpriced = true;
       costMaterials += c;
-      matBreak.push('  - 12ft picket sticks '+s+': '+qty+' x 12ft x $'+money(perFt)+'/ft = $'+money(c));
+      matBreak.push('  - 12ft picket sticks '+size+': '+qty+' x 12ft x $'+money(perFt)+'/ft = $'+money(c));
     });
 
-    const railLine = /^12ft rail sticks \\((.+?)\\)/;
-    Object.entries(materials).forEach(([label, qty])=>{
-      const m = label.match(railLine);
-      if(!m) return;
-      const s = normalizeSize(m[1]);
-      const perFt = PRICE_FT[s]||0;
+    Object.keys(railStickTotals).sort().forEach(size=>{
+      const qty = railStickTotals[size];
+      const perFt = PRICE_FT[size]||0;
       const c = qty * 12 * perFt;
       if(perFt===0) unpriced = true;
       costMaterials += c;
-      matBreak.push('  - 12ft rail sticks '+s+': '+qty+' x 12ft x $'+money(perFt)+'/ft = $'+money(c));
+      matBreak.push('  - 12ft rail sticks '+size+': '+qty+' x 12ft x $'+money(perFt)+'/ft = $'+money(c));
     });
 
     // NEW: Finials cost (flat $1.25 each via total of descriptive labels)
