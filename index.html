@@ -1682,8 +1682,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function normalizeSize(txt){
     return String(txt||'')
-      .replace(/\\u201D|”/g,'\"')
-      .replace(/\\u201C|“/g,'\"')
+      .replace(/\\u201D|”/g,'"')
+      .replace(/\\u201C|“/g,'"')
       .replace(/\\u00BC|¼/g,'1/4')
       .replace(/\\u00BD|½/g,'1/2')
       .replace(/\\u00BE|¾/g,'3/4')
