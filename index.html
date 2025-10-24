@@ -2465,7 +2465,14 @@ document.addEventListener('DOMContentLoaded', function(){
       addServiceLine('Rail Patch Repairs', `Cut out rusted sections and weld in ${describeCount(totals.wiPatches, 'steel patch', 'steel patches')} on horizontal rails.`);
     }
     if (totals.wiRails > 0){
-      addServiceLine('Full Rail Replacement', `Fabricate and install ${describeCount(totals.wiRails, 'new rail', 'new rails')} to match the original profile.`);
+      const railCount = parseInt(totals.wiRails, 10) || 0;
+      const railLabel = railCount === 1 ? 'old rail' : 'old rails';
+      const railVerb = railCount === 1 ? 'is' : 'are';
+      const railNeedVerb = railCount === 1 ? 'needs' : 'need';
+      addServiceLine(
+        'Full Rail Replacement',
+        `Cut out ${railCount}x ${railLabel} that ${railVerb} rusted through and ${railNeedVerb} to be replaced. Weld in new rail steel.`
+      );
     }
     const replaceServiceCounts = totals.postsReplace || zeroPostCounts();
     if (replaceServiceCounts.posts2x2 > 0 || replaceServiceCounts.posts3x3 > 0 || replaceServiceCounts.posts1p5 > 0 || replaceServiceCounts.posts4x4 > 0){
