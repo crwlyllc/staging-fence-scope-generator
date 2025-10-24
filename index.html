@@ -2689,7 +2689,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const posts2x2CountsCost = {};
     Object.keys(materials).forEach(k=>{
-      const m = k.match(/^2x2x(\\d+)\\s+posts$/);
+      const m = k.match(/^2x2x(\d+)\s+posts$/);
       if(m){ posts2x2CountsCost[m[1]] = (posts2x2CountsCost[m[1]]||0) + materials[k]; }
     });
     Object.entries(posts2x2CountsCost).forEach(([lenStr, qty])=>{
@@ -3028,7 +3028,6 @@ document.addEventListener('DOMContentLoaded', function(){
       ? [...lines.slice(idxTotals), '', ...lines.slice(0, idxTotals)]
       : lines;
     const fullNotes = [...outLines, '', ...cost];
-
     notesEl.value = fullNotes.join('\n');
     outputEl.style.display = 'grid';
     if (window.parentIFrame && typeof window.parentIFrame.size === 'function') {
