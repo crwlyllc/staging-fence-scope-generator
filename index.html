@@ -1891,7 +1891,6 @@ document.addEventListener('DOMContentLoaded', function(){
       const styles = new Set();
       const rails = new Set();
       const railSizes = new Set();
-      const pickets = new Set();
       const spacing = new Set();
       const postSizes = new Set();
       const styleGroups = new Map();
@@ -1901,37 +1900,57 @@ document.addEventListener('DOMContentLoaded', function(){
         totalLength += len;
         if(section.height){ heights.add(String(section.height).trim()); }
         if(section.style){ styles.add(String(section.style).trim()); }
-        if(section.picketSize){ pickets.add(normalizeSize(section.picketSize)); }
         const groupKey = (()=>{
           const height = section.height ? String(section.height).trim() : '';
           const style = section.style ? String(section.style).trim() : '';
           return JSON.stringify({ height, style });
         })();
+        if(!styleGroups.has(groupKey)){
+          styleGroups.set(groupKey, {
+            length: 0,
+            height: section.height ? String(section.height).trim() : '',
+            style: section.style ? String(section.style).trim() : '',
+            postSizes: new Set(),
+            picketSizes: new Set(),
+            railSizes: new Set()
+          });
+        }
+        const group = styleGroups.get(groupKey);
         if(len > 0){
-          if(!styleGroups.has(groupKey)){
-            styleGroups.set(groupKey, {
-              length: 0,
-              height: section.height ? String(section.height).trim() : '',
-              style: section.style ? String(section.style).trim() : ''
-            });
-          }
-          styleGroups.get(groupKey).length += len;
+          group.length += len;
         }
         const rCount = parseInt(section.railsCount,10) || (Array.isArray(section.rails) ? section.rails.length : 0);
         if(rCount > 0){ rails.add(`${rCount} rail${rCount === 1 ? '' : 's'}`); }
         if(Array.isArray(section.rails) && section.rails.length){
           section.rails.forEach(r=>{
-            if(r && r.size){ railSizes.add(normalizeSize(r.size)); }
-            if(r && r.stacked && r.size2){ railSizes.add(normalizeSize(r.size2)); }
+            if(r && r.size){
+              const normalized = normalizeSize(r.size);
+              railSizes.add(normalized);
+              group.railSizes.add(normalized);
+            }
+            if(r && r.stacked && r.size2){
+              const normalized = normalizeSize(r.size2);
+              railSizes.add(normalized);
+              group.railSizes.add(normalized);
+            }
           });
         } else if(section.railSize){
-          railSizes.add(normalizeSize(section.railSize));
+          const normalized = normalizeSize(section.railSize);
+          railSizes.add(normalized);
+          group.railSizes.add(normalized);
           if(section.railStacked && section.railSize2){
-            railSizes.add(normalizeSize(section.railSize2));
+            const normalizedStack = normalizeSize(section.railSize2);
+            railSizes.add(normalizedStack);
+            group.railSizes.add(normalizedStack);
           }
         }
         if(section.postSize){
-          postSizes.add(normalizeSize(section.postSize));
+          const normalized = normalizeSize(section.postSize);
+          postSizes.add(normalized);
+          group.postSizes.add(normalized);
+        }
+        if(section.picketSize){
+          group.picketSizes.add(normalizeSize(section.picketSize));
         }
         const spacingCandidate = (section._installCalc && section._installCalc.spacingFt) || parseFloat(section.postSpacing||'');
         const spacingStr = formatFtValue(spacingCandidate);
@@ -1949,10 +1968,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
       const withParts = [];
       if(rails.size){ withParts.push(joinParts(Array.from(rails))); }
-      if(pickets.size){
-        const picketLabels = Array.from(pickets).map(p=> `${p} pickets`);
-        withParts.push(joinParts(picketLabels));
-      }
       const withText = withParts.length ? ` with ${joinParts(withParts)}` : '';
       const actionPrefix = includeRemoval ? 'Remove existing fence and install' : 'Install';
       const breakdownParts = Array.from(styleGroups.values())
@@ -1961,7 +1976,12 @@ document.addEventListener('DOMContentLoaded', function(){
           const heightLabel = item.height ? `${item.height} tall` : '';
           const styleLabel = item.style || 'wrought iron';
           const phraseParts = [heightLabel, `${styleLabel}${/fence/i.test(styleLabel)?'':' fence'}`].filter(Boolean);
-          return `${item.length}ft of ${phraseParts.join(' ')}`;
+          const postDetail = item.postSizes.size ? `posts: ${joinParts(Array.from(item.postSizes))}` : '';
+          const picketDetail = item.picketSizes.size ? `pickets: ${joinParts(Array.from(item.picketSizes))}` : '';
+          const railDetail = item.railSizes.size ? `rails: ${joinParts(Array.from(item.railSizes).map(v=> `${v} stock`))}` : '';
+          const detailParts = [postDetail, picketDetail, railDetail].filter(Boolean);
+          const detailText = detailParts.length ? ` (${detailParts.join('; ')})` : '';
+          return `${item.length}ft of ${phraseParts.join(' ')}${detailText}`;
         });
       let firstSentence = '';
       if(breakdownParts.length){
@@ -1980,10 +2000,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const postSizeLabel = postSizeValues.length ? ` (${joinParts(postSizeValues)})` : '';
       if(spacingValues.length){
         if(spacingValues.length === 1){
-          postsSentence = `Posts${postSizeLabel} will be set ${spacingValues[0]}ft apart and will be set in concrete 36\" deep.`;
+          postsSentence = `Posts${postSizeLabel} will be spaced ${spacingValues[0]}ft apart and set in concrete 36\" deep.`;
         } else {
           const spacingLabels = spacingValues.map(v=> `${v}ft`);
-          postsSentence = `Posts${postSizeLabel} will be set between ${joinParts(spacingLabels)} apart and will be set in concrete 36\" deep.`;
+          postsSentence = `Posts${postSizeLabel} will be spaced between ${joinParts(spacingLabels)} apart and set in concrete 36\" deep.`;
         }
       } else {
         postsSentence = `Posts${postSizeLabel} will be set in concrete 36\" deep.`;
