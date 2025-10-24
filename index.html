@@ -1894,6 +1894,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const pickets = new Set();
       const spacing = new Set();
       const postSizes = new Set();
+      const styleGroups = new Map();
 
       sections.forEach(section=>{
         const len = parseInt(section.length,10) || 0;
@@ -1901,6 +1902,21 @@ document.addEventListener('DOMContentLoaded', function(){
         if(section.height){ heights.add(String(section.height).trim()); }
         if(section.style){ styles.add(String(section.style).trim()); }
         if(section.picketSize){ pickets.add(normalizeSize(section.picketSize)); }
+        const groupKey = (()=>{
+          const height = section.height ? String(section.height).trim() : '';
+          const style = section.style ? String(section.style).trim() : '';
+          return JSON.stringify({ height, style });
+        })();
+        if(len > 0){
+          if(!styleGroups.has(groupKey)){
+            styleGroups.set(groupKey, {
+              length: 0,
+              height: section.height ? String(section.height).trim() : '',
+              style: section.style ? String(section.style).trim() : ''
+            });
+          }
+          styleGroups.get(groupKey).length += len;
+        }
         const rCount = parseInt(section.railsCount,10) || (Array.isArray(section.rails) ? section.rails.length : 0);
         if(rCount > 0){ rails.add(`${rCount} rail${rCount === 1 ? '' : 's'}`); }
         if(Array.isArray(section.rails) && section.rails.length){
@@ -1939,10 +1955,23 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       const withText = withParts.length ? ` with ${joinParts(withParts)}` : '';
       const actionPrefix = includeRemoval ? 'Remove existing fence and install' : 'Install';
-      const lengthText = totalLength > 0 ? `${totalLength}ft` : '';
-      const firstSentence = lengthText
-        ? `${actionPrefix} ${lengthText} of ${descriptor}${withText}.`
-        : `${actionPrefix} ${descriptor}${withText}.`;
+      const breakdownParts = Array.from(styleGroups.values())
+        .filter(item=>item.length > 0)
+        .map(item=>{
+          const heightLabel = item.height ? `${item.height} tall` : '';
+          const styleLabel = item.style || 'wrought iron';
+          const phraseParts = [heightLabel, `${styleLabel}${/fence/i.test(styleLabel)?'':' fence'}`].filter(Boolean);
+          return `${item.length}ft of ${phraseParts.join(' ')}`;
+        });
+      let firstSentence = '';
+      if(breakdownParts.length){
+        firstSentence = `${actionPrefix} ${joinParts(breakdownParts)}${withText}.`;
+      } else {
+        const lengthText = totalLength > 0 ? `${totalLength}ft` : '';
+        firstSentence = lengthText
+          ? `${actionPrefix} ${lengthText} of ${descriptor}${withText}.`
+          : `${actionPrefix} ${descriptor}${withText}.`;
+      }
 
       const spacingValues = Array.from(spacing).sort((a,b)=> parseFloat(a) - parseFloat(b));
       const railSizeValues = Array.from(railSizes).filter(Boolean);
@@ -2633,7 +2662,11 @@ document.addEventListener('DOMContentLoaded', function(){
         const fN = normalizeSize(frame);
         const pN = normalizeSize(pick);
         if(fN === '1\"' && (pN === '1/2\"' || pN === '5/8\"')){
-          addMat(materials, 'prefab gate panel', rb);
+          const gateDescParts = [];
+          if((s.walkRebuildFrame||'').trim()){ gateDescParts.push(`frame ${s.walkRebuildFrame.trim()}`); }
+          if((s.walkRebuildPicket||'').trim()){ gateDescParts.push(`pickets ${s.walkRebuildPicket.trim()}`); }
+          const gateDesc = gateDescParts.length ? ` (${gateDescParts.join(', ')})` : '';
+          addMat(materials, `prefab gate panel${gateDesc}`, rb);
           addMat(materials, `12ft rail sticks (${frame})`, rb * 2);
         } else {
           addMat(materials, `12ft rail sticks (${frame})`, rb * 2);
@@ -2780,7 +2813,15 @@ document.addEventListener('DOMContentLoaded', function(){
           const price = PANEL_PRICE[pkey(p.feet, p.picketSize, p.style)];
           const unit = (typeof price==='number') ? price : 0;
           costPanels += p.qty * unit;
-          addMat(materials, `prefab fence panel ${p.height} ${/Finials/i.test(p.style)?'(finials)':''} (${p.picketSize})`, p.qty);
+          const panelDescParts = [];
+          if(p.height) panelDescParts.push(p.height);
+          if(p.style) panelDescParts.push(p.style);
+          if(p.finialStyle && !/Finials/i.test(p.style||'')) panelDescParts.push(`(${p.finialStyle})`);
+          const picketLabel = p.picketSize ? `${p.picketSize} pickets` : '';
+          const panelDesc = panelDescParts.length ? panelDescParts.join(' ') : 'wrought iron';
+          const labelParts = [`prefab fence panel ${panelDesc}`];
+          if(picketLabel) labelParts.push(`(${picketLabel})`);
+          addMat(materials, labelParts.join(' '), p.qty);
           // No extra raw steel for prefab
         } else {
           // Build on site: rails (2 per panel) and pickets per width
