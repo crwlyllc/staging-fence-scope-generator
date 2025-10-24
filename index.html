@@ -2032,6 +2032,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const totals = {
       length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
       wiPickets:0, wiPatches:0, wiRails:0,
+      wiPicketSizes: new Set(),
+      wiPatchSizes: new Set(),
+      wiRailReplaceSizes: new Set(),
       posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0,
       walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
       walkGateAdds:0,
@@ -2158,14 +2161,29 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
 
-      const sectionPatchTotal = isRepair
-        ? (s.rails||[]).slice(0, s.railsCount||0)
-            .reduce((acc,r)=> acc + (parseInt(r?.patches||0,10)||0), 0)
-        : 0;
-      const sectionReplTotal = isRepair
-        ? (s.rails||[]).slice(0, s.railsCount||0)
-            .reduce((acc,r)=> acc + (parseInt(r?.replacements||0,10)||0), 0)
-        : 0;
+      let sectionPatchTotal = 0;
+      let sectionReplTotal = 0;
+      const sectionPatchSizes = new Set();
+      const sectionReplSizes = new Set();
+      if(isRepair){
+        const railsArr = (s.rails||[]).slice(0, s.railsCount||0);
+        railsArr.forEach(r=>{
+          const patchCount = parseInt(r?.patches||0,10) || 0;
+          const replCount = parseInt(r?.replacements||0,10) || 0;
+          const primarySize = normalizeSize(r?.size);
+          const secondarySize = r?.stacked ? normalizeSize(r?.size2) : '';
+          if(patchCount){
+            sectionPatchTotal += patchCount;
+            if(primarySize) sectionPatchSizes.add(primarySize);
+            if(secondarySize) sectionPatchSizes.add(secondarySize);
+          }
+          if(replCount){
+            sectionReplTotal += replCount;
+            if(primarySize) sectionReplSizes.add(primarySize);
+            if(secondarySize) sectionReplSizes.add(secondarySize);
+          }
+        });
+      }
 
       lines.push(`${title}`);
       const scopeLabel = scopeType === 'install'
@@ -2199,11 +2217,12 @@ document.addEventListener('DOMContentLoaded', function(){
       if (!isInstall && s.digOut > 0)    lines.push(`- Dig out: ${s.digOut} lf`);
 
       const i = (v)=> (parseInt(v||0,10) || 0);
+      const picketReplaceCount = isRepair ? i(s.wiPickets) : 0;
       const replaceCounts = isRepair ? countPostGroups(s.postReplacements) : zeroPostCounts();
       const realignCounts = isRepair ? countPostGroups(s.postRealignments) : zeroPostCounts();
       if(isRepair){
         lines.push(`- Repairs:`);
-        lines.push(`  - Pickets to replace: ${i(s.wiPickets)}`);
+        lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
         lines.push(`  - Rail patches: ${sectionPatchTotal}`);
         lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
         lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
@@ -2363,9 +2382,19 @@ document.addEventListener('DOMContentLoaded', function(){
       if(isRepair){
         totals.digOut       += i(s.digOut);
         totals.finials      += finCount;
-        totals.wiPickets    += i(s.wiPickets);
+        totals.wiPickets    += picketReplaceCount;
+        if(picketReplaceCount > 0){
+          const picketSizeNormalized = normalizeSize(s.picketSize);
+          if(picketSizeNormalized) totals.wiPicketSizes.add(picketSizeNormalized);
+        }
         totals.wiPatches    += sectionPatchTotal;
+        if(sectionPatchTotal > 0){
+          sectionPatchSizes.forEach(size=> totals.wiPatchSizes.add(size));
+        }
         totals.wiRails      += sectionReplTotal;
+        if(sectionReplTotal > 0){
+          sectionReplSizes.forEach(size=> totals.wiRailReplaceSizes.add(size));
+        }
         addPostCounts(totals.postsReplace, replaceCounts);
         addPostCounts(totals, replaceCounts);
         totals.postsRealign2x2 += realignCounts.posts2x2;
@@ -2496,25 +2525,41 @@ document.addEventListener('DOMContentLoaded', function(){
     const picketCount = parseInt(totals.wiPickets, 10) || 0;
     if (picketCount > 0){
       const picketPlural = picketCount === 1 ? '' : 's';
-      addServiceLine(
-        'Replace Damaged Pickets',
-        `Cut out ${picketCount}x rusted 1/2" picket${picketPlural} and weld in ${picketCount}x new 1/2" steel picket${picketPlural}.`
-      );
+      const picketSizes = Array.from(totals.wiPicketSizes || []).filter(Boolean);
+      let picketDesc = '';
+      if(picketSizes.length === 1){
+        const size = picketSizes[0];
+        picketDesc = `Cut out ${picketCount}x rusted ${size} picket${picketPlural} and weld in ${picketCount}x new ${size} steel picket${picketPlural}.`;
+      } else {
+        const sizeSuffix = picketSizes.length > 1 ? ` (${joinParts(picketSizes)})` : '';
+        picketDesc = `Cut out ${picketCount}x rusted picket${picketPlural}${sizeSuffix} and weld in ${picketCount}x new steel picket${picketPlural}${sizeSuffix}.`;
+      }
+      addServiceLine('Replace Damaged Pickets', picketDesc);
     }
     if (totals.wiPatches > 0){
       const rustedPortionText = totals.wiPatches === 1
         ? '1x rusted portion'
         : `${totals.wiPatches}x rusted portions`;
-      addServiceLine('Rail Patch Repairs', `Cut out ${rustedPortionText} of 1" rail steel and weld in new steel.`);
+      const patchSizes = Array.from(totals.wiPatchSizes || []).filter(Boolean);
+      let patchDesc = '';
+      if(patchSizes.length === 1){
+        patchDesc = `Cut out ${rustedPortionText} of ${patchSizes[0]} rail steel and weld in new steel.`;
+      } else {
+        const sizeSuffix = patchSizes.length > 1 ? ` (${joinParts(patchSizes)})` : '';
+        patchDesc = `Cut out ${rustedPortionText} of rail steel${sizeSuffix} and weld in new steel.`;
+      }
+      addServiceLine('Rail Patch Repairs', patchDesc);
     }
     if (totals.wiRails > 0){
       const railCount = parseInt(totals.wiRails, 10) || 0;
       const railLabel = railCount === 1 ? 'old rail' : 'old rails';
       const railVerb = railCount === 1 ? 'is' : 'are';
       const railNeedVerb = railCount === 1 ? 'needs' : 'need';
+      const replaceSizes = Array.from(totals.wiRailReplaceSizes || []).filter(Boolean);
+      const sizeSuffix = replaceSizes.length ? ` (${joinParts(replaceSizes)})` : '';
       addServiceLine(
         'Full Rail Replacement',
-        `Cut out ${railCount}x ${railLabel} that ${railVerb} rusted through and ${railNeedVerb} to be replaced. Weld in new rail steel.`
+        `Cut out ${railCount}x ${railLabel}${sizeSuffix} that ${railVerb} rusted through and ${railNeedVerb} to be replaced. Weld in new rail steel.`
       );
     }
     const replaceServiceCounts = totals.postsReplace || zeroPostCounts();
