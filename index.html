@@ -2441,11 +2441,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.caps > 0){
       addServiceLine('Post Cap Replacement', `Install ${describeCount(totals.caps, 'new post cap', 'new post caps')} to protect posts and match the existing style.`);
     }
-    if (totals.panelsPrefab > 0){
-      addServiceLine('Install Prefab Panels', `Swap in ${describeCount(totals.panelsPrefab, 'prefabricated panel', 'prefabricated panels')} and secure them to existing posts.`);
+    const prefabSwapCount = Math.max(0, totals.panelsPrefab - (totals.panelsInstallPrefab || 0));
+    if (prefabSwapCount > 0){
+      addServiceLine('Install Prefab Panels', `Swap in ${describeCount(prefabSwapCount, 'prefabricated panel', 'prefabricated panels')} and secure them to existing posts.`);
     }
-    if (totals.panelsCustom > 0){
-      addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(totals.panelsCustom, 'custom panel', 'custom panels')} on site to match the wrought iron design.`);
+    const customSwapCount = Math.max(0, totals.panelsCustom - (totals.panelsInstallCustom || 0));
+    if (customSwapCount > 0){
+      addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(customSwapCount, 'custom panel', 'custom panels')} on site to match the wrought iron design.`);
     }
     if (totals.walkRealign > 0){
       addServiceLine('Realign Walk Gates', `Adjust and plumb ${describeCount(totals.walkRealign, 'walk gate', 'walk gates')} for smooth swing and latch.`);
