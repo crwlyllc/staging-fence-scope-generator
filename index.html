@@ -2493,8 +2493,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.digOut > 0){
       addServiceLine('Dig Out Encroaching Soil', `Remove built-up soil along ${totals.digOut} linear feet to expose fence bottoms and prevent corrosion.`);
     }
-    if (totals.wiPickets > 0){
-      addServiceLine('Replace Damaged Pickets', `Cut out rusted members and weld in ${describeCount(totals.wiPickets, 'matching picket', 'matching pickets')} to match the existing pattern.`);
+    const picketCount = parseInt(totals.wiPickets, 10) || 0;
+    if (picketCount > 0){
+      const picketPlural = picketCount === 1 ? '' : 's';
+      addServiceLine(
+        'Replace Damaged Pickets',
+        `Cut out ${picketCount}x rusted 1/2" picket${picketPlural} and weld in ${picketCount}x new 1/2" steel picket${picketPlural}.`
+      );
     }
     if (totals.wiPatches > 0){
       addServiceLine('Rail Patch Repairs', `Cut out rusted sections and weld in ${describeCount(totals.wiPatches, 'steel patch', 'steel patches')} on horizontal rails.`);
