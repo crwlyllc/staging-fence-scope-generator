@@ -1823,6 +1823,73 @@ document.addEventListener('DOMContentLoaded', function(){
       if(clean.length === 2) return `${clean[0]} and ${clean[1]}`;
       return `${clean.slice(0,-1).join(', ')}, and ${clean[clean.length-1]}`;
     }
+    function formatFtValue(value){
+      const n = parseFloat(value);
+      if(!isFinite(n) || n <= 0) return '';
+      return n
+        .toFixed(2)
+        .replace(/(\.\d*?)0+$/,'$1')
+        .replace(/\.$/,'');
+    }
+    function buildInstallServiceDescription(sections, includeRemoval){
+      if(!Array.isArray(sections) || !sections.length) return '';
+      let totalLength = 0;
+      const heights = new Set();
+      const styles = new Set();
+      const rails = new Set();
+      const pickets = new Set();
+      const spacing = new Set();
+
+      sections.forEach(section=>{
+        const len = parseInt(section.length,10) || 0;
+        totalLength += len;
+        if(section.height){ heights.add(String(section.height).trim()); }
+        if(section.style){ styles.add(String(section.style).trim()); }
+        if(section.picketSize){ pickets.add(normalizeSize(section.picketSize)); }
+        const rCount = parseInt(section.railsCount,10) || (Array.isArray(section.rails) ? section.rails.length : 0);
+        if(rCount > 0){ rails.add(`${rCount} rail${rCount === 1 ? '' : 's'}`); }
+        const spacingCandidate = (section._installCalc && section._installCalc.spacingFt) || parseFloat(section.postSpacing||'');
+        const spacingStr = formatFtValue(spacingCandidate);
+        if(spacingStr){ spacing.add(spacingStr); }
+      });
+
+      const descriptorParts = [];
+      if(heights.size){
+        const heightLabel = joinParts(Array.from(heights).map(h=> `${h} tall`));
+        descriptorParts.push(heightLabel);
+      }
+      const styleLabel = styles.size ? `${joinParts(Array.from(styles))} fence` : 'wrought iron fence';
+      descriptorParts.push(styleLabel);
+      const descriptor = descriptorParts.filter(Boolean).join(' ').trim();
+
+      const withParts = [];
+      if(rails.size){ withParts.push(joinParts(Array.from(rails))); }
+      if(pickets.size){
+        const picketLabels = Array.from(pickets).map(p=> `${p} pickets`);
+        withParts.push(joinParts(picketLabels));
+      }
+      const withText = withParts.length ? ` with ${joinParts(withParts)}` : '';
+      const actionPrefix = includeRemoval ? 'Remove existing fence and install' : 'Install';
+      const lengthText = totalLength > 0 ? `${totalLength}ft` : '';
+      const firstSentence = lengthText
+        ? `${actionPrefix} ${lengthText} of ${descriptor}${withText}.`
+        : `${actionPrefix} ${descriptor}${withText}.`;
+
+      const spacingValues = Array.from(spacing).sort((a,b)=> parseFloat(a) - parseFloat(b));
+      let postsSentence = '';
+      if(spacingValues.length){
+        if(spacingValues.length === 1){
+          postsSentence = `Posts will be set ${spacingValues[0]}ft apart and will be set in concrete 36\" deep.`;
+        } else {
+          const spacingLabels = spacingValues.map(v=> `${v}ft`);
+          postsSentence = `Posts will be set between ${joinParts(spacingLabels)} apart and will be set in concrete 36\" deep.`;
+        }
+      } else {
+        postsSentence = `Posts will be set in concrete 36\" deep.`;
+      }
+
+      return [firstSentence, postsSentence].filter(Boolean).join(' ');
+    }
     const zeroPostCounts = ()=>({ posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 });
     const totals = {
       length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
@@ -2203,112 +2270,124 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.panelsInstallCustom) lines.push(`- New custom panels: ${t.panelsInstallCustom}`);
     }
 
-    const paintingSummary = state.sections.reduce((acc, s)=>{
-      const len = parseInt(s.length||0,10) || 0;
-      if(len > 0){
-        const hardscape = parseInt(s.hardscape||0,10) || 0;
-        const trim = parseInt(s.trim||0,10) || 0;
-        if(s.painting === 'Paint Section'){
-          acc.full.len += len;
-          acc.full.hardscape += hardscape;
-          acc.full.trim += trim;
-        } else if (s.painting === 'Prime and Paint'){
-          acc.primePaint.len += len;
-          acc.primePaint.hardscape += hardscape;
-          acc.primePaint.trim += trim;
-        } else if (s.painting === 'Spot Paint Welds'){
-          acc.spot += len;
+    const installScopeSections = state.sections.filter(s=>{
+      const type = s?.scopeType || 'repair';
+      return type === 'install' || type === 'replace';
+    });
+    const isPureInstallReplace = installScopeSections.length > 0 && installScopeSections.length === state.sections.length;
+
+    if(isPureInstallReplace){
+      const serviceName = totals.replaceSections > 0 ? 'Wrought Iron Fence Replacement' : 'Wrought Iron Fence Installation';
+      const detail = buildInstallServiceDescription(installScopeSections, totals.replaceSections > 0);
+      addServiceLine(serviceName, detail || 'Install wrought iron fence. Posts will be set in concrete 36\" deep.');
+    } else {
+      const paintingSummary = state.sections.reduce((acc, s)=>{
+        const len = parseInt(s.length||0,10) || 0;
+        if(len > 0){
+          const hardscape = parseInt(s.hardscape||0,10) || 0;
+          const trim = parseInt(s.trim||0,10) || 0;
+          if(s.painting === 'Paint Section'){
+            acc.full.len += len;
+            acc.full.hardscape += hardscape;
+            acc.full.trim += trim;
+          } else if (s.painting === 'Prime and Paint'){
+            acc.primePaint.len += len;
+            acc.primePaint.hardscape += hardscape;
+            acc.primePaint.trim += trim;
+          } else if (s.painting === 'Spot Paint Welds'){
+            acc.spot += len;
+          }
         }
-      }
-      return acc;
-    }, { full: { len: 0, hardscape: 0, trim: 0 }, primePaint: { len: 0, hardscape: 0, trim: 0 }, spot: 0 });
+        return acc;
+      }, { full: { len: 0, hardscape: 0, trim: 0 }, primePaint: { len: 0, hardscape: 0, trim: 0 }, spot: 0 });
 
-    if (paintingSummary.full.len || paintingSummary.primePaint.len || paintingSummary.spot){
-      const segments = [];
-      if(paintingSummary.full.len){
-        let detail = `Prep and apply gloss black oil-based paint to approximately ${paintingSummary.full.len} linear feet of fence`;
-        const extras = [];
-        if(paintingSummary.full.hardscape) extras.push(`${paintingSummary.full.hardscape} lf over hardscape`);
-        if(paintingSummary.full.trim) extras.push(`${paintingSummary.full.trim} lf of trim detail`);
-        if(extras.length) detail += ` (${extras.join(', ')})`;
-        segments.push(detail);
+      if (paintingSummary.full.len || paintingSummary.primePaint.len || paintingSummary.spot){
+        const segments = [];
+        if(paintingSummary.full.len){
+          let detail = `Prep and apply gloss black oil-based paint to approximately ${paintingSummary.full.len} linear feet of fence`;
+          const extras = [];
+          if(paintingSummary.full.hardscape) extras.push(`${paintingSummary.full.hardscape} lf over hardscape`);
+          if(paintingSummary.full.trim) extras.push(`${paintingSummary.full.trim} lf of trim detail`);
+          if(extras.length) detail += ` (${extras.join(', ')})`;
+          segments.push(detail);
+        }
+        if(paintingSummary.primePaint.len){
+          let detail = `Prime with red oxide primer, then apply gloss black oil-based paint to approximately ${paintingSummary.primePaint.len} linear feet of fence`;
+          const extras = [];
+          if(paintingSummary.primePaint.hardscape) extras.push(`${paintingSummary.primePaint.hardscape} lf over hardscape`);
+          if(paintingSummary.primePaint.trim) extras.push(`${paintingSummary.primePaint.trim} lf of trim detail`);
+          if(extras.length) detail += ` (${extras.join(', ')})`;
+          detail += ` with two mobilizations: prime on day one and return after cure for the finish coat`;
+          segments.push(detail);
+        }
+        if(paintingSummary.spot){
+          segments.push(`Spot prep and apply gloss black oil-based paint to weld areas along ${paintingSummary.spot} linear feet`);
+        }
+        addServiceLine('Surface Preparation & Painting', segments.join('; ') + '.');
       }
-      if(paintingSummary.primePaint.len){
-        let detail = `Prime with red oxide primer, then apply gloss black oil-based paint to approximately ${paintingSummary.primePaint.len} linear feet of fence`;
-        const extras = [];
-        if(paintingSummary.primePaint.hardscape) extras.push(`${paintingSummary.primePaint.hardscape} lf over hardscape`);
-        if(paintingSummary.primePaint.trim) extras.push(`${paintingSummary.primePaint.trim} lf of trim detail`);
-        if(extras.length) detail += ` (${extras.join(', ')})`;
-        detail += ` with two mobilizations: prime on day one and return after cure for the finish coat`;
-        segments.push(detail);
-      }
-      if(paintingSummary.spot){
-        segments.push(`Spot prep and apply gloss black oil-based paint to weld areas along ${paintingSummary.spot} linear feet`);
-      }
-      addServiceLine('Surface Preparation & Painting', segments.join('; ') + '.');
-    }
 
-    if (totals.digOut > 0){
-      addServiceLine('Dig Out Encroaching Soil', `Remove built-up soil along ${totals.digOut} linear feet to expose fence bottoms and prevent corrosion.`);
-    }
-    if (totals.wiPickets > 0){
-      addServiceLine('Replace Damaged Pickets', `Cut out rusted members and weld in ${describeCount(totals.wiPickets, 'matching picket', 'matching pickets')} to match the existing pattern.`);
-    }
-    if (totals.wiPatches > 0){
-      addServiceLine('Rail Patch Repairs', `Cut out rusted sections and weld in ${describeCount(totals.wiPatches, 'steel patch', 'steel patches')} on horizontal rails.`);
-    }
-    if (totals.wiRails > 0){
-      addServiceLine('Full Rail Replacement', `Fabricate and install ${describeCount(totals.wiRails, 'new rail', 'new rails')} to match the original profile.`);
-    }
-    const replaceServiceCounts = totals.postsReplace || zeroPostCounts();
-    if (replaceServiceCounts.posts2x2 > 0 || replaceServiceCounts.posts3x3 > 0 || replaceServiceCounts.posts1p5 > 0 || replaceServiceCounts.posts4x4 > 0){
-      const parts = [];
-      if(replaceServiceCounts.posts2x2 > 0) parts.push(describeCount(replaceServiceCounts.posts2x2, '2x2 post', '2x2 posts'));
-      if(replaceServiceCounts.posts3x3 > 0) parts.push(describeCount(replaceServiceCounts.posts3x3, '3x3 post', '3x3 posts'));
-      if(replaceServiceCounts.posts1p5 > 0) parts.push(describeCount(replaceServiceCounts.posts1p5, '1 1/2" x 1 1/2" post', '1 1/2" x 1 1/2" posts'));
-      if(replaceServiceCounts.posts4x4 > 0) parts.push(describeCount(replaceServiceCounts.posts4x4, '4x4 post', '4x4 posts'));
-      const partText = joinParts(parts);
-      if(partText) addServiceLine('Replace Fence Posts', `Set new ${partText} in concrete and tie into existing panels.`);
-    }
-    if (totals.postsRealign2x2 > 0 || totals.postsRealign3x3 > 0){
-      const parts = [];
-      if(totals.postsRealign2x2 > 0) parts.push(describeCount(totals.postsRealign2x2, '2x2 post', '2x2 posts'));
-      if(totals.postsRealign3x3 > 0) parts.push(describeCount(totals.postsRealign3x3, '3x3 post', '3x3 posts'));
-      const partText = joinParts(parts);
-      if(partText) addServiceLine('Realign Leaning Posts', `Plumb and secure ${partText} without replacement.`);
-    }
-    if (totals.finials > 0){
-      addServiceLine('Finial Replacement', `Install ${describeCount(totals.finials, 'new finial', 'new finials')} to restore decorative picket tops.`);
-    }
-    if (totals.caps > 0){
-      addServiceLine('Post Cap Replacement', `Install ${describeCount(totals.caps, 'new post cap', 'new post caps')} to protect posts and match the existing style.`);
-    }
-    if (totals.panelsPrefab > 0){
-      addServiceLine('Install Prefab Panels', `Swap in ${describeCount(totals.panelsPrefab, 'prefabricated panel', 'prefabricated panels')} and secure them to existing posts.`);
-    }
-    if (totals.panelsCustom > 0){
-      addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(totals.panelsCustom, 'custom panel', 'custom panels')} on site to match the wrought iron design.`);
-    }
-    if (totals.walkRealign > 0){
-      addServiceLine('Realign Walk Gates', `Adjust and plumb ${describeCount(totals.walkRealign, 'walk gate', 'walk gates')} for smooth swing and latch.`);
-    }
-    if (totals.walkHardware > 0){
-      addServiceLine('Replace Walk Gate Hardware', `Install new latch and hinge hardware on ${describeCount(totals.walkHardware, 'walk gate', 'walk gates')}.`);
-    }
-    if (totals.walkRebuild > 0){
-      addServiceLine('Rebuild Walk Gates', `Rebuild ${describeCount(totals.walkRebuild, 'walk gate', 'walk gates')} with new frame and pickets to match the fence.`);
-    }
-    if (totals.walkGateAddsSingle > 0){
-      addServiceLine('Add Single Walk Gate', `Cut in and install ${describeCount(totals.walkGateAddsSingle, 'single swing walk gate', 'single swing walk gates')} complete with posts, frame, and hardware.`);
-    }
-    if (totals.walkGateAddsDouble > 0){
-      addServiceLine('Add Double Walk Gate', `Cut in and install ${describeCount(totals.walkGateAddsDouble, 'double swing gate', 'double swing gates')} complete with posts, frame, and hardware.`);
-    }
-    if (totals.replaceSections > 0){
-      addServiceLine('Remove Fence Sections', `Take down and haul away ${describeCount(totals.replaceSections, 'existing fence section', 'existing fence sections')} prior to installation.`);
-    }
-    if (totals.installSections > 0){
-      addServiceLine('Install New Fence Sections', `Set posts in concrete and install panels for ${describeCount(totals.installSections, 'new wrought iron fence section', 'new wrought iron fence sections')}.`);
+      if (totals.digOut > 0){
+        addServiceLine('Dig Out Encroaching Soil', `Remove built-up soil along ${totals.digOut} linear feet to expose fence bottoms and prevent corrosion.`);
+      }
+      if (totals.wiPickets > 0){
+        addServiceLine('Replace Damaged Pickets', `Cut out rusted members and weld in ${describeCount(totals.wiPickets, 'matching picket', 'matching pickets')} to match the existing pattern.`);
+      }
+      if (totals.wiPatches > 0){
+        addServiceLine('Rail Patch Repairs', `Cut out rusted sections and weld in ${describeCount(totals.wiPatches, 'steel patch', 'steel patches')} on horizontal rails.`);
+      }
+      if (totals.wiRails > 0){
+        addServiceLine('Full Rail Replacement', `Fabricate and install ${describeCount(totals.wiRails, 'new rail', 'new rails')} to match the original profile.`);
+      }
+      const replaceServiceCounts = totals.postsReplace || zeroPostCounts();
+      if (replaceServiceCounts.posts2x2 > 0 || replaceServiceCounts.posts3x3 > 0 || replaceServiceCounts.posts1p5 > 0 || replaceServiceCounts.posts4x4 > 0){
+        const parts = [];
+        if(replaceServiceCounts.posts2x2 > 0) parts.push(describeCount(replaceServiceCounts.posts2x2, '2x2 post', '2x2 posts'));
+        if(replaceServiceCounts.posts3x3 > 0) parts.push(describeCount(replaceServiceCounts.posts3x3, '3x3 post', '3x3 posts'));
+        if(replaceServiceCounts.posts1p5 > 0) parts.push(describeCount(replaceServiceCounts.posts1p5, '1 1/2" x 1 1/2" post', '1 1/2" x 1 1/2" posts'));
+        if(replaceServiceCounts.posts4x4 > 0) parts.push(describeCount(replaceServiceCounts.posts4x4, '4x4 post', '4x4 posts'));
+        const partText = joinParts(parts);
+        if(partText) addServiceLine('Replace Fence Posts', `Set new ${partText} in concrete and tie into existing panels.`);
+      }
+      if (totals.postsRealign2x2 > 0 || totals.postsRealign3x3 > 0){
+        const parts = [];
+        if(totals.postsRealign2x2 > 0) parts.push(describeCount(totals.postsRealign2x2, '2x2 post', '2x2 posts'));
+        if(totals.postsRealign3x3 > 0) parts.push(describeCount(totals.postsRealign3x3, '3x3 post', '3x3 posts'));
+        const partText = joinParts(parts);
+        if(partText) addServiceLine('Realign Leaning Posts', `Plumb and secure ${partText} without replacement.`);
+      }
+      if (totals.finials > 0){
+        addServiceLine('Finial Replacement', `Install ${describeCount(totals.finials, 'new finial', 'new finials')} to restore decorative picket tops.`);
+      }
+      if (totals.caps > 0){
+        addServiceLine('Post Cap Replacement', `Install ${describeCount(totals.caps, 'new post cap', 'new post caps')} to protect posts and match the existing style.`);
+      }
+      if (totals.panelsPrefab > 0){
+        addServiceLine('Install Prefab Panels', `Swap in ${describeCount(totals.panelsPrefab, 'prefabricated panel', 'prefabricated panels')} and secure them to existing posts.`);
+      }
+      if (totals.panelsCustom > 0){
+        addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(totals.panelsCustom, 'custom panel', 'custom panels')} on site to match the wrought iron design.`);
+      }
+      if (totals.walkRealign > 0){
+        addServiceLine('Realign Walk Gates', `Adjust and plumb ${describeCount(totals.walkRealign, 'walk gate', 'walk gates')} for smooth swing and latch.`);
+      }
+      if (totals.walkHardware > 0){
+        addServiceLine('Replace Walk Gate Hardware', `Install new latch and hinge hardware on ${describeCount(totals.walkHardware, 'walk gate', 'walk gates')}.`);
+      }
+      if (totals.walkRebuild > 0){
+        addServiceLine('Rebuild Walk Gates', `Rebuild ${describeCount(totals.walkRebuild, 'walk gate', 'walk gates')} with new frame and pickets to match the fence.`);
+      }
+      if (totals.walkGateAddsSingle > 0){
+        addServiceLine('Add Single Walk Gate', `Cut in and install ${describeCount(totals.walkGateAddsSingle, 'single swing walk gate', 'single swing walk gates')} complete with posts, frame, and hardware.`);
+      }
+      if (totals.walkGateAddsDouble > 0){
+        addServiceLine('Add Double Walk Gate', `Cut in and install ${describeCount(totals.walkGateAddsDouble, 'double swing gate', 'double swing gates')} complete with posts, frame, and hardware.`);
+      }
+      if (totals.replaceSections > 0){
+        addServiceLine('Remove Fence Sections', `Take down and haul away ${describeCount(totals.replaceSections, 'existing fence section', 'existing fence sections')} prior to installation.`);
+      }
+      if (totals.installSections > 0){
+        addServiceLine('Install New Fence Sections', `Set posts in concrete and install panels for ${describeCount(totals.installSections, 'new wrought iron fence section', 'new wrought iron fence sections')}.`);
+      }
     }
 
     renderServiceLineNotes(serviceLines);
