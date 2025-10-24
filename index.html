@@ -310,6 +310,14 @@ document.addEventListener('DOMContentLoaded', function(){
           <input class="sp-input" data-field="label" placeholder="Enter a label" />
         </div>
         <div class="sp-field col-2">
+          <label class="sp-label">Section Scope</label>
+          <select class="sp-select" data-field="scopeType">
+            <option value="repair">Repair Existing</option>
+            <option value="replace">Replace Section</option>
+            <option value="install">Install New Section</option>
+          </select>
+        </div>
+        <div class="sp-field col-2">
           <label class="sp-label">Style</label>
           <select class="sp-select" data-field="style">${createSelect(SEED.style)}</select>
         </div>
@@ -320,6 +328,27 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="sp-field col-2">
           <label class="sp-label">Post Size</label>
           <select class="sp-select" data-field="postSize">${createSelect(SEED.postSize)}</select>
+        </div>
+        <div class="sp-field col-2" data-install-only>
+          <label class="sp-label">Post Spacing (ft)</label>
+          <select class="sp-select" data-field="postSpacing">
+            <option value="4">4 ft</option>
+            <option value="5">5 ft</option>
+            <option value="6">6 ft</option>
+            <option value="8">8 ft</option>
+            <option value="10">10 ft</option>
+          </select>
+        </div>
+        <div class="sp-field col-2" data-install-only>
+          <label class="sp-label">Panel Attachment</label>
+          <select class="sp-select" data-field="panelAttachment">
+            <option value="Welding">Welding</option>
+            <option value="Brackets">Brackets</option>
+          </select>
+        </div>
+        <div class="sp-field col-2" data-install-finials style="display:none">
+          <label class="sp-label">Finial Style</label>
+          <select class="sp-select" data-field="installFinialStyle">${createSelect(SEED.finialStyles)}</select>
         </div>
 
         <!-- Move these up directly after Post Size -->
@@ -571,6 +600,11 @@ document.addEventListener('DOMContentLoaded', function(){
       walkAddLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
       walkAddHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
 
+      scopeType: 'repair',
+      postSpacing: '8',
+      panelAttachment: 'Welding',
+      installFinialStyle: SEED.finialStyles[0],
+
       // NEW: Finials
       finials: [],
       // NEW: Post Caps
@@ -693,9 +727,13 @@ document.addEventListener('DOMContentLoaded', function(){
     return {
       id,
       label: val('label').trim(),
+      scopeType: val('scopeType') || 'repair',
       style: val('style'),
       height: val('height'),
       postSize: val('postSize'),
+      postSpacing: val('postSpacing'),
+      panelAttachment: val('panelAttachment'),
+      installFinialStyle: val('installFinialStyle'),
       postReplacements,
       postRealignments,
 
@@ -772,9 +810,13 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
     set('label', data.label||'');
+    set('scopeType', data.scopeType||'repair');
     set('style', data.style||SEED.style[0]);
     set('height', data.height||'4ft');
     set('postSize', data.postSize||'2x2');
+    set('postSpacing', data.postSpacing||'8');
+    set('panelAttachment', data.panelAttachment||'Welding');
+    set('installFinialStyle', data.installFinialStyle||SEED.finialStyles[0]);
 
     set('railsCount', data.railsCount || 2);
     renderRailsControls(card, data);
@@ -1135,11 +1177,11 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label">Second ${label} Size</label>
           <select class="sp-select" data-field="railSize2_${i}">${createSelect(SEED.railSize)}</select>
         </div>
-        <div class="sp-field" style="margin-top:6px">
+        <div class="sp-field" data-rail-repair style="margin-top:6px">
           <label class="sp-label"># Rail Patches (${label})</label>
           ${patchesHtml}
         </div>
-        <div class="sp-field" style="margin-top:6px">
+        <div class="sp-field" data-rail-repair style="margin-top:6px">
           <label class="sp-label"># Full Rail Replacements (${label})</label>
           ${replHtml}
         </div>
@@ -1420,6 +1462,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(cond) cond.style.display = t.checked ? 'block' : 'none';
       }
       updateWalkGateConditional(card);
+      updateInstallConditional(card);
       persist();
     });
   }
@@ -1435,6 +1478,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const next = Math.max(min, current + dir);
           input.value = next;
           updateWalkGateConditional(card);
+          updateInstallConditional(card);
           persist();
         });
       });
@@ -1443,8 +1487,42 @@ document.addEventListener('DOMContentLoaded', function(){
         const min = parseInt(input.getAttribute('min')||'0',10)||0;
         input.value = Math.max(min, val);
         updateWalkGateConditional(card);
+        updateInstallConditional(card);
         persist();
       });
+    });
+  }
+
+  function allowInstallFinials(style, puppy){
+    return /finials/i.test(String(style||'')) || /finials/i.test(String(puppy||''));
+  }
+
+  function updateInstallConditional(card){
+    const scopeSel = card.querySelector('[data-field="scopeType"]');
+    const scope = scopeSel ? scopeSel.value : 'repair';
+    const isInstall = scope === 'install' || scope === 'replace';
+    card.querySelectorAll('[data-install-only]').forEach(el=>{
+      el.style.display = isInstall ? '' : 'none';
+    });
+
+    const styleVal = (card.querySelector('[data-field="style"]') || {}).value || '';
+    const puppyVal = (card.querySelector('[data-field="puppy"]') || {}).value || '';
+    const finialsWrap = card.querySelector('[data-install-finials]');
+    if(finialsWrap){
+      const showFinials = isInstall && allowInstallFinials(styleVal, puppyVal);
+      finialsWrap.style.display = showFinials ? '' : 'none';
+      const finSel = card.querySelector('[data-field="installFinialStyle"]');
+      if(finSel && showFinials && !finSel.value){
+        finSel.value = SEED.finialStyles[0];
+      }
+    }
+
+    card.querySelectorAll('[data-rail-repair]').forEach(el=>{
+      el.style.display = isInstall ? 'none' : '';
+      if(isInstall){
+        const input = el.querySelector('input');
+        if(input){ input.value = '0'; }
+      }
     });
   }
 
@@ -1486,6 +1564,7 @@ document.addEventListener('DOMContentLoaded', function(){
       attachNumberHandlers(card);
       attachRailsHandlers(card);
       updateWalkGateConditional(card);
+      updateInstallConditional(card);
 
       const titleEl = $('.sp-card-title', card);
       const labelInput = card.querySelector('[data-field="label"]');
@@ -1543,6 +1622,7 @@ document.addEventListener('DOMContentLoaded', function(){
         el.addEventListener('input', ()=>{ persist(); });
         el.addEventListener('change', ()=>{
           updateWalkGateConditional(card);
+          updateInstallConditional(card);
           persist();
         });
       });
@@ -1667,6 +1747,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function generateNotes(){
     syncStateFromDOM();
+    state.sections.forEach(s=>{ delete s._panelCalc; delete s._installCalc; });
 
     // --- PANEL REPLACEMENT helpers ---
     const PANEL_PRICE = {
@@ -1725,13 +1806,19 @@ document.addEventListener('DOMContentLoaded', function(){
       if(clean.length === 2) return `${clean[0]} and ${clean[1]}`;
       return `${clean.slice(0,-1).join(', ')}, and ${clean[clean.length-1]}`;
     }
+    const zeroPostCounts = ()=>({ posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 });
     const totals = {
       length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
       wiPickets:0, wiPatches:0, wiRails:0,
       posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0,
       walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
       walkGateAdds:0,
-      panelsPrefab:0, panelsCustom:0
+      panelsPrefab:0, panelsCustom:0,
+      panelsInstallPrefab:0, panelsInstallCustom:0,
+      installSections:0, replaceSections:0,
+      removalLf:0, removalCost:0,
+      postsInstall: zeroPostCounts(),
+      postsReplace: zeroPostCounts()
     };
     const materials = {};
     let manHours = 0;
@@ -1753,12 +1840,76 @@ document.addEventListener('DOMContentLoaded', function(){
           })()
         : (s.railStacked ? `${s.railSize} + ${s.railSize2} (stacked)` : `${s.railSize}`);
 
+      const scopeType = (s.scopeType || 'repair');
+      const isInstall = scopeType === 'install' || scopeType === 'replace';
+      if(scopeType === 'install'){ totals.installSections += 1; }
+      if(scopeType === 'replace'){ totals.replaceSections += 1; }
+
+      let installInfo = null;
+      if(isInstall){
+        const lengthFt = parseInt(s.length||0,10) || 0;
+        const spacingRaw = parseFloat(s.postSpacing||'8');
+        const spacingFt = (isFinite(spacingRaw) && spacingRaw > 0) ? spacingRaw : 8;
+        let spanCount = 0;
+        if(lengthFt > 0){ spanCount = Math.max(1, Math.ceil(lengthFt / spacingFt)); }
+        const postsTotal = spanCount > 0 ? spanCount + 1 : (lengthFt > 0 ? 2 : 0);
+        const installCounts = zeroPostCounts();
+        const pKey = postSizeKey(s.postSize);
+        if(pKey){ installCounts[pKey] = postsTotal; }
+        addPostCounts(totals.postsInstall, installCounts);
+        addPostCounts(totals, installCounts);
+
+        const panelWidths = [];
+        if(spanCount > 0){
+          const standardWidthIn = Math.max(12, Math.round(spacingFt * 12));
+          for(let iPanel=0; iPanel<spanCount; iPanel++){
+            if(iPanel === spanCount - 1){
+              const consumed = spacingFt * (spanCount - 1);
+              const remainingFt = lengthFt - consumed;
+              const widthIn = Math.max(12, Math.round((remainingFt>0 ? remainingFt : spacingFt) * 12));
+              panelWidths.push(widthIn);
+            } else {
+              panelWidths.push(standardWidthIn);
+            }
+          }
+        }
+
+        const finialStyle = allowInstallFinials(s.style, s.puppy)
+          ? (s.installFinialStyle || SEED.finialStyles[0])
+          : '';
+
+        installInfo = {
+          lengthFt,
+          spacingFt,
+          spanCount,
+          postsTotal,
+          postCounts: installCounts,
+          panelWidths,
+          attachment: s.panelAttachment || 'Welding',
+          finialStyle,
+          removalCost: 0
+        };
+
+        if(scopeType === 'replace' && lengthFt > 0){
+          const removalCost = lengthFt * 3.9;
+          installInfo.removalCost = removalCost;
+          totals.removalLf += lengthFt;
+          totals.removalCost += removalCost;
+        }
+      }
+
       const sectionPatchTotal = (s.rails||[]).slice(0, s.railsCount||0)
         .reduce((acc,r)=> acc + (parseInt(r?.patches||0,10)||0), 0);
       const sectionReplTotal = (s.rails||[]).slice(0, s.railsCount||0)
         .reduce((acc,r)=> acc + (parseInt(r?.replacements||0,10)||0), 0);
 
       lines.push(`${title}`);
+      const scopeLabel = scopeType === 'install'
+        ? 'Install new section'
+        : scopeType === 'replace'
+          ? 'Remove & replace section'
+          : 'Repair existing section';
+      lines.push(`- Scope: ${scopeLabel}`);
       lines.push(`- Style: ${s.style}`);
       lines.push(`- Height: ${s.height}`);
       lines.push(`- Rails: ${railsDesc}`);
@@ -1766,24 +1917,45 @@ document.addEventListener('DOMContentLoaded', function(){
       lines.push(`- Puppy Pickets: ${s.puppy}`);
       lines.push(`- Painting: ${s.painting || 'Paint Section'}`);
 
+      if(isInstall && installInfo){
+        lines.push(`- Post spacing: ${installInfo.spacingFt} ft`);
+        lines.push(`- Panel attachment: ${installInfo.attachment}`);
+        lines.push(`- Posts to set: ${installInfo.postsTotal} (${s.postSize})`);
+        if(installInfo.finialStyle){
+          lines.push(`- Finials: ${installInfo.finialStyle}`);
+        }
+        if(scopeType === 'replace' && installInfo.lengthFt > 0){
+          lines.push(`- Remove existing section (${installInfo.lengthFt} lf) and haul away (sub paid $${money(installInfo.removalCost)})`);
+        }
+      }
+
       lines.push(`- Length: ${numOrDash(s.length)} ft`);
       if (s.hardscape > 0) lines.push(`- Over hardscape: ${s.hardscape} lf`);
       if (s.trim > 0)      lines.push(`- Trim: ${s.trim} lf`);
       if (s.digOut > 0)    lines.push(`- Dig out: ${s.digOut} lf`);
 
       const i = (v)=> (parseInt(v||0,10) || 0);
-      lines.push(`- Repairs:`);
-      lines.push(`  - Pickets to replace: ${i(s.wiPickets)}`);
-      lines.push(`  - Rail patches: ${sectionPatchTotal}`);
-      lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
       const replaceCounts = countPostGroups(s.postReplacements);
       const realignCounts = countPostGroups(s.postRealignments);
-      lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
-      lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
-      lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
-      lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
-      lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
-      lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
+      const hasRepairWork = (
+        i(s.wiPickets) > 0 ||
+        sectionPatchTotal > 0 ||
+        sectionReplTotal > 0 ||
+        Object.values(replaceCounts).some(val=> (parseInt(val,10)||0) > 0) ||
+        Object.values(realignCounts).some(val=> (parseInt(val,10)||0) > 0)
+      );
+      if(!isInstall || hasRepairWork){
+        lines.push(`- Repairs:`);
+        lines.push(`  - Pickets to replace: ${i(s.wiPickets)}`);
+        lines.push(`  - Rail patches: ${sectionPatchTotal}`);
+        lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
+        lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
+        lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
+        lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
+        lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
+        lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
+        lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
+      }
 
       // NEW: Finials
       const finArr = Array.isArray(s.finials) ? s.finials : [];
@@ -1796,33 +1968,99 @@ document.addEventListener('DOMContentLoaded', function(){
         });
       }
 
+      function processPanels(list, heading, source, extra={}){
+        if(!Array.isArray(list) || list.length === 0) return;
+        const prepared = [];
+        const defaultRail = (Array.isArray(s.rails) && s.rails[0] && s.rails[0].size) || s.railSize || SEED.railSize[0];
+        list.forEach(p=>{
+          if(!p) return;
+          const qty = parseInt(p.qty,10) || 0;
+          if(qty <= 0) return;
+          const widthRaw = parseInt(p.widthIn,10) || 0;
+          const widthIn = Math.max(12, widthRaw);
+          const railSize = p.railSize || defaultRail;
+          const picketSize = p.picketSize || s.picketSize || SEED.picketSize[0];
+          const height = p.height || s.height;
+          let style = p.style || s.style || '';
+          if(source === 'install' && extra.style){ style = extra.style; }
+          const finialStyle = p.finialStyle || extra.finialStyle || SEED.finialStyles[0];
+          prepared.push({ qty, widthIn, railSize, picketSize, height, style, finialStyle });
+        });
+        if(!prepared.length) return;
+        lines.push(heading);
+        prepared.forEach(entry=>{
+          const { qty, widthIn, railSize, picketSize, height, style, finialStyle } = entry;
+          const feet = feetFromHeightStr(height);
+          const eligible = isPrefabEligible(widthIn, railSize, picketSize);
+          const desc = `${height}, ${style}, rails ${railSize}, pickets ${picketSize} ${eligible?'(prefab eligible)':'(build on site)'}`;
+          lines.push(`  - ${qty} × ${widthIn}" wide panel — ${desc}`);
+          const panelHours = eligible ? qty * 0.5 : qty * 1.5;
+          manHours += panelHours;
+          welderHours += panelHours;
+          if(eligible){
+            totals.panelsPrefab += qty;
+            if(source === 'install') totals.panelsInstallPrefab += qty;
+          } else {
+            totals.panelsCustom += qty;
+            if(source === 'install') totals.panelsInstallCustom += qty;
+          }
+          if(!s._panelCalc) s._panelCalc = [];
+          s._panelCalc.push({
+            qty,
+            feet,
+            eligible,
+            style,
+            picketSize,
+            railSize,
+            height,
+            widthIn,
+            finialStyle,
+            source
+          });
+          if(/Finials/i.test(style) && !eligible){
+            const finStyleLabel = finialStyle || SEED.finialStyles[0];
+            addMat(materials, `finials - Cast Iron - ${finStyleLabel} (${picketSize})`, qty*26);
+          }
+        });
+        if(source === 'install' && extra.installInfo){
+          if(!extra.installInfo.panels) extra.installInfo.panels = [];
+          prepared.forEach(entry=>{ extra.installInfo.panels.push({ ...entry }); });
+        }
+      }
+
       // PANEL REPLACEMENTS (per-row)
       const panelArr = Array.isArray(s.panels) ? s.panels : [];
-      if(panelArr.length){ lines.push(`- Panel replacements:`); }
-      panelArr.forEach(p=>{
-        const q = parseInt(p?.qty||0,10)||0; if(!q) return;
-        const feet = feetFromHeightStr(p.height);
-        const eligible = isPrefabEligible(p.widthIn, p.railSize, p.picketSize);
-        const isFin = /Finials/i.test(p.style);
-        lines.push(`  - ${q} × ${p.widthIn||0}" wide panel — ${p.height}, ${p.style}, rails ${p.railSize}, pickets ${p.picketSize} ${eligible?'(prefab eligible)':'(build on site)'}`);
-        // Labor
-        const panelHours = eligible ? q * 0.5 : q * 1.5;
-        manHours += panelHours;
-        welderHours += panelHours;
-        if(eligible){ totals.panelsPrefab += q; }
-        else        { totals.panelsCustom += q; }
+      processPanels(panelArr, '- Panel replacements:', 'repair');
 
-        // Materials / Costing accumulators handled after loop below
-        // Store a scratch list on section to pick up later
-        if(!s._panelCalc) s._panelCalc = []; s._panelCalc.push({
-          qty:q, feet, eligible, style:p.style, picketSize:p.picketSize, railSize:p.railSize, widthIn: parseInt(p.widthIn,10)||0, finialStyle: p.finialStyle
+      if(installInfo && installInfo.spanCount > 0){
+        const widthCounts = {};
+        installInfo.panelWidths.forEach(w=>{
+          widthCounts[w] = (widthCounts[w]||0) + 1;
         });
-
-        if(isFin && !eligible){
-          // custom build w/ finials -> add 26 per panel to materials
-          addMat(materials, `finials - Cast Iron - ${p.finialStyle} (${p.picketSize})`, q*26);
-        }
-      });
+        const installStyle = (()=>{
+          let base = s.style || '';
+          const puppyVal = s.puppy || '';
+          if(/Finials/i.test(puppyVal) && !/Finials/i.test(base)){
+            base = base ? `${base} (${puppyVal})` : puppyVal;
+          }
+          return base || s.style || '';
+        })();
+        const installPanels = Object.entries(widthCounts).map(([width, qty])=>({
+          qty,
+          widthIn: parseInt(width,10) || 0,
+          height: s.height,
+          style: installStyle,
+          railSize: (Array.isArray(s.rails) && s.rails[0] && s.rails[0].size) || s.railSize || SEED.railSize[0],
+          picketSize: s.picketSize,
+          finialStyle: installInfo.finialStyle
+        }));
+        processPanels(installPanels, '- Panel installation:', 'install', {
+          attachment: installInfo.attachment,
+          finialStyle: installInfo.finialStyle,
+          style: installStyle,
+          installInfo
+        });
+      }
 
       // NEW: Caps
       const capArr = Array.isArray(s.caps) ? s.caps : [];
@@ -1833,6 +2071,10 @@ document.addEventListener('DOMContentLoaded', function(){
           const q = parseInt(c?.qty||0,10) || 0; if(!q) return;
           lines.push(`  - ${q} × ${c.material} ${c.style} caps for ${c.postSize} posts`);
         });
+      }
+
+      if(installInfo){
+        s._installCalc = installInfo;
       }
 
       // Walk gate details
@@ -1865,6 +2107,7 @@ document.addEventListener('DOMContentLoaded', function(){
       totals.wiPickets    += i(s.wiPickets);
       totals.wiPatches    += sectionPatchTotal;
       totals.wiRails      += sectionReplTotal;
+      addPostCounts(totals.postsReplace, replaceCounts);
       addPostCounts(totals, replaceCounts);
       totals.postsRealign2x2 += realignCounts.posts2x2;
       totals.postsRealign3x3 += realignCounts.posts3x3;
@@ -1884,15 +2127,24 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.hardscape)     lines.push(`- Over hardscape: ${t.hardscape} lf`);
       if (t.trim)          lines.push(`- Trim: ${t.trim} lf`);
       if (t.digOut)        lines.push(`- Dig out: ${t.digOut} lf`);
-      if (t.finials)       lines.push(`- Finials to replace: ${t.finials}`);
-      if (t.caps)          lines.push(`- Post caps to replace: ${t.caps}`);
-      if (t.wiPickets)     lines.push(`- Pickets to replace: ${t.wiPickets}`);
-      if (t.wiPatches)     lines.push(`- Rail patches: ${t.wiPatches}`);
-      if (t.wiRails)       lines.push(`- Full rail replacements: ${t.wiRails}`);
-      if (t.posts2x2)      lines.push(`- 2x2 posts: ${t.posts2x2}`);
-      if (t.posts3x3)      lines.push(`- 3x3 posts: ${t.posts3x3}`);
-      if (t.posts1p5)      lines.push(`- 1 1/2" x 1 1/2" posts: ${t.posts1p5}`);
-      if (t.posts4x4)      lines.push(`- 4x4 posts: ${t.posts4x4}`);
+      if (t.replaceSections) lines.push(`- Sections to replace: ${t.replaceSections}`);
+      if (t.installSections) lines.push(`- New sections to install: ${t.installSections}`);
+      if (t.removalLf)      lines.push(`- Removal & haul away: ${t.removalLf} lf (sub paid $${money(t.removalCost)})`);
+      if (t.finials)        lines.push(`- Finials to replace: ${t.finials}`);
+      if (t.caps)           lines.push(`- Post caps to replace: ${t.caps}`);
+      if (t.wiPickets)      lines.push(`- Pickets to replace: ${t.wiPickets}`);
+      if (t.wiPatches)      lines.push(`- Rail patches: ${t.wiPatches}`);
+      if (t.wiRails)        lines.push(`- Full rail replacements: ${t.wiRails}`);
+      const postSummary = (label, counts)=>{
+        const parts = [];
+        if(counts.posts1p5) parts.push(`${counts.posts1p5} × 1 1/2" x 1 1/2"`);
+        if(counts.posts2x2) parts.push(`${counts.posts2x2} × 2x2`);
+        if(counts.posts3x3) parts.push(`${counts.posts3x3} × 3x3`);
+        if(counts.posts4x4) parts.push(`${counts.posts4x4} × 4x4`);
+        if(parts.length) lines.push(`- ${label}: ${parts.join(', ')}`);
+      };
+      postSummary('Posts to replace', t.postsReplace || zeroPostCounts());
+      postSummary('Posts to set (new sections)', t.postsInstall || zeroPostCounts());
       if (t.postsRealign2x2) lines.push(`- 2x2 posts to realign: ${t.postsRealign2x2}`);
       if (t.postsRealign3x3) lines.push(`- 3x3 posts to realign: ${t.postsRealign3x3}`);
       if (t.walkGates)     lines.push(`- Walk gates: ${t.walkGates}`);
@@ -1902,6 +2154,8 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.walkGateAdds)  lines.push(`- Walk gates to add: ${t.walkGateAdds}`);
       if (t.panelsPrefab) lines.push(`- Prefab panels to install: ${t.panelsPrefab}`);
       if (t.panelsCustom) lines.push(`- Panels to custom-build: ${t.panelsCustom}`);
+      if (t.panelsInstallPrefab) lines.push(`- New prefab panels: ${t.panelsInstallPrefab}`);
+      if (t.panelsInstallCustom) lines.push(`- New custom panels: ${t.panelsInstallCustom}`);
     }
 
     const paintingSummary = state.sections.reduce((acc, s)=>{
@@ -1961,12 +2215,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.wiRails > 0){
       addServiceLine('Full Rail Replacement', `Fabricate and install ${describeCount(totals.wiRails, 'new rail', 'new rails')} to match the original profile.`);
     }
-    if (totals.posts2x2 > 0 || totals.posts3x3 > 0 || totals.posts1p5 > 0 || totals.posts4x4 > 0){
+    const replaceServiceCounts = totals.postsReplace || zeroPostCounts();
+    if (replaceServiceCounts.posts2x2 > 0 || replaceServiceCounts.posts3x3 > 0 || replaceServiceCounts.posts1p5 > 0 || replaceServiceCounts.posts4x4 > 0){
       const parts = [];
-      if(totals.posts2x2 > 0) parts.push(describeCount(totals.posts2x2, '2x2 post', '2x2 posts'));
-      if(totals.posts3x3 > 0) parts.push(describeCount(totals.posts3x3, '3x3 post', '3x3 posts'));
-      if(totals.posts1p5 > 0) parts.push(describeCount(totals.posts1p5, '1 1/2" x 1 1/2" post', '1 1/2" x 1 1/2" posts'));
-      if(totals.posts4x4 > 0) parts.push(describeCount(totals.posts4x4, '4x4 post', '4x4 posts'));
+      if(replaceServiceCounts.posts2x2 > 0) parts.push(describeCount(replaceServiceCounts.posts2x2, '2x2 post', '2x2 posts'));
+      if(replaceServiceCounts.posts3x3 > 0) parts.push(describeCount(replaceServiceCounts.posts3x3, '3x3 post', '3x3 posts'));
+      if(replaceServiceCounts.posts1p5 > 0) parts.push(describeCount(replaceServiceCounts.posts1p5, '1 1/2" x 1 1/2" post', '1 1/2" x 1 1/2" posts'));
+      if(replaceServiceCounts.posts4x4 > 0) parts.push(describeCount(replaceServiceCounts.posts4x4, '4x4 post', '4x4 posts'));
       const partText = joinParts(parts);
       if(partText) addServiceLine('Replace Fence Posts', `Set new ${partText} in concrete and tie into existing panels.`);
     }
@@ -2000,6 +2255,12 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (totals.walkGateAdds > 0){
       addServiceLine('Add New Walk Gate', `Cut in and install ${describeCount(totals.walkGateAdds, 'new walk gate', 'new walk gates')} complete with posts, frame, and hardware.`);
+    }
+    if (totals.replaceSections > 0){
+      addServiceLine('Remove Fence Sections', `Take down and haul away ${describeCount(totals.replaceSections, 'existing fence section', 'existing fence sections')} prior to installation.`);
+    }
+    if (totals.installSections > 0){
+      addServiceLine('Install New Fence Sections', `Set posts in concrete and install panels for ${describeCount(totals.installSections, 'new wrought iron fence section', 'new wrought iron fence sections')}.`);
     }
 
     renderServiceLineNotes(serviceLines);
@@ -2054,6 +2315,11 @@ document.addEventListener('DOMContentLoaded', function(){
         const perStick = Math.max(1, Math.floor(12 / Math.max(1, postLen)));
         raw1p5Total += Math.ceil(count / perStick);
       }
+      const installCount1p5 = parseInt(s._installCalc?.postCounts?.posts1p5 || 0,10) || 0;
+      if(installCount1p5>0){
+        const perStickInstall = Math.max(1, Math.floor(12 / Math.max(1, postLen)));
+        raw1p5Total += Math.ceil(installCount1p5 / perStickInstall);
+      }
       const addG = parseInt(s.walkGatesAdd||0,10) || 0;
       if(addG>0 && (s.walkAddPostSize||'').trim() === '1 1/2" x 1 1/2"'){
         const perStickAdd = Math.max(1, Math.floor(12 / Math.max(1, postLen)));
@@ -2070,6 +2336,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const repCounts = countPostGroups(s.postReplacements);
       const nReplace = repCounts.posts2x2 || 0;
       if(nReplace>0){ posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + nReplace; }
+      const nInstall2x2 = parseInt(s._installCalc?.postCounts?.posts2x2 || 0,10) || 0;
+      if(nInstall2x2>0){ posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + nInstall2x2; }
       const addG = parseInt(s.walkGatesAdd||0,10) || 0;
       if(addG>0 && (s.walkAddPostSize||'').trim() === '2x2'){
         posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + addG;
@@ -2089,6 +2357,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const perStick = Math.max(1, Math.floor(12 / Math.max(1, L)));
         const sticks = Math.ceil(count / perStick);
         posts3x3ByLenCalc[L] = (posts3x3ByLenCalc[L]||0) + sticks;
+      }
+      const installCount3x3 = parseInt(s._installCalc?.postCounts?.posts3x3 || 0,10) || 0;
+      if(installCount3x3>0){
+        const perStickInstall = Math.max(1, Math.floor(12 / Math.max(1, L)));
+        const sticksInstall = Math.ceil(installCount3x3 / perStickInstall);
+        posts3x3ByLenCalc[L] = (posts3x3ByLenCalc[L]||0) + sticksInstall;
       }
       const addG = parseInt(s.walkGatesAdd||0,10) || 0;
       if(addG>0 && (s.walkAddPostSize||'').trim() === '3x3'){
@@ -2111,6 +2385,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const perStick = Math.max(1, Math.floor(12 / Math.max(1, L)));
         const sticks = Math.ceil(count / perStick);
         posts4x4ByLenCalc[L] = (posts4x4ByLenCalc[L]||0) + sticks;
+      }
+      const installCount4x4 = parseInt(s._installCalc?.postCounts?.posts4x4 || 0,10) || 0;
+      if(installCount4x4>0){
+        const perStickInstall = Math.max(1, Math.floor(12 / Math.max(1, L)));
+        const sticksInstall = Math.ceil(installCount4x4 / perStickInstall);
+        posts4x4ByLenCalc[L] = (posts4x4ByLenCalc[L]||0) + sticksInstall;
       }
       const addG = parseInt(s.walkGatesAdd||0,10) || 0;
       if(addG>0 && (s.walkAddPostSize||'').trim() === '4x4'){
@@ -2615,13 +2895,22 @@ document.addEventListener('DOMContentLoaded', function(){
 
     sub.push('');
     sub.push('SCOPE (Totals)');
+    if (totals.replaceSections > 0) sub.push('- Sections to replace: '+totals.replaceSections);
+    if (totals.installSections > 0) sub.push('- New sections to install: '+totals.installSections);
+    if (totals.removalLf > 0)       sub.push(`- Removal & haul away: ${totals.removalLf} lf (sub paid $${money(totals.removalCost)})`);
     if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
     if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
-    if (totals.posts2x2 > 0)        sub.push('- 2x2 posts to replace: '+totals.posts2x2);
-    if (totals.posts3x3 > 0)        sub.push('- 3x3 posts to replace: '+totals.posts3x3);
-    if (totals.posts1p5 > 0)        sub.push('- 1 1/2" x 1 1/2" posts to replace: '+totals.posts1p5);
-    if (totals.posts4x4 > 0)        sub.push('- 4x4 posts to replace: '+totals.posts4x4);
+    const pushPostLinesSub = (label, counts)=>{
+      const parts = [];
+      if(counts.posts1p5) parts.push(`${counts.posts1p5} × 1 1/2" x 1 1/2"`);
+      if(counts.posts2x2) parts.push(`${counts.posts2x2} × 2x2`);
+      if(counts.posts3x3) parts.push(`${counts.posts3x3} × 3x3`);
+      if(counts.posts4x4) parts.push(`${counts.posts4x4} × 4x4`);
+      if(parts.length) sub.push(`- ${label}: ${parts.join(', ')}`);
+    };
+    pushPostLinesSub('Posts to replace', totals.postsReplace || zeroPostCounts());
+    pushPostLinesSub('Posts to set (new sections)', totals.postsInstall || zeroPostCounts());
     if (totals.postsRealign2x2 > 0) sub.push('- 2x2 posts to realign: '+totals.postsRealign2x2);
     if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
     if (totals.walkGates > 0)       sub.push('- Walk gates: '+totals.walkGates);
@@ -2634,13 +2923,16 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.digOut > 0)          sub.push('- Dig out: '+totals.digOut+' lf');
     if (totals.panelsPrefab > 0)    sub.push('- Prefab panels to install: '+totals.panelsPrefab);
     if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
+    if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
+    if (totals.panelsInstallCustom > 0) sub.push('- New custom panels: '+totals.panelsInstallCustom);
     if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then hand paint '+paintLenTotal+' ft of fence');
     if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
 
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
     const crewCost = (day1Crew > 0 ? laborCost(day1Crew) : 0) + (day2Crew > 0 ? laborCost(day2Crew) : 0);
-    const directCosts = crewCost + costMaterials;
+    const removalCost = totals.removalCost || 0;
+    const directCosts = crewCost + costMaterials + removalCost;
     const revenueRes = computeChargeRevenue(directCosts);
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
     const commissionFormula$ = isFinite(revenue)
@@ -2663,8 +2955,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const laborDetailWithDays = crewScheduleDetail.length ? crewScheduleDetail.join('; ') : 'TBD';
     cost.push('- Labor: $'+money(crewCost)+' ('+laborDetailWithDays+')');
     cost.push('- Materials: $'+money(costMaterials));
+    if(removalCost>0){ cost.push('- Removal & disposal (paid to sub): $'+money(removalCost)); }
     matBreak.forEach(line=> cost.push(line));
-    cost.push('- Total: $'+money(crewCost + costMaterials));
+    cost.push('- Total: $'+money(crewCost + costMaterials + removalCost));
     if (unpriced) cost.push('  - Note: Some sizes have no price mapping and were counted as $0.');
 
     cost.push('');
