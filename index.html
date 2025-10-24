@@ -2884,13 +2884,26 @@ document.addEventListener('DOMContentLoaded', function(){
       lines.push('- Crew: TBD');
     }
 
+    const materialEntries = Object.keys(materials)
+      .filter(label => materials[label] > 0)
+      .sort((a, b) => a.localeCompare(b))
+      .map(label => ({ label, qty: materials[label] }));
+
+    if (materialEntries.length) {
+      lines.push('');
+      lines.push('MATERIALS');
+      materialEntries.forEach(({ label, qty }) => {
+        lines.push(`- ${qty}x ${label}`);
+      });
+    }
+
     const sub = [];
     sub.push('JOB DURATION');
     sub.push('- '+durationStr);
     sub.push('');
     sub.push('MATERIALS');
-    Object.keys(materials).sort((a,b)=>a.localeCompare(b)).forEach(label=>{
-      sub.push('- '+materials[label]+'x '+label);
+    materialEntries.forEach(({ label, qty }) => {
+      sub.push(`- ${qty}x ${label}`);
     });
 
     sub.push('');
