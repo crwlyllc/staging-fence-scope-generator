@@ -1665,17 +1665,29 @@ document.addEventListener('DOMContentLoaded', function(){
     if(v === 'Puppy Pickets w/ Finials') return 0.5;
     return 0;
   }
+  function normalizeLabelText(text){
+    return String(text||'')
+      .replace(/\u201D|”/g,'"')
+      .replace(/\u201C|“/g,'"')
+      .replace(/\u2019|’/g,"'")
+      .replace(/\u2018|‘/g,"'")
+      .replace(/×/g,'x')
+      .trim();
+  }
   function addMat(map, label, qty){
     if(!qty || qty <= 0) return;
-    map[label] = (map[label]||0) + qty;
+    const cleanLabel = normalizeLabelText(label);
+    map[cleanLabel] = (map[cleanLabel]||0) + qty;
   }
 
   function normalizeSize(txt){
     return String(txt||'')
       .replace(/\\u201D|”/g,'\"')
+      .replace(/\\u201C|“/g,'\"')
       .replace(/\\u00BC|¼/g,'1/4')
       .replace(/\\u00BD|½/g,'1/2')
       .replace(/\\u00BE|¾/g,'3/4')
+      .replace(/×/g,'x')
       .trim();
   }
 
@@ -2035,6 +2047,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postsReplace: zeroPostCounts()
     };
     const materials = {};
+    const steelStickTotals = { raw1p5:0, raw3x3:0, raw4x4:0 };
     let manHours = 0;
     let welderHours = 0;
     let helperHours = 0;
@@ -2591,7 +2604,10 @@ document.addEventListener('DOMContentLoaded', function(){
         raw1p5Total += Math.ceil(addG / perStickAdd);
       }
     });
-    if(raw1p5Total>0){ addMat(materials, '1.5x1.5x12 raw steel', raw1p5Total); }
+    if(raw1p5Total>0){
+      steelStickTotals.raw1p5 += raw1p5Total;
+      addMat(materials, '1.5x1.5x12 raw steel', raw1p5Total);
+    }
 
     // posts (2x2 by length)
     const posts2x2ByLenCalc = {};
@@ -2617,7 +2633,7 @@ document.addEventListener('DOMContentLoaded', function(){
     state.sections.forEach(s=>{
       const repCounts = countPostGroups(s.postReplacements);
       const count = repCounts.posts3x3 || 0;
-      const L = feetFromStr(s.height) + 3;
+      const L = Math.max(8, feetFromStr(s.height) + 3);
       if(count>0){
         const perStick = Math.max(1, Math.floor(12 / Math.max(1, L)));
         const sticks = Math.ceil(count / perStick);
@@ -2638,14 +2654,17 @@ document.addEventListener('DOMContentLoaded', function(){
     });
     let raw3x3Total = 0;
     Object.values(posts3x3ByLenCalc).forEach(v=>{ raw3x3Total += v; });
-    if(raw3x3Total>0){ addMat(materials, '3x3x12 raw steel', raw3x3Total); }
+    if(raw3x3Total>0){
+      steelStickTotals.raw3x3 += raw3x3Total;
+      addMat(materials, '3x3x12 raw steel', raw3x3Total);
+    }
 
     // 4x4 raw sticks (12ft) incl. gate adds
     const posts4x4ByLenCalc = {};
     state.sections.forEach(s=>{
       const repCounts = countPostGroups(s.postReplacements);
       const count = repCounts.posts4x4 || 0;
-      const L = feetFromStr(s.height) + 3;
+      const L = Math.max(8, feetFromStr(s.height) + 3);
       if(count>0){
         const perStick = Math.max(1, Math.floor(12 / Math.max(1, L)));
         const sticks = Math.ceil(count / perStick);
@@ -2666,7 +2685,10 @@ document.addEventListener('DOMContentLoaded', function(){
     });
     let raw4x4Total = 0;
     Object.values(posts4x4ByLenCalc).forEach(v=>{ raw4x4Total += v; });
-    if(raw4x4Total>0){ addMat(materials, '4x4x12 raw steel', raw4x4Total); }
+    if(raw4x4Total>0){
+      steelStickTotals.raw4x4 += raw4x4Total;
+      addMat(materials, '4x4x12 raw steel', raw4x4Total);
+    }
 
     // Concrete
     const concreteBagsCalc = totals.posts2x2 + totals.posts3x3 + totals.posts1p5 + totals.posts4x4 + Math.ceil((totals.postsRealign2x2 + totals.postsRealign3x3) * 0.5) + totals.walkRealign + totals.walkGateAddsRepair;
@@ -2738,7 +2760,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (ph <= 0) ph = 54;
       const perStick = Math.max(1, Math.floor(144 / ph));
       const sticks = Math.ceil(need / perStick);
-      const size = s.picketSize;
+      const size = normalizeSize(s.picketSize);
       picketBySizeCalc[size] = (picketBySizeCalc[size]||0) + sticks;
     });
     Object.entries(picketBySizeCalc).forEach(([size, qty])=>{
@@ -2758,12 +2780,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const p = parseInt(r.patches||0,10) || 0;
         const rep = parseInt(r.replacements||0,10) || 0;
         if(p>0){
-          inc(patchBySizeMat, r.size, p);
-          if(r.stacked) inc(patchBySizeMat, r.size2, p);
+          inc(patchBySizeMat, normalizeSize(r.size), p);
+          if(r.stacked) inc(patchBySizeMat, normalizeSize(r.size2), p);
         }
         if(rep>0){
-          inc(replBySizeMat, r.size, rep);
-          if(r.stacked) inc(replBySizeMat, r.size2, rep);
+          inc(replBySizeMat, normalizeSize(r.size), rep);
+          if(r.stacked) inc(replBySizeMat, normalizeSize(r.size2), rep);
         }
       }
     });
@@ -2819,7 +2841,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const arr = Array.isArray(s.finials) ? s.finials : [];
       arr.forEach(f=>{
         const q = parseInt(f?.qty||0,10) || 0; if(!q) return;
-        addMat(materials, `finials - ${f.material} - ${f.style} (${f.picketSize})`, q);
+        const picketLabel = normalizeSize(f?.picketSize);
+        addMat(materials, `finials - ${f.material} - ${f.style} (${picketLabel})`, q);
       });
     });
     // Caps (descriptive labels) for MATERIALS list
@@ -2934,10 +2957,7 @@ document.addEventListener('DOMContentLoaded', function(){
       matBreak.push('  - 2x2x'+len+' posts: '+qty+' x $'+money(unit)+' = $'+money(c));
     });
 
-    const raw1p5Count = Object.keys(materials).reduce((acc,k)=>{
-      const m = k.match(/^1\.5x1\.5x12 raw steel/);
-      return acc + (m ? materials[k] : 0);
-    },0);
+    const raw1p5Count = steelStickTotals.raw1p5 || 0;
     if(raw1p5Count>0){
       const perFt1p5 = PRICE_FT['1 1/2\"'] || 0;
       const unit1p5 = 12 * perFt1p5;
@@ -2947,10 +2967,7 @@ document.addEventListener('DOMContentLoaded', function(){
       matBreak.push('  - 1.5x1.5 raw steel sticks: '+raw1p5Count+' x 12ft x $'+money(perFt1p5)+'/ft = $'+money(c));
     }
 
-    const raw3x3Count = Object.keys(materials).reduce((acc,k)=>{
-      const m = k.match(/^3x3x12 raw steel/);
-      return acc + (m ? materials[k] : 0);
-    },0);
+    const raw3x3Count = steelStickTotals.raw3x3 || 0;
     if(raw3x3Count>0){
       const unit3x3 = 12 * (PRICE_FT['3x3\"']||0);
       const c = raw3x3Count * unit3x3;
@@ -2958,10 +2975,7 @@ document.addEventListener('DOMContentLoaded', function(){
       matBreak.push('  - 3x3 raw steel sticks: '+raw3x3Count+' x 12ft x $'+money(PRICE_FT['3x3\"']||0)+'/ft = $'+money(c));
     }
 
-    const raw4x4Count = Object.keys(materials).reduce((acc,k)=>{
-      const m = k.match(/^4x4x12 raw steel/);
-      return acc + (m ? materials[k] : 0);
-    },0);
+    const raw4x4Count = steelStickTotals.raw4x4 || 0;
     if(raw4x4Count>0){
       const unit4x4 = 139.73;
       const c = raw4x4Count * unit4x4;
@@ -3167,13 +3181,13 @@ document.addEventListener('DOMContentLoaded', function(){
       const rCount = s.railsCount || (s.rails||[]).length || 0;
       for(let i=0;i<rCount;i++){
         const r = (s.rails||[])[i] || {};
-        if(r && r.size) railSizesSet.add(r.size);
-        if(r && r.stacked && r.size2) railSizesSet.add(r.size2);
+        if(r && r.size) railSizesSet.add(normalizeSize(r.size));
+        if(r && r.stacked && r.size2) railSizesSet.add(normalizeSize(r.size2));
       }
     });
-    const picketSizesSet = new Set(state.sections.map(s => s.picketSize).filter(Boolean));
-    railSizesSet.forEach(size => sub.push(`- 3x 12ft rail sticks (${size})`));
-    picketSizesSet.forEach(size => sub.push(`- 3x 12ft picket sticks (${size})`));
+    const picketSizesSet = new Set(state.sections.map(s => normalizeSize(s.picketSize)).filter(Boolean));
+    railSizesSet.forEach(size => { if(size) sub.push(`- 3x 12ft rail sticks (${size})`); });
+    picketSizesSet.forEach(size => { if(size) sub.push(`- 3x 12ft picket sticks (${size})`); });
 
     sub.push('');
     sub.push('SCOPE (Totals)');
