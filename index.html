@@ -1837,8 +1837,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const heights = new Set();
       const styles = new Set();
       const rails = new Set();
+      const railSizes = new Set();
       const pickets = new Set();
       const spacing = new Set();
+      const postSizes = new Set();
 
       sections.forEach(section=>{
         const len = parseInt(section.length,10) || 0;
@@ -1848,6 +1850,20 @@ document.addEventListener('DOMContentLoaded', function(){
         if(section.picketSize){ pickets.add(normalizeSize(section.picketSize)); }
         const rCount = parseInt(section.railsCount,10) || (Array.isArray(section.rails) ? section.rails.length : 0);
         if(rCount > 0){ rails.add(`${rCount} rail${rCount === 1 ? '' : 's'}`); }
+        if(Array.isArray(section.rails) && section.rails.length){
+          section.rails.forEach(r=>{
+            if(r && r.size){ railSizes.add(normalizeSize(r.size)); }
+            if(r && r.stacked && r.size2){ railSizes.add(normalizeSize(r.size2)); }
+          });
+        } else if(section.railSize){
+          railSizes.add(normalizeSize(section.railSize));
+          if(section.railStacked && section.railSize2){
+            railSizes.add(normalizeSize(section.railSize2));
+          }
+        }
+        if(section.postSize){
+          postSizes.add(normalizeSize(section.postSize));
+        }
         const spacingCandidate = (section._installCalc && section._installCalc.spacingFt) || parseFloat(section.postSpacing||'');
         const spacingStr = formatFtValue(spacingCandidate);
         if(spacingStr){ spacing.add(spacingStr); }
@@ -1876,19 +1892,27 @@ document.addEventListener('DOMContentLoaded', function(){
         : `${actionPrefix} ${descriptor}${withText}.`;
 
       const spacingValues = Array.from(spacing).sort((a,b)=> parseFloat(a) - parseFloat(b));
+      const railSizeValues = Array.from(railSizes).filter(Boolean);
+      const postSizeValues = Array.from(postSizes).filter(Boolean);
       let postsSentence = '';
+      const postSizeLabel = postSizeValues.length ? ` (${joinParts(postSizeValues)})` : '';
       if(spacingValues.length){
         if(spacingValues.length === 1){
-          postsSentence = `Posts will be set ${spacingValues[0]}ft apart and will be set in concrete 36\" deep.`;
+          postsSentence = `Posts${postSizeLabel} will be set ${spacingValues[0]}ft apart and will be set in concrete 36\" deep.`;
         } else {
           const spacingLabels = spacingValues.map(v=> `${v}ft`);
-          postsSentence = `Posts will be set between ${joinParts(spacingLabels)} apart and will be set in concrete 36\" deep.`;
+          postsSentence = `Posts${postSizeLabel} will be set between ${joinParts(spacingLabels)} apart and will be set in concrete 36\" deep.`;
         }
       } else {
-        postsSentence = `Posts will be set in concrete 36\" deep.`;
+        postsSentence = `Posts${postSizeLabel} will be set in concrete 36\" deep.`;
       }
 
-      return [firstSentence, postsSentence].filter(Boolean).join(' ');
+      let railSentence = '';
+      if(railSizeValues.length){
+        railSentence = `Rails will use ${joinParts(railSizeValues)} stock.`;
+      }
+
+      return [firstSentence, postsSentence, railSentence].filter(Boolean).join(' ');
     }
     const zeroPostCounts = ()=>({ posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 });
     const totals = {
