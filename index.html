@@ -3350,7 +3350,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
-    const crewCost = crewSchedule.reduce((acc, day) => acc + laborCost(day.crew || 0), 0);
+    const totalCrewCount = crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0);
+    const crewCost = laborCost(totalCrewCount);
     const removalCost = totals.removalCost || 0;
     const directCosts = crewCost + costMaterials + removalCost;
     const revenueRes = computeChargeRevenue(directCosts);
@@ -3362,7 +3363,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const cost = [];
     cost.push('ESTIMATED COST');
     const crewScheduleDetail = scheduleEntries.map(entry => `Day ${entry.number}: ${entry.crewLabel}${entry.suffix}`);
-    const laborDetailWithDays = crewScheduleDetail.length ? crewScheduleDetail.join('; ') : 'TBD';
+    const laborDetailWithDays = crewScheduleDetail.length
+      ? `${crewScheduleDetail.join('; ')}; total crew-equivalent: ${totalCrewCount}`
+      : 'TBD';
     cost.push('- Labor: $'+money(crewCost)+' ('+laborDetailWithDays+')');
     cost.push('- Materials: $'+money(costMaterials));
     if(removalCost>0){ cost.push('- Removal & disposal (paid to sub): $'+money(removalCost)); }
