@@ -2502,7 +2502,10 @@ document.addEventListener('DOMContentLoaded', function(){
       );
     }
     if (totals.wiPatches > 0){
-      addServiceLine('Rail Patch Repairs', `Cut out rusted sections and weld in ${describeCount(totals.wiPatches, 'steel patch', 'steel patches')} on horizontal rails.`);
+      const rustedPortionText = totals.wiPatches === 1
+        ? '1x rusted portion'
+        : `${totals.wiPatches}x rusted portions`;
+      addServiceLine('Rail Patch Repairs', `Cut out ${rustedPortionText} of 1" rail steel and weld in new steel.`);
     }
     if (totals.wiRails > 0){
       const railCount = parseInt(totals.wiRails, 10) || 0;
