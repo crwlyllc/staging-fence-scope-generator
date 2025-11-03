@@ -245,6 +245,8 @@ document.addEventListener('DOMContentLoaded', function(){
     capPostSizes:["1 1/2\" x 1 1/2\"","2x2","3x3","4x4"],
   };
 
+  const PUPPY_INSERT_SIZES = ['1/2"','5/8"'];
+
   const GATE = {
     latchTypes: [
       'Gravity Latch',
@@ -419,6 +421,15 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-row" style="margin-top:6px">
             <button class="sp-btn ghost" type="button" data-finial-add>+ Add Finial Replacement</button>
             <span class="sp-hint">Each replacement adds ~30 seconds of labor. Unit cost: $1.25.</span>
+          </div>
+        </div>
+
+        <div class="sp-field col-12" data-repair-only>
+          <label class="sp-label">Puppy Picket Inserts</label>
+          <div data-puppy-inserts></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-puppy-insert-add>+ Add Puppy Picket Insert</button>
+            <span class="sp-hint">Each insert takes a welder + helper about 30 minutes. Unit cost: $62.59 plus picket plugs.</span>
           </div>
         </div>
 
@@ -631,6 +642,8 @@ document.addEventListener('DOMContentLoaded', function(){
       caps: [],
       // NEW: Panel Replacements
       panels: [],
+      // NEW: Puppy Picket Inserts
+      puppyInserts: [],
 
       ...data
     });
@@ -688,6 +701,17 @@ document.addEventListener('DOMContentLoaded', function(){
         const material = (row.querySelector('[data-finial-material]')?.value) || (SEED.finialMaterials && SEED.finialMaterials[0]);
         const picketSize = (row.querySelector('[data-finial-picket]')?.value) || (SEED.picketSize && SEED.picketSize[0]);
         if(qty>0){ finials.push({ qty, style, material, picketSize }); }
+      });
+    }
+
+    const puppyInserts = [];
+    const puppyCont = card.querySelector('[data-puppy-inserts]');
+    if(puppyCont){
+      const rows = Array.from(puppyCont.querySelectorAll('[data-puppy-insert-row]'));
+      rows.forEach(row=>{
+        const qty = parseInt((row.querySelector('[data-puppy-insert-qty] input')?.value)||'0',10) || 0;
+        const picketSize = (row.querySelector('[data-puppy-insert-size]')?.value) || PUPPY_INSERT_SIZES[0];
+        if(qty>0){ puppyInserts.push({ qty, picketSize }); }
       });
     }
 
@@ -819,6 +843,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
       // NEW: finials
       finials,
+      // NEW: puppy picket inserts
+      puppyInserts,
       // NEW: caps
       caps,
       // NEW: panels
@@ -902,6 +928,7 @@ document.addEventListener('DOMContentLoaded', function(){
     renderPostRealignControls(card, data);
     // NEW: render finial rows
     renderFinialsControls(card, data);
+    renderPuppyInsertControls(card, data);
     // NEW: render cap rows
     renderCapsControls(card, data);
     // NEW: render panel rows
@@ -1660,6 +1687,105 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  function renderPuppyInsertControls(card, data){
+    const cont = card.querySelector('[data-puppy-inserts]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const arr = Array.isArray(data.puppyInserts) ? data.puppyInserts : [];
+    arr.forEach(item=>{
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-puppy-insert-row','');
+      row.innerHTML = `
+        <div class="sp-field col-3">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-puppy-insert-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${item.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-4">
+          <label class="sp-label">Picket Size</label>
+          <select class="sp-select" data-puppy-insert-size>${createSelect(PUPPY_INSERT_SIZES)}</select>
+        </div>
+        <div class="sp-field col-2" style="align-self:end">
+          <button class="sp-btn danger" data-puppy-insert-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const sizeSel = row.querySelector('[data-puppy-insert-size]');
+      const normalized = normalizeSize(item.picketSize);
+      const preferred = PUPPY_INSERT_SIZES.includes(normalized) ? normalized : PUPPY_INSERT_SIZES[0];
+      if(sizeSel){ sizeSel.value = preferred; }
+    });
+
+    const addBtn = card.querySelector('[data-puppy-insert-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s.puppyInserts)) s.puppyInserts = [];
+        const normalized = normalizeSize(s.picketSize);
+        const defaultSize = PUPPY_INSERT_SIZES.includes(normalized) ? normalized : PUPPY_INSERT_SIZES[0];
+        s.puppyInserts.push({ qty: 1, picketSize: defaultSize });
+        renderPuppyInsertControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-puppy-insert-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-puppy-insert-row]'));
+      const row = btn.closest('[data-puppy-insert-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.puppyInserts)) return;
+      if(idx>=0){
+        s.puppyInserts.splice(idx,1);
+        renderPuppyInsertControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.matches('[data-puppy-insert-size]')){
+        persistPuppyInsertsFromDOM(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-puppy-insert-qty]')){
+        persistPuppyInsertsFromDOM(card);
+        persist();
+      }
+    });
+  }
+
+  function persistPuppyInsertsFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-puppy-inserts]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-puppy-insert-row]')) : [];
+    s.puppyInserts = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-puppy-insert-qty] input')?.value)||'0',10) || 0;
+      let picketSize = (row.querySelector('[data-puppy-insert-size]')?.value) || PUPPY_INSERT_SIZES[0];
+      const normalized = normalizeSize(picketSize);
+      if(PUPPY_INSERT_SIZES.includes(normalized)){
+        picketSize = normalized;
+      } else {
+        picketSize = PUPPY_INSERT_SIZES[0];
+      }
+      return { qty, picketSize };
+    });
+  }
+
   function persistFinialsFromDOM(card){
     const secId = card.getAttribute('data-id');
     const s = state.sections.find(x=>x.id===secId);
@@ -1944,6 +2070,10 @@ document.addEventListener('DOMContentLoaded', function(){
     'Pair of Auto Close Hinges': 50,
     // NEW
     'replacement finial': 1.25,
+    'puppy picket insert (1/2")': 62.59,
+    'puppy picket insert (5/8")': 62.59,
+    'picket plugs (1/2")': 0.10,
+    'picket plugs (5/8")': 0.11,
     'prefab gate panel': 0
   };
 
@@ -2074,7 +2204,8 @@ document.addEventListener('DOMContentLoaded', function(){
       'Realign Walk Gates': 'repairs',
       'Replace Walk Gate Hardware': 'repairs',
       'Rebuild Walk Gates': 'repairs',
-      'Add Diagonal Braces': 'repairs'
+      'Add Diagonal Braces': 'repairs',
+      'Install Puppy Picket Inserts': 'repairs'
     };
     function ensureSentence(text){
       const trimmed = (text || '').trim();
@@ -2258,6 +2389,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const zeroPostCounts = ()=>({ posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 });
     const totals = {
       length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
+      puppyInserts:0,
       diagonalBraces:0,
       wiPickets:0, wiPatches:0, wiRails:0, wiRailGaps:0,
       wiPicketSizes: new Set(),
@@ -2265,6 +2397,7 @@ document.addEventListener('DOMContentLoaded', function(){
       wiRailReplaceSizes: new Set(),
       wiRailGapSizes: new Set(),
       diagonalBraceSizes: new Map(),
+      puppyInsertSizes: new Map(),
       posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0,
       walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
       walkGateAdds:0,
@@ -2527,6 +2660,19 @@ document.addEventListener('DOMContentLoaded', function(){
         });
       }
 
+      const puppyInsertArr = isRepair && Array.isArray(s.puppyInserts) ? s.puppyInserts : [];
+      const puppyInsertCount = puppyInsertArr.reduce((acc,item)=> acc + (parseInt(item?.qty||0,10) || 0), 0);
+      if(puppyInsertCount){
+        lines.push(`- Puppy picket inserts: ${puppyInsertCount}`);
+        puppyInsertArr.forEach(item=>{
+          const qty = parseInt(item?.qty||0,10) || 0;
+          if(!qty) return;
+          const normalized = normalizeSize(item?.picketSize);
+          const sizeLabel = PUPPY_INSERT_SIZES.includes(normalized) ? normalized : PUPPY_INSERT_SIZES[0];
+          lines.push(`  - ${qty} × ${sizeLabel} pickets (includes 25 plugs per insert)`);
+        });
+      }
+
       function processPanels(list, heading, source, extra={}){
         if(!Array.isArray(list) || list.length === 0) return;
         const prepared = [];
@@ -2665,6 +2811,18 @@ document.addEventListener('DOMContentLoaded', function(){
       if(isRepair){
         totals.digOut       += i(s.digOut);
         totals.finials      += finCount;
+        totals.puppyInserts += puppyInsertCount;
+        if(puppyInsertCount > 0){
+          puppyInsertArr.forEach(item=>{
+            const qty = parseInt(item?.qty||0,10) || 0;
+            if(!qty) return;
+            const normalized = normalizeSize(item?.picketSize);
+            const sizeLabel = PUPPY_INSERT_SIZES.includes(normalized) ? normalized : PUPPY_INSERT_SIZES[0];
+            totals.puppyInsertSizes.set(sizeLabel, (totals.puppyInsertSizes.get(sizeLabel)||0) + qty);
+            addMat(materials, `puppy picket insert (${sizeLabel})`, qty);
+            addMat(materials, `picket plugs (${sizeLabel})`, qty * 25);
+          });
+        }
         totals.wiPickets    += picketReplaceCount;
         if(picketReplaceCount > 0){
           const picketSizeNormalized = normalizeSize(s.picketSize);
@@ -2718,6 +2876,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.installSections) lines.push(`- New sections to install: ${t.installSections}`);
       if (t.removalLf)      lines.push(`- Removal & haul away: ${t.removalLf} lf (sub paid $${money(t.removalCost)})`);
       if (t.finials)        lines.push(`- Finials to replace: ${t.finials}`);
+      if (t.puppyInserts)   lines.push(`- Puppy picket inserts: ${t.puppyInserts}`);
       if (t.caps)           lines.push(`- Post caps to replace: ${t.caps}`);
       if (t.wiPickets)      lines.push(`- Pickets to replace: ${t.wiPickets}`);
       if (t.wiPatches)      lines.push(`- Rail patches: ${t.wiPatches}`);
@@ -2877,6 +3036,16 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.finials > 0){
       addServiceLine('Finial Replacement', `Install ${describeCount(totals.finials, 'new finial', 'new finials')} to restore decorative picket tops.`);
     }
+    if (totals.puppyInserts > 0){
+      const sizeParts = [];
+      if(totals.puppyInsertSizes && typeof totals.puppyInsertSizes.forEach === 'function'){
+        totals.puppyInsertSizes.forEach((count, size)=>{
+          if(count>0){ sizeParts.push(`${count} × ${size}`); }
+        });
+      }
+      const sizeNote = sizeParts.length ? ` (${sizeParts.join(', ')})` : '';
+      addServiceLine('Install Puppy Picket Inserts', `Install ${describeCount(totals.puppyInserts, 'puppy picket insert', 'puppy picket inserts')}${sizeNote} to close spacing near the bottom of the fence for small pets.`);
+    }
     if (totals.caps > 0){
       addServiceLine('Post Cap Replacement', `Install ${describeCount(totals.caps, 'new post cap', 'new post caps')} to protect posts and match the existing style.`);
     }
@@ -2964,6 +3133,12 @@ document.addEventListener('DOMContentLoaded', function(){
     const capHours = totals.caps * (20/60);
     manHours += capHours;
     helperHours += capHours;
+    const puppyInsertWelderHours = totals.puppyInserts * 0.5;
+    const puppyInsertHelperHours = totals.puppyInserts * 0.5;
+    const puppyInsertManHours = puppyInsertWelderHours + puppyInsertHelperHours;
+    manHours += puppyInsertManHours;
+    welderHours += puppyInsertWelderHours;
+    helperHours += puppyInsertHelperHours;
     // Added gates: 4 hours each
     const addedGateHours = (totals.walkGateAddsSingle * 2) + (totals.walkGateAddsDouble * 3);
     manHours += addedGateHours;
@@ -3680,6 +3855,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.walkGateAddsSingle > 0) sub.push('- Single swing walk gates to add: '+totals.walkGateAddsSingle);
     if (totals.walkGateAddsDouble > 0) sub.push('- Double swing gates to add: '+totals.walkGateAddsDouble);
     if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
+    if (totals.puppyInserts > 0)    sub.push('- Puppy picket inserts: '+totals.puppyInserts);
     if (totals.caps > 0)            sub.push('- Post caps to replace: '+totals.caps);
     if (totals.diagonalBraces > 0)  sub.push('- Diagonal braces to add: '+totals.diagonalBraces);
     if (totals.digOut > 0)          sub.push('- Dig out: '+totals.digOut+' lf');
