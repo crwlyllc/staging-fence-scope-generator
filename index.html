@@ -404,6 +404,16 @@ document.addEventListener('DOMContentLoaded', function(){
           ${numberControl('picketHeight','e.g., 54')}
         </div>
         <div class="sp-field col-3">
+          <label class="sp-label">Diagonal Brace Size</label>
+          <select class="sp-select" data-field="diagonalBraceSize">${createSelect(SEED.picketSize)}</select>
+          <div class="sp-hint">Select picket steel for diagonal braces.</div>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Diagonal Brace Qty</label>
+          ${numberControl('diagonalBraceQty','0')}
+          <div class="sp-hint">Each brace uses 4 ft of material.</div>
+        </div>
+        <div class="sp-field col-3">
           <label class="sp-label">Puppy Pickets</label>
           <select class="sp-select" data-field="puppy">${createSelect(SEED.puppy)}</select>
         </div>
@@ -591,6 +601,9 @@ document.addEventListener('DOMContentLoaded', function(){
       walkRebuildLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
       walkRebuildHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
 
+      diagonalBraceSize: SEED.picketSize[0],
+      diagonalBraceQty: 0,
+
       // NEW: Add Walk Gate fields
       walkGatesAdd: 0,
       walkAddType: 'Single Swing Walk Gate',
@@ -748,6 +761,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
       picketSize: val('picketSize'),
       picketHeight: val('picketHeight'),
+      diagonalBraceSize: val('diagonalBraceSize'),
+      diagonalBraceQty: val('diagonalBraceQty'),
       puppy: val('puppy'),
       painting: val('painting'),
       length: val('length'),
@@ -825,6 +840,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     set('picketSize', data.picketSize||SEED.picketSize[0]);
     set('picketHeight', data.picketHeight||'');
+    set('diagonalBraceSize', data.diagonalBraceSize || data.picketSize || SEED.picketSize[0]);
+    set('diagonalBraceQty', data.diagonalBraceQty || '');
     set('puppy', data.puppy||SEED.puppy[0]);
     set('painting', data.painting||'Paint Section');
     set('length', data.length||'');
@@ -1864,7 +1881,8 @@ document.addEventListener('DOMContentLoaded', function(){
       'Build Custom Panels': 'repairs',
       'Realign Walk Gates': 'repairs',
       'Replace Walk Gate Hardware': 'repairs',
-      'Rebuild Walk Gates': 'repairs'
+      'Rebuild Walk Gates': 'repairs',
+      'Add Diagonal Braces': 'repairs'
     };
     function ensureSentence(text){
       const trimmed = (text || '').trim();
@@ -2048,11 +2066,13 @@ document.addEventListener('DOMContentLoaded', function(){
     const zeroPostCounts = ()=>({ posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 });
     const totals = {
       length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
+      diagonalBraces:0,
       wiPickets:0, wiPatches:0, wiRails:0, wiRailGaps:0,
       wiPicketSizes: new Set(),
       wiPatchSizes: new Set(),
       wiRailReplaceSizes: new Set(),
       wiRailGapSizes: new Set(),
+      diagonalBraceSizes: new Map(),
       posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0,
       walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
       walkGateAdds:0,
@@ -2071,6 +2091,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const picketStickTotals = {};
     const railStickTotals = {};
     const steelStickTotals = { raw1p5:0, raw3x3:0, raw4x4:0 };
+    const diagonalBraceFeetBySize = {};
 
     const addPicketSticks = (size, qty) => {
       if(!qty || qty <= 0) return;
@@ -2098,6 +2119,9 @@ document.addEventListener('DOMContentLoaded', function(){
     state.sections.forEach((s, idx)=>{
       const title  = s.label ? `Section ${idx+1} - ${s.label}` : `Section ${idx+1}`;
       const picket = s.picketHeight ? `${s.picketSize} (height ${s.picketHeight} in)` : `${s.picketSize}`;
+      const braceQty = parseInt(s.diagonalBraceQty||0,10) || 0;
+      const braceSizeRaw = s.diagonalBraceSize || '';
+      const braceSizeLabel = braceSizeRaw ? normalizeLabelText(braceSizeRaw) : '';
 
       const railsDesc = (Array.isArray(s.rails) && s.rails.length)
         ? (()=>{
@@ -2224,6 +2248,20 @@ document.addEventListener('DOMContentLoaded', function(){
       lines.push(`- Picket: ${picket}`);
       lines.push(`- Puppy Pickets: ${s.puppy}`);
       lines.push(`- Painting: ${s.painting || 'Paint Section'}`);
+      let braceLine = '';
+      if(braceQty > 0){
+        const normalizedBraceSize = normalizeSize(braceSizeRaw) || braceSizeLabel || 'picket steel';
+        totals.diagonalBraces += braceQty;
+        if(normalizedBraceSize){
+          const prevCount = totals.diagonalBraceSizes.get(normalizedBraceSize) || 0;
+          totals.diagonalBraceSizes.set(normalizedBraceSize, prevCount + braceQty);
+          diagonalBraceFeetBySize[normalizedBraceSize] = (diagonalBraceFeetBySize[normalizedBraceSize]||0) + braceQty * 4;
+        }
+        braceLine = `- Diagonal brace additions: ${braceQty} × ${braceSizeLabel || 'picket steel'} (4 ft each)`;
+      }
+      if(braceLine && !isRepair){
+        lines.push(braceLine);
+      }
 
       if(isInstall && installInfo){
         lines.push(`- Post spacing: ${installInfo.spacingFt} ft`);
@@ -2258,6 +2296,9 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
         lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
         lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
+        if(braceQty > 0){
+          lines.push(`  - Diagonal brace additions: ${braceQty} (${braceSizeLabel || 'picket steel'})`);
+        }
       }
 
       // NEW: Finials
@@ -2624,6 +2665,21 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.caps > 0){
       addServiceLine('Post Cap Replacement', `Install ${describeCount(totals.caps, 'new post cap', 'new post caps')} to protect posts and match the existing style.`);
     }
+    if (totals.diagonalBraces > 0){
+      const braceDesc = describeCount(totals.diagonalBraces, 'diagonal brace', 'diagonal braces');
+      const braceSizeLabels = [];
+      if(totals.diagonalBraceSizes && typeof totals.diagonalBraceSizes.forEach === 'function'){
+        totals.diagonalBraceSizes.forEach((count, size)=>{
+          const qty = parseInt(count,10) || 0;
+          if(qty <= 0) return;
+          const cleanSize = normalizeLabelText(size || '');
+          braceSizeLabels.push(cleanSize ? `${cleanSize} picket steel` : 'picket steel');
+        });
+      }
+      const uniqueBraceLabels = Array.from(new Set(braceSizeLabels)).filter(Boolean);
+      const sizeDetail = uniqueBraceLabels.length ? ` using ${joinParts(uniqueBraceLabels)}` : '';
+      addServiceLine('Add Diagonal Braces', `Fabricate and install ${braceDesc}${sizeDetail} to close gaps near the bottom of the fence (4 ft each).`);
+    }
     const prefabSwapCount = Math.max(0, totals.panelsPrefab - (totals.panelsInstallPrefab || 0));
     if (prefabSwapCount > 0){
       addServiceLine('Install Prefab Panels', `Swap in ${describeCount(prefabSwapCount, 'prefabricated panel', 'prefabricated panels')} and secure them to existing posts.`);
@@ -2666,6 +2722,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const weldRepairHours = (
       totals.wiPickets*12 +
+      totals.diagonalBraces*12 +
       totals.wiPatches*20 +
       totals.wiRails*30 +
       totals.wiRailGaps*20 +
@@ -2880,6 +2937,15 @@ document.addEventListener('DOMContentLoaded', function(){
     });
     Object.entries(picketBySizeCalc).forEach(([size, qty])=>{
       addPicketSticks(size, qty);
+    });
+
+    Object.entries(diagonalBraceFeetBySize).forEach(([size, feetTotal])=>{
+      const totalFeet = parseFloat(feetTotal) || 0;
+      if(totalFeet <= 0) return;
+      const sticks = Math.ceil(totalFeet / 12);
+      if(sticks > 0){
+        addPicketSticks(size, sticks);
+      }
     });
 
     // Rails: patches & replacements → sticks
@@ -3355,6 +3421,13 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
     const picketSizesSet = new Set(state.sections.map(s => normalizeSize(s.picketSize)).filter(Boolean));
+    if(totals.diagonalBraceSizes && typeof totals.diagonalBraceSizes.forEach === 'function'){
+      totals.diagonalBraceSizes.forEach((count, size)=>{
+        if((parseInt(count,10)||0) <= 0) return;
+        const clean = normalizeSize(size) || normalizeLabelText(size || '');
+        if(clean) picketSizesSet.add(clean);
+      });
+    }
     railSizesSet.forEach(size => { if(size) sub.push(`- 3x 12ft rail sticks (${size})`); });
     picketSizesSet.forEach(size => { if(size) sub.push(`- 3x 12ft picket sticks (${size})`); });
 
@@ -3387,6 +3460,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.walkGateAddsDouble > 0) sub.push('- Double swing gates to add: '+totals.walkGateAddsDouble);
     if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
     if (totals.caps > 0)            sub.push('- Post caps to replace: '+totals.caps);
+    if (totals.diagonalBraces > 0)  sub.push('- Diagonal braces to add: '+totals.diagonalBraces);
     if (totals.digOut > 0)          sub.push('- Dig out: '+totals.digOut+' lf');
     if (totals.panelsPrefab > 0)    sub.push('- Prefab panels to install: '+totals.panelsPrefab);
     if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
