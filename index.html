@@ -2678,7 +2678,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       const uniqueBraceLabels = Array.from(new Set(braceSizeLabels)).filter(Boolean);
       const sizeDetail = uniqueBraceLabels.length ? ` using ${joinParts(uniqueBraceLabels)}` : '';
-      addServiceLine('Add Diagonal Braces', `Fabricate and install ${braceDesc}${sizeDetail} to close gaps near the bottom of the fence (4 ft each).`);
+      addServiceLine('Add Diagonal Braces', `Fabricate and install ${braceDesc}${sizeDetail} to close gaps near the bottom of the fence.`);
     }
     const prefabSwapCount = Math.max(0, totals.panelsPrefab - (totals.panelsInstallPrefab || 0));
     if (prefabSwapCount > 0){
