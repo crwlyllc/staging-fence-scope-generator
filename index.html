@@ -574,8 +574,8 @@ document.addEventListener('DOMContentLoaded', function(){
       collapsed:false,
       railsCount:2,
       rails:[
-        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
-        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
+        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0, gapAdditions:0, gapSize:SEED.railSize[0]},
+        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0, gapAdditions:0, gapSize:SEED.railSize[0]},
       ],
       postSize: '2x2',
       postReplacements: [],
@@ -653,7 +653,9 @@ document.addEventListener('DOMContentLoaded', function(){
         stacked: !!val(`railStacked_${i}`),
         size2: val(`railSize2_${i}`),
         patches: val(`railPatches_${i}`),
-        replacements: val(`railRepl_${i}`)
+        replacements: val(`railRepl_${i}`),
+        gapAdditions: val(`railGapAdd_${i}`),
+        gapSize: val(`railGapSize_${i}`)
       });
     }
 
@@ -1158,6 +1160,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const r = rails[i] || {};
       if(r.size) sizes.add(r.size);
       if(r.stacked && r.size2) sizes.add(r.size2);
+      if(r.gapSize) sizes.add(r.gapSize);
     }
     if(!sizes.size){
       if(section?.railSize) sizes.add(section.railSize);
@@ -1180,6 +1183,7 @@ document.addEventListener('DOMContentLoaded', function(){
       block.setAttribute('data-rail-block','');
       const patchesHtml = numberControl('railPatches_'+i,'0');
       const replHtml    = numberControl('railRepl_'+i,'0');
+      const gapHtml     = numberControl('railGapAdd_'+i,'0');
       block.innerHTML = `
         <label class="sp-label">${label} Size</label>
         <select class="sp-select" data-field="railSize_${i}">${createSelect(SEED.railSize)}</select>
@@ -1201,6 +1205,14 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label"># Full Rail Replacements (${label})</label>
           ${replHtml}
         </div>
+        <div class="sp-field" data-rail-repair style="margin-top:6px">
+          <label class="sp-label">Gap Addition Rail Size (${label})</label>
+          <select class="sp-select" data-field="railGapSize_${i}">${createSelect(SEED.railSize)}</select>
+        </div>
+        <div class="sp-field" data-rail-repair style="margin-top:6px">
+          <label class="sp-label"># Full Rail Gap Additions (${label})</label>
+          ${gapHtml}
+        </div>
       `;
       row.appendChild(block);
       const r = rails[i] || {};
@@ -1209,11 +1221,15 @@ document.addEventListener('DOMContentLoaded', function(){
       const size2El   = card.querySelector(`[data-field="railSize2_${i}"]`);
       const patchesBox= card.querySelector(`[data-field="railPatches_${i}"]`);
       const replBox   = card.querySelector(`[data-field="railRepl_${i}"]`);
+      const gapSizeEl = card.querySelector(`[data-field="railGapSize_${i}"]`);
+      const gapBox    = card.querySelector(`[data-field="railGapAdd_${i}"]`);
       if(sizeEl) sizeEl.value = r.size || SEED.railSize[0];
       if(stackEl) stackEl.checked = Boolean(r.stacked);
       if(size2El) size2El.value = r.size2 || SEED.railSize[0];
       if(patchesBox) patchesBox.querySelector('input').value = r.patches || 0;
       if(replBox)    replBox.querySelector('input').value    = r.replacements || 0;
+      if(gapSizeEl) gapSizeEl.value = r.gapSize || r.size || SEED.railSize[0];
+      if(gapBox)    gapBox.querySelector('input').value      = r.gapAdditions || 0;
       const cond = card.querySelector(`[data-if="railStacked_${i}"]`);
       if(cond && stackEl) cond.style.display = stackEl.checked ? 'block' : 'none';
     });
@@ -1462,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', function(){
         s.railsCount = newCount;
         if(!Array.isArray(s.rails)) s.rails = [];
         const labels = railLabels(newCount);
-        s.rails = labels.map((_, i)=> s.rails[i] || { size: SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0});
+        s.rails = labels.map((_, i)=> s.rails[i] || { size: SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0, gapAdditions:0, gapSize:SEED.railSize[0]});
         renderRailsControls(card, s);
         attachNumberHandlers(card);
         persist();
@@ -1839,6 +1855,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Replace Damaged Pickets': 'repairs',
       'Rail Patch Repairs': 'repairs',
       'Full Rail Replacement': 'repairs',
+      'Full Rail Gap Addition': 'repairs',
       'Replace Fence Posts': 'repairs',
       'Realign Leaning Posts': 'repairs',
       'Finial Replacement': 'repairs',
@@ -2031,10 +2048,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const zeroPostCounts = ()=>({ posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 });
     const totals = {
       length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
-      wiPickets:0, wiPatches:0, wiRails:0,
+      wiPickets:0, wiPatches:0, wiRails:0, wiRailGaps:0,
       wiPicketSizes: new Set(),
       wiPatchSizes: new Set(),
       wiRailReplaceSizes: new Set(),
+      wiRailGapSizes: new Set(),
       posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0,
       walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
       walkGateAdds:0,
@@ -2163,15 +2181,19 @@ document.addEventListener('DOMContentLoaded', function(){
 
       let sectionPatchTotal = 0;
       let sectionReplTotal = 0;
+      let sectionGapTotal = 0;
       const sectionPatchSizes = new Set();
       const sectionReplSizes = new Set();
+      const sectionGapSizes = new Set();
       if(isRepair){
         const railsArr = (s.rails||[]).slice(0, s.railsCount||0);
         railsArr.forEach(r=>{
           const patchCount = parseInt(r?.patches||0,10) || 0;
           const replCount = parseInt(r?.replacements||0,10) || 0;
+          const gapCount = parseInt(r?.gapAdditions||0,10) || 0;
           const primarySize = normalizeSize(r?.size);
           const secondarySize = r?.stacked ? normalizeSize(r?.size2) : '';
+          const gapSize = normalizeSize(r?.gapSize) || primarySize;
           if(patchCount){
             sectionPatchTotal += patchCount;
             if(primarySize) sectionPatchSizes.add(primarySize);
@@ -2181,6 +2203,10 @@ document.addEventListener('DOMContentLoaded', function(){
             sectionReplTotal += replCount;
             if(primarySize) sectionReplSizes.add(primarySize);
             if(secondarySize) sectionReplSizes.add(secondarySize);
+          }
+          if(gapCount){
+            sectionGapTotal += gapCount;
+            if(gapSize) sectionGapSizes.add(gapSize);
           }
         });
       }
@@ -2225,6 +2251,7 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
         lines.push(`  - Rail patches: ${sectionPatchTotal}`);
         lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
+        lines.push(`  - Full rail gap additions: ${sectionGapTotal}`);
         lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
         lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
         lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
@@ -2395,6 +2422,10 @@ document.addEventListener('DOMContentLoaded', function(){
         if(sectionReplTotal > 0){
           sectionReplSizes.forEach(size=> totals.wiRailReplaceSizes.add(size));
         }
+        totals.wiRailGaps   += sectionGapTotal;
+        if(sectionGapTotal > 0){
+          sectionGapSizes.forEach(size=> totals.wiRailGapSizes.add(size));
+        }
         addPostCounts(totals.postsReplace, replaceCounts);
         addPostCounts(totals, replaceCounts);
         totals.postsRealign2x2 += realignCounts.posts2x2;
@@ -2435,6 +2466,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.wiPickets)      lines.push(`- Pickets to replace: ${t.wiPickets}`);
       if (t.wiPatches)      lines.push(`- Rail patches: ${t.wiPatches}`);
       if (t.wiRails)        lines.push(`- Full rail replacements: ${t.wiRails}`);
+      if (t.wiRailGaps)     lines.push(`- Full rail gap additions: ${t.wiRailGaps}`);
       const postSummary = (label, counts)=>{
         const parts = [];
         if(counts.posts1p5) parts.push(`${counts.posts1p5} × 1 1/2" x 1 1/2"`);
@@ -2562,6 +2594,13 @@ document.addEventListener('DOMContentLoaded', function(){
         `Cut out ${railCount}x ${railLabel}${sizeSuffix} that ${railVerb} rusted through and ${railNeedVerb} to be replaced. Weld in new rail steel.`
       );
     }
+    if (totals.wiRailGaps > 0){
+      const gapCount = parseInt(totals.wiRailGaps, 10) || 0;
+      const gapLabel = describeCount(gapCount, 'full rail gap addition', 'full rail gap additions');
+      const gapSizes = Array.from(totals.wiRailGapSizes || []).filter(Boolean);
+      const sizeText = gapSizes.length ? ` using ${joinParts(gapSizes)} rail stock` : ' using matching rail stock';
+      addServiceLine('Full Rail Gap Addition', `Add ${gapLabel}${sizeText} to close open spans and match the existing fence.`);
+    }
     const replaceServiceCounts = totals.postsReplace || zeroPostCounts();
     if (replaceServiceCounts.posts2x2 > 0 || replaceServiceCounts.posts3x3 > 0 || replaceServiceCounts.posts1p5 > 0 || replaceServiceCounts.posts4x4 > 0){
       const parts = [];
@@ -2629,6 +2668,7 @@ document.addEventListener('DOMContentLoaded', function(){
       totals.wiPickets*12 +
       totals.wiPatches*20 +
       totals.wiRails*30 +
+      totals.wiRailGaps*20 +
       totals.posts1p5*60 +
       totals.posts2x2*60 +
       totals.posts3x3*90 +
@@ -2846,6 +2886,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const railStickBySizeMat = {};
     const patchBySizeMat = {};
     const replBySizeMat = {};
+    const gapBySizeMat = {};
     function inc(map, key, delta){ if(!key) return; map[key] = (map[key]||0) + (delta||0); }
 
     state.sections.forEach(s=>{
@@ -2854,6 +2895,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const r = (s.rails||[])[i] || {};
         const p = parseInt(r.patches||0,10) || 0;
         const rep = parseInt(r.replacements||0,10) || 0;
+        const gap = parseInt(r.gapAdditions||0,10) || 0;
         if(p>0){
           inc(patchBySizeMat, normalizeSize(r.size), p);
           if(r.stacked) inc(patchBySizeMat, normalizeSize(r.size2), p);
@@ -2862,11 +2904,19 @@ document.addEventListener('DOMContentLoaded', function(){
           inc(replBySizeMat, normalizeSize(r.size), rep);
           if(r.stacked) inc(replBySizeMat, normalizeSize(r.size2), rep);
         }
+        if(gap>0){
+          const primarySize = normalizeSize(r.gapSize) || normalizeSize(r.size);
+          inc(gapBySizeMat, primarySize, gap);
+        }
       }
     });
 
     Object.entries(replBySizeMat).forEach(([size, rep])=>{
       if(rep>0) inc(railStickBySizeMat, size, rep);
+    });
+
+    Object.entries(gapBySizeMat).forEach(([size, gapCount])=>{
+      if(gapCount>0) inc(railStickBySizeMat, size, gapCount);
     });
 
     Object.entries(patchBySizeMat).forEach(([size, pcount])=>{
@@ -3301,6 +3351,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const r = (s.rails||[])[i] || {};
         if(r && r.size) railSizesSet.add(normalizeSize(r.size));
         if(r && r.stacked && r.size2) railSizesSet.add(normalizeSize(r.size2));
+        if(r && r.gapSize) railSizesSet.add(normalizeSize(r.gapSize));
       }
     });
     const picketSizesSet = new Set(state.sections.map(s => normalizeSize(s.picketSize)).filter(Boolean));
@@ -3315,6 +3366,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
     if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
+    if (totals.wiRailGaps > 0)      sub.push('- Full rail gap additions: '+totals.wiRailGaps);
     const pushPostLinesSub = (label, counts)=>{
       const parts = [];
       if(counts.posts1p5) parts.push(`${counts.posts1p5} × 1 1/2" x 1 1/2"`);
