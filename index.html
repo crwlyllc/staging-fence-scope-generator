@@ -394,6 +394,15 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
 
+        <div class="sp-field col-12" data-repair-only>
+          <label class="sp-label">Gap Addition Rails</label>
+          <div data-gap-additions></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-gap-addition-add>+ Add Gap Addition Rail</button>
+            <span class="sp-hint">Record each rail size and quantity to close open spans.</span>
+          </div>
+        </div>
+
         <!-- ========== GROUP: Pickets & Finials ========== -->
         <div class="sp-field col-3">
           <label class="sp-label">Picket Size</label>
@@ -403,15 +412,13 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label">Picket Height (inches) — leave blank to auto-use fence height</label>
           ${numberControl('picketHeight','e.g., 54')}
         </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">Diagonal Brace Size</label>
-          <select class="sp-select" data-field="diagonalBraceSize">${createSelect(SEED.picketSize)}</select>
-          <div class="sp-hint">Select picket steel for diagonal braces.</div>
-        </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">Diagonal Brace Qty</label>
-          ${numberControl('diagonalBraceQty','0')}
-          <div class="sp-hint">Each brace uses 4 ft of material.</div>
+        <div class="sp-field col-12" data-repair-only>
+          <label class="sp-label">Diagonal Braces</label>
+          <div data-diagonal-braces></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-diagonal-brace-add>+ Add Diagonal Brace</button>
+            <span class="sp-hint">Each brace uses 4 ft of picket steel.</span>
+          </div>
         </div>
         <div class="sp-field col-3">
           <label class="sp-label">Puppy Pickets</label>
@@ -584,12 +591,14 @@ document.addEventListener('DOMContentLoaded', function(){
       collapsed:false,
       railsCount:2,
       rails:[
-        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0, gapAdditions:0, gapSize:SEED.railSize[0]},
-        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0, gapAdditions:0, gapSize:SEED.railSize[0]},
+        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
+        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
       ],
       postSize: '2x2',
       postReplacements: [],
       postRealignments: [],
+      gapAdditions: [],
+      diagonalBraces: [],
       walkGates: 0,
       walkGatesRealign: 0,
       walkGatesHardware: 0,
@@ -600,9 +609,6 @@ document.addEventListener('DOMContentLoaded', function(){
       walkRebuildPicket: SEED.picketSize[0],
       walkRebuildLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
       walkRebuildHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
-
-      diagonalBraceSize: SEED.picketSize[0],
-      diagonalBraceQty: 0,
 
       // NEW: Add Walk Gate fields
       walkGatesAdd: 0,
@@ -666,9 +672,7 @@ document.addEventListener('DOMContentLoaded', function(){
         stacked: !!val(`railStacked_${i}`),
         size2: val(`railSize2_${i}`),
         patches: val(`railPatches_${i}`),
-        replacements: val(`railRepl_${i}`),
-        gapAdditions: val(`railGapAdd_${i}`),
-        gapSize: val(`railGapSize_${i}`)
+        replacements: val(`railRepl_${i}`)
       });
     }
 
@@ -717,6 +721,28 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
 
+    const gapAdditions = [];
+    const gapCont = card.querySelector('[data-gap-additions]');
+    if(gapCont){
+      const rows = Array.from(gapCont.querySelectorAll('[data-gap-addition-row]'));
+      rows.forEach(row=>{
+        const qty = parseInt((row.querySelector('[data-gap-addition-qty] input')?.value)||'0',10) || 0;
+        const size = (row.querySelector('[data-gap-addition-size]')?.value) || SEED.railSize[0];
+        if(qty>0){ gapAdditions.push({ qty, size }); }
+      });
+    }
+
+    const diagonalBraces = [];
+    const braceCont = card.querySelector('[data-diagonal-braces]');
+    if(braceCont){
+      const rows = Array.from(braceCont.querySelectorAll('[data-diagonal-brace-row]'));
+      rows.forEach(row=>{
+        const qty = parseInt((row.querySelector('[data-diagonal-brace-qty] input')?.value)||'0',10) || 0;
+        const size = (row.querySelector('[data-diagonal-brace-size]')?.value) || SEED.picketSize[0];
+        if(qty>0){ diagonalBraces.push({ qty, size }); }
+      });
+    }
+
     const postReplacements = [];
     const postRepCont = card.querySelector('[data-post-replacements]');
     if(postRepCont){
@@ -754,6 +780,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
       railsCount,
       rails,
+      gapAdditions,
+      diagonalBraces,
 
       railSize: rails[0]?.size || '',
       railStacked: !!rails[0]?.stacked,
@@ -761,8 +789,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
       picketSize: val('picketSize'),
       picketHeight: val('picketHeight'),
-      diagonalBraceSize: val('diagonalBraceSize'),
-      diagonalBraceQty: val('diagonalBraceQty'),
       puppy: val('puppy'),
       painting: val('painting'),
       length: val('length'),
@@ -837,11 +863,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
     set('railsCount', data.railsCount || 2);
     renderRailsControls(card, data);
+    renderGapAdditionsControls(card, data);
+    renderDiagonalBracesControls(card, data);
 
     set('picketSize', data.picketSize||SEED.picketSize[0]);
     set('picketHeight', data.picketHeight||'');
-    set('diagonalBraceSize', data.diagonalBraceSize || data.picketSize || SEED.picketSize[0]);
-    set('diagonalBraceQty', data.diagonalBraceQty || '');
     set('puppy', data.puppy||SEED.puppy[0]);
     set('painting', data.painting||'Paint Section');
     set('length', data.length||'');
@@ -1177,8 +1203,9 @@ document.addEventListener('DOMContentLoaded', function(){
       const r = rails[i] || {};
       if(r.size) sizes.add(r.size);
       if(r.stacked && r.size2) sizes.add(r.size2);
-      if(r.gapSize) sizes.add(r.gapSize);
     }
+    const gaps = Array.isArray(section?.gapAdditions) ? section.gapAdditions : [];
+    gaps.forEach(g=>{ if(g && g.size) sizes.add(g.size); });
     if(!sizes.size){
       if(section?.railSize) sizes.add(section.railSize);
       if(section?.railStacked && section?.railSize2) sizes.add(section.railSize2);
@@ -1200,7 +1227,6 @@ document.addEventListener('DOMContentLoaded', function(){
       block.setAttribute('data-rail-block','');
       const patchesHtml = numberControl('railPatches_'+i,'0');
       const replHtml    = numberControl('railRepl_'+i,'0');
-      const gapHtml     = numberControl('railGapAdd_'+i,'0');
       block.innerHTML = `
         <label class="sp-label">${label} Size</label>
         <select class="sp-select" data-field="railSize_${i}">${createSelect(SEED.railSize)}</select>
@@ -1222,14 +1248,6 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label"># Full Rail Replacements (${label})</label>
           ${replHtml}
         </div>
-        <div class="sp-field" data-rail-repair style="margin-top:6px">
-          <label class="sp-label">Gap Addition Rail Size (${label})</label>
-          <select class="sp-select" data-field="railGapSize_${i}">${createSelect(SEED.railSize)}</select>
-        </div>
-        <div class="sp-field" data-rail-repair style="margin-top:6px">
-          <label class="sp-label"># Full Rail Gap Additions (${label})</label>
-          ${gapHtml}
-        </div>
       `;
       row.appendChild(block);
       const r = rails[i] || {};
@@ -1238,17 +1256,188 @@ document.addEventListener('DOMContentLoaded', function(){
       const size2El   = card.querySelector(`[data-field="railSize2_${i}"]`);
       const patchesBox= card.querySelector(`[data-field="railPatches_${i}"]`);
       const replBox   = card.querySelector(`[data-field="railRepl_${i}"]`);
-      const gapSizeEl = card.querySelector(`[data-field="railGapSize_${i}"]`);
-      const gapBox    = card.querySelector(`[data-field="railGapAdd_${i}"]`);
       if(sizeEl) sizeEl.value = r.size || SEED.railSize[0];
       if(stackEl) stackEl.checked = Boolean(r.stacked);
       if(size2El) size2El.value = r.size2 || SEED.railSize[0];
       if(patchesBox) patchesBox.querySelector('input').value = r.patches || 0;
       if(replBox)    replBox.querySelector('input').value    = r.replacements || 0;
-      if(gapSizeEl) gapSizeEl.value = r.gapSize || r.size || SEED.railSize[0];
-      if(gapBox)    gapBox.querySelector('input').value      = r.gapAdditions || 0;
       const cond = card.querySelector(`[data-if="railStacked_${i}"]`);
       if(cond && stackEl) cond.style.display = stackEl.checked ? 'block' : 'none';
+    });
+  }
+
+  function renderGapAdditionsControls(card, data){
+    const cont = card.querySelector('[data-gap-additions]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const arr = Array.isArray(data.gapAdditions) ? data.gapAdditions : [];
+    arr.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-gap-addition-row','');
+      row.innerHTML = `
+        <div class="sp-field col-2">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-gap-addition-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${item.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-4">
+          <label class="sp-label">Rail Size</label>
+          <select class="sp-select" data-gap-addition-size>${createSelect(SEED.railSize)}</select>
+        </div>
+        <div class="sp-field col-2" style="align-self:end">
+          <button class="sp-btn danger" data-gap-addition-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const sizeSel = row.querySelector('[data-gap-addition-size]');
+      if(sizeSel) sizeSel.value = item.size || SEED.railSize[0];
+    });
+
+    const addBtn = card.querySelector('[data-gap-addition-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s.gapAdditions)) s.gapAdditions = [];
+        s.gapAdditions.push({ qty:1, size: SEED.railSize[0] });
+        renderGapAdditionsControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-gap-addition-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-gap-addition-row]'));
+      const row = btn.closest('[data-gap-addition-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.gapAdditions)) return;
+      s.gapAdditions.splice(idx,1);
+      renderGapAdditionsControls(card, s);
+      attachNumberHandlers(card);
+      persist();
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.matches('[data-gap-addition-size]')){
+        persistGapAdditionsFromDOM(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-gap-addition-qty]')){
+        persistGapAdditionsFromDOM(card);
+        persist();
+      }
+    });
+  }
+
+  function persistGapAdditionsFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-gap-additions]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-gap-addition-row]')) : [];
+    s.gapAdditions = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-gap-addition-qty] input')?.value)||'0',10) || 0;
+      const size = (row.querySelector('[data-gap-addition-size]')?.value) || SEED.railSize[0];
+      return { qty, size };
+    });
+  }
+
+  function renderDiagonalBracesControls(card, data){
+    const cont = card.querySelector('[data-diagonal-braces]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const arr = Array.isArray(data.diagonalBraces) ? data.diagonalBraces : [];
+    arr.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-diagonal-brace-row','');
+      row.innerHTML = `
+        <div class="sp-field col-2">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-diagonal-brace-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${item.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-4">
+          <label class="sp-label">Brace Size</label>
+          <select class="sp-select" data-diagonal-brace-size>${createSelect(SEED.picketSize)}</select>
+        </div>
+        <div class="sp-field col-2" style="align-self:end">
+          <button class="sp-btn danger" data-diagonal-brace-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const sizeSel = row.querySelector('[data-diagonal-brace-size]');
+      if(sizeSel) sizeSel.value = item.size || SEED.picketSize[0];
+    });
+
+    const addBtn = card.querySelector('[data-diagonal-brace-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s.diagonalBraces)) s.diagonalBraces = [];
+        const defaultSize = s.picketSize || SEED.picketSize[0];
+        s.diagonalBraces.push({ qty:1, size: defaultSize });
+        renderDiagonalBracesControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-diagonal-brace-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-diagonal-brace-row]'));
+      const row = btn.closest('[data-diagonal-brace-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.diagonalBraces)) return;
+      s.diagonalBraces.splice(idx,1);
+      renderDiagonalBracesControls(card, s);
+      attachNumberHandlers(card);
+      persist();
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.matches('[data-diagonal-brace-size]')){
+        persistDiagonalBracesFromDOM(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-diagonal-brace-qty]')){
+        persistDiagonalBracesFromDOM(card);
+        persist();
+      }
+    });
+  }
+
+  function persistDiagonalBracesFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-diagonal-braces]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-diagonal-brace-row]')) : [];
+    s.diagonalBraces = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-diagonal-brace-qty] input')?.value)||'0',10) || 0;
+      const size = (row.querySelector('[data-diagonal-brace-size]')?.value) || SEED.picketSize[0];
+      return { qty, size };
     });
   }
 
@@ -1495,8 +1684,10 @@ document.addEventListener('DOMContentLoaded', function(){
         s.railsCount = newCount;
         if(!Array.isArray(s.rails)) s.rails = [];
         const labels = railLabels(newCount);
-        s.rails = labels.map((_, i)=> s.rails[i] || { size: SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0, gapAdditions:0, gapSize:SEED.railSize[0]});
+        s.rails = labels.map((_, i)=> s.rails[i] || { size: SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0 });
         renderRailsControls(card, s);
+        renderGapAdditionsControls(card, s);
+        renderDiagonalBracesControls(card, s);
         attachNumberHandlers(card);
         persist();
       });
@@ -2119,9 +2310,30 @@ document.addEventListener('DOMContentLoaded', function(){
     state.sections.forEach((s, idx)=>{
       const title  = s.label ? `Section ${idx+1} - ${s.label}` : `Section ${idx+1}`;
       const picket = s.picketHeight ? `${s.picketSize} (height ${s.picketHeight} in)` : `${s.picketSize}`;
-      const braceQty = parseInt(s.diagonalBraceQty||0,10) || 0;
-      const braceSizeRaw = s.diagonalBraceSize || '';
-      const braceSizeLabel = braceSizeRaw ? normalizeLabelText(braceSizeRaw) : '';
+      const gapAdditionsArr = Array.isArray(s.gapAdditions) ? s.gapAdditions : [];
+      const diagonalBracesArr = Array.isArray(s.diagonalBraces) ? s.diagonalBraces : [];
+      const braceCountByLabel = new Map();
+      let braceTotalQty = 0;
+      diagonalBracesArr.forEach(item=>{
+        const qty = parseInt(item?.qty||0,10) || 0;
+        if(!qty) return;
+        braceTotalQty += qty;
+        const rawSize = item?.size || '';
+        const normalized = normalizeSize(rawSize);
+        const label = normalized ? normalizeLabelText(normalized) : normalizeLabelText(rawSize) || rawSize || 'picket steel';
+        const displayLabel = label || 'picket steel';
+        braceCountByLabel.set(displayLabel, (braceCountByLabel.get(displayLabel)||0) + qty);
+        if(normalized){
+          const prevCount = totals.diagonalBraceSizes.get(normalized) || 0;
+          totals.diagonalBraceSizes.set(normalized, prevCount + qty);
+          diagonalBraceFeetBySize[normalized] = (diagonalBraceFeetBySize[normalized]||0) + qty * 4;
+        }
+      });
+      if(braceTotalQty > 0){
+        totals.diagonalBraces += braceTotalQty;
+      }
+      const braceLineParts = [];
+      braceCountByLabel.forEach((qty,label)=>{ braceLineParts.push(`${qty} × ${label}`); });
 
       const railsDesc = (Array.isArray(s.rails) && s.rails.length)
         ? (()=>{
@@ -2209,15 +2421,14 @@ document.addEventListener('DOMContentLoaded', function(){
       const sectionPatchSizes = new Set();
       const sectionReplSizes = new Set();
       const sectionGapSizes = new Set();
+      const gapCountByLabel = new Map();
       if(isRepair){
         const railsArr = (s.rails||[]).slice(0, s.railsCount||0);
         railsArr.forEach(r=>{
           const patchCount = parseInt(r?.patches||0,10) || 0;
           const replCount = parseInt(r?.replacements||0,10) || 0;
-          const gapCount = parseInt(r?.gapAdditions||0,10) || 0;
           const primarySize = normalizeSize(r?.size);
           const secondarySize = r?.stacked ? normalizeSize(r?.size2) : '';
-          const gapSize = normalizeSize(r?.gapSize) || primarySize;
           if(patchCount){
             sectionPatchTotal += patchCount;
             if(primarySize) sectionPatchSizes.add(primarySize);
@@ -2228,10 +2439,17 @@ document.addEventListener('DOMContentLoaded', function(){
             if(primarySize) sectionReplSizes.add(primarySize);
             if(secondarySize) sectionReplSizes.add(secondarySize);
           }
-          if(gapCount){
-            sectionGapTotal += gapCount;
-            if(gapSize) sectionGapSizes.add(gapSize);
-          }
+        });
+        gapAdditionsArr.forEach(item=>{
+          const qty = parseInt(item?.qty||0,10) || 0;
+          if(!qty) return;
+          sectionGapTotal += qty;
+          const rawSize = item?.size || '';
+          const normalized = normalizeSize(rawSize);
+          if(normalized) sectionGapSizes.add(normalized);
+          const label = normalized ? normalizeLabelText(normalized) : normalizeLabelText(rawSize) || rawSize || 'matching rail stock';
+          const displayLabel = label || 'matching rail stock';
+          gapCountByLabel.set(displayLabel, (gapCountByLabel.get(displayLabel)||0) + qty);
         });
       }
 
@@ -2248,17 +2466,7 @@ document.addEventListener('DOMContentLoaded', function(){
       lines.push(`- Picket: ${picket}`);
       lines.push(`- Puppy Pickets: ${s.puppy}`);
       lines.push(`- Painting: ${s.painting || 'Paint Section'}`);
-      let braceLine = '';
-      if(braceQty > 0){
-        const normalizedBraceSize = normalizeSize(braceSizeRaw) || braceSizeLabel || 'picket steel';
-        totals.diagonalBraces += braceQty;
-        if(normalizedBraceSize){
-          const prevCount = totals.diagonalBraceSizes.get(normalizedBraceSize) || 0;
-          totals.diagonalBraceSizes.set(normalizedBraceSize, prevCount + braceQty);
-          diagonalBraceFeetBySize[normalizedBraceSize] = (diagonalBraceFeetBySize[normalizedBraceSize]||0) + braceQty * 4;
-        }
-        braceLine = `- Diagonal brace additions: ${braceQty} × ${braceSizeLabel || 'picket steel'} (4 ft each)`;
-      }
+      const braceLine = braceLineParts.length ? `- Diagonal brace additions: ${braceLineParts.join('; ')} (4 ft each)` : '';
       if(braceLine && !isRepair){
         lines.push(braceLine);
       }
@@ -2289,15 +2497,21 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
         lines.push(`  - Rail patches: ${sectionPatchTotal}`);
         lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
-        lines.push(`  - Full rail gap additions: ${sectionGapTotal}`);
+        const gapLineParts = [];
+        gapCountByLabel.forEach((qty,label)=>{ gapLineParts.push(`${qty} × ${label}`); });
+        const gapSummary = (sectionGapTotal > 0 && gapLineParts.length)
+          ? ` (${gapLineParts.join('; ')})`
+          : '';
+        lines.push(`  - Full rail gap additions: ${sectionGapTotal}${gapSummary}`);
         lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
         lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
         lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
         lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
         lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
         lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
-        if(braceQty > 0){
-          lines.push(`  - Diagonal brace additions: ${braceQty} (${braceSizeLabel || 'picket steel'})`);
+        if(braceTotalQty > 0){
+          const braceSummary = braceLineParts.length ? ` (${braceLineParts.join('; ')})` : '';
+          lines.push(`  - Diagonal brace additions: ${braceTotalQty}${braceSummary}`);
         }
       }
 
@@ -2961,7 +3175,6 @@ document.addEventListener('DOMContentLoaded', function(){
         const r = (s.rails||[])[i] || {};
         const p = parseInt(r.patches||0,10) || 0;
         const rep = parseInt(r.replacements||0,10) || 0;
-        const gap = parseInt(r.gapAdditions||0,10) || 0;
         if(p>0){
           inc(patchBySizeMat, normalizeSize(r.size), p);
           if(r.stacked) inc(patchBySizeMat, normalizeSize(r.size2), p);
@@ -2970,11 +3183,14 @@ document.addEventListener('DOMContentLoaded', function(){
           inc(replBySizeMat, normalizeSize(r.size), rep);
           if(r.stacked) inc(replBySizeMat, normalizeSize(r.size2), rep);
         }
-        if(gap>0){
-          const primarySize = normalizeSize(r.gapSize) || normalizeSize(r.size);
-          inc(gapBySizeMat, primarySize, gap);
-        }
       }
+      const gapArr = Array.isArray(s.gapAdditions) ? s.gapAdditions : [];
+      gapArr.forEach(item=>{
+        const qty = parseInt(item?.qty||0,10) || 0;
+        if(qty<=0) return;
+        const normalized = normalizeSize(item?.size);
+        inc(gapBySizeMat, normalized, qty);
+      });
     });
 
     Object.entries(replBySizeMat).forEach(([size, rep])=>{
@@ -3417,8 +3633,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const r = (s.rails||[])[i] || {};
         if(r && r.size) railSizesSet.add(normalizeSize(r.size));
         if(r && r.stacked && r.size2) railSizesSet.add(normalizeSize(r.size2));
-        if(r && r.gapSize) railSizesSet.add(normalizeSize(r.gapSize));
       }
+      const gapArr = Array.isArray(s.gapAdditions) ? s.gapAdditions : [];
+      gapArr.forEach(item=>{
+        const normalized = normalizeSize(item?.size);
+        if(normalized) railSizesSet.add(normalized);
+      });
     });
     const picketSizesSet = new Set(state.sections.map(s => normalizeSize(s.picketSize)).filter(Boolean));
     if(totals.diagonalBraceSizes && typeof totals.diagonalBraceSizes.forEach === 'function'){
