@@ -394,15 +394,6 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
 
-        <div class="sp-field col-12" data-repair-only>
-          <label class="sp-label">Gap Addition Rails</label>
-          <div data-gap-additions></div>
-          <div class="sp-row" style="margin-top:6px">
-            <button class="sp-btn ghost" type="button" data-gap-addition-add>+ Add Gap Addition Rail</button>
-            <span class="sp-hint">Record each rail size and quantity to close open spans.</span>
-          </div>
-        </div>
-
         <!-- ========== GROUP: Pickets & Finials ========== -->
         <div class="sp-field col-3">
           <label class="sp-label">Picket Size</label>
@@ -411,14 +402,6 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="sp-field col-3">
           <label class="sp-label">Picket Height (inches) — leave blank to auto-use fence height</label>
           ${numberControl('picketHeight','e.g., 54')}
-        </div>
-        <div class="sp-field col-12" data-repair-only>
-          <label class="sp-label">Diagonal Braces</label>
-          <div data-diagonal-braces></div>
-          <div class="sp-row" style="margin-top:6px">
-            <button class="sp-btn ghost" type="button" data-diagonal-brace-add>+ Add Diagonal Brace</button>
-            <span class="sp-hint">Each brace uses 4 ft of picket steel.</span>
-          </div>
         </div>
         <div class="sp-field col-3">
           <label class="sp-label">Puppy Pickets</label>
@@ -465,6 +448,24 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-row" style="margin-top:6px">
             <button class="sp-btn ghost" type="button" data-cap-add>+ Add Cap Replacement</button>
             <span class="sp-hint">Each cap adds ~20 seconds of labor. Pricing varies by size & style.</span>
+          </div>
+        </div>
+
+        <div class="sp-field col-12" data-repair-only>
+          <label class="sp-label">Diagonal Braces</label>
+          <div data-diagonal-braces></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-diagonal-brace-add>+ Add Diagonal Brace</button>
+            <span class="sp-hint">Each brace uses 4 ft of picket steel.</span>
+          </div>
+        </div>
+
+        <div class="sp-field col-12" data-repair-only>
+          <label class="sp-label">Full Rail Gap Fillers</label>
+          <div data-gap-additions></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-gap-addition-add>+ Add Full Rail Gap Filler</button>
+            <span class="sp-hint">Record each rail size and quantity to close open spans.</span>
           </div>
         </div>
 
@@ -2063,7 +2064,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Replace Damaged Pickets': 'repairs',
       'Rail Patch Repairs': 'repairs',
       'Full Rail Replacement': 'repairs',
-      'Full Rail Gap Addition': 'repairs',
+      'Full Rail Gap Filler': 'repairs',
       'Replace Fence Posts': 'repairs',
       'Realign Leaning Posts': 'repairs',
       'Finial Replacement': 'repairs',
@@ -2502,7 +2503,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const gapSummary = (sectionGapTotal > 0 && gapLineParts.length)
           ? ` (${gapLineParts.join('; ')})`
           : '';
-        lines.push(`  - Full rail gap additions: ${sectionGapTotal}${gapSummary}`);
+        lines.push(`  - Full rail gap fillers: ${sectionGapTotal}${gapSummary}`);
         lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
         lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
         lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
@@ -2721,7 +2722,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.wiPickets)      lines.push(`- Pickets to replace: ${t.wiPickets}`);
       if (t.wiPatches)      lines.push(`- Rail patches: ${t.wiPatches}`);
       if (t.wiRails)        lines.push(`- Full rail replacements: ${t.wiRails}`);
-      if (t.wiRailGaps)     lines.push(`- Full rail gap additions: ${t.wiRailGaps}`);
+      if (t.wiRailGaps)     lines.push(`- Full rail gap fillers: ${t.wiRailGaps}`);
       const postSummary = (label, counts)=>{
         const parts = [];
         if(counts.posts1p5) parts.push(`${counts.posts1p5} × 1 1/2" x 1 1/2"`);
@@ -2851,10 +2852,10 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (totals.wiRailGaps > 0){
       const gapCount = parseInt(totals.wiRailGaps, 10) || 0;
-      const gapLabel = describeCount(gapCount, 'full rail gap addition', 'full rail gap additions');
+      const gapLabel = describeCount(gapCount, 'full rail gap filler', 'full rail gap fillers');
       const gapSizes = Array.from(totals.wiRailGapSizes || []).filter(Boolean);
       const sizeText = gapSizes.length ? ` using ${joinParts(gapSizes)} rail stock` : ' using matching rail stock';
-      addServiceLine('Full Rail Gap Addition', `Add ${gapLabel}${sizeText} to close open spans and match the existing fence.`);
+      addServiceLine('Full Rail Gap Filler', `Add ${gapLabel}${sizeText} to close open spans and match the existing fence.`);
     }
     const replaceServiceCounts = totals.postsReplace || zeroPostCounts();
     if (replaceServiceCounts.posts2x2 > 0 || replaceServiceCounts.posts3x3 > 0 || replaceServiceCounts.posts1p5 > 0 || replaceServiceCounts.posts4x4 > 0){
@@ -3659,7 +3660,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
     if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
-    if (totals.wiRailGaps > 0)      sub.push('- Full rail gap additions: '+totals.wiRailGaps);
+    if (totals.wiRailGaps > 0)      sub.push('- Full rail gap fillers: '+totals.wiRailGaps);
     const pushPostLinesSub = (label, counts)=>{
       const parts = [];
       if(counts.posts1p5) parts.push(`${counts.posts1p5} × 1 1/2" x 1 1/2"`);
