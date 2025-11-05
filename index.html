@@ -741,7 +741,10 @@ document.addEventListener('DOMContentLoaded', function(){
         const railSize = (row.querySelector('[data-panel-rail]')?.value) || SEED.railSize[0];
         const picketSize = (row.querySelector('[data-panel-picket]')?.value) || SEED.picketSize[0];
         const widthIn = parseInt((row.querySelector('[data-panel-width] input')?.value)||'0',10) || 0;
-        const finialStyle = (row.querySelector('[data-panel-finial-style]')?.value) || SEED.finialStyles[0];
+        const hasFinials = /Finials/i.test(style);
+        const finialStyle = hasFinials
+          ? ((row.querySelector('[data-panel-finial-style]')?.value) || SEED.finialStyles[0])
+          : '';
         if(qty>0){ panels.push({ qty, height, style, railSize, picketSize, widthIn, finialStyle }); }
       });
     }
@@ -1545,7 +1548,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const s = state.sections.find(x=>x.id===secId);
         if(!s) return;
         if(!Array.isArray(s.panels)) s.panels = [];
-        s.panels.push({ qty:1, height: SEED.height[1], style: SEED.style[0], railSize: SEED.railSize[0], picketSize: SEED.picketSize[0], widthIn: 96, finialStyle: SEED.finialStyles[0]});
+        s.panels.push({ qty:1, height: SEED.height[1], style: SEED.style[0], railSize: SEED.railSize[0], picketSize: SEED.picketSize[0], widthIn: 96, finialStyle: ''});
         renderPanelsControls(card, s);
         attachNumberHandlers(card);
         persist();
@@ -1572,7 +1575,12 @@ document.addEventListener('DOMContentLoaded', function(){
         // Toggle finial picker visibility
         if(e.target.matches('[data-panel-style]')){
           const wrap = e.target.closest('[data-panel-row]').querySelector('[data-panel-finial-wrap]');
-          wrap.style.display = /Finials/i.test(e.target.value) ? 'block' : 'none';
+          const show = /Finials/i.test(e.target.value);
+          wrap.style.display = show ? 'block' : 'none';
+          if(show){
+            const finSel = wrap.querySelector('[data-panel-finial-style]');
+            if(finSel && !finSel.value){ finSel.value = SEED.finialStyles[0]; }
+          }
         }
         persistPanelsFromDOM(card);
         persist();
@@ -1600,7 +1608,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const railSize = (row.querySelector('[data-panel-rail]')?.value) || SEED.railSize[0];
       const picketSize = (row.querySelector('[data-panel-picket]')?.value) || SEED.picketSize[0];
       const widthIn = parseInt((row.querySelector('[data-panel-width] input')?.value)||'0',10) || 0;
-      const finialStyle = (row.querySelector('[data-panel-finial-style]')?.value) || SEED.finialStyles[0];
+      const hasFinials = /Finials/i.test(style);
+      const finialStyle = hasFinials
+        ? ((row.querySelector('[data-panel-finial-style]')?.value) || SEED.finialStyles[0])
+        : '';
       return { qty, height, style, railSize, picketSize, widthIn, finialStyle };
     });
   }
@@ -2688,7 +2699,10 @@ document.addEventListener('DOMContentLoaded', function(){
           const height = p.height || s.height;
           let style = p.style || s.style || '';
           if(source === 'install' && extra.style){ style = extra.style; }
-          const finialStyle = p.finialStyle || extra.finialStyle || SEED.finialStyles[0];
+          const hasFinials = /Finials/i.test(style);
+          const finialStyle = hasFinials
+            ? (p.finialStyle || extra.finialStyle || SEED.finialStyles[0])
+            : '';
           prepared.push({ qty, widthIn, railSize, picketSize, height, style, finialStyle });
         });
         if(!prepared.length) return;
