@@ -3449,7 +3449,13 @@ document.addEventListener('DOMContentLoaded', function(){
           const panelDescParts = [];
           if(p.height) panelDescParts.push(p.height);
           if(p.style) panelDescParts.push(p.style);
-          if(p.finialStyle && !/Finials/i.test(p.style||'')) panelDescParts.push(`(${p.finialStyle})`);
+          const styleText = p.style || '';
+          const hasFinialsInStyle = /Finials?/i.test(styleText);
+          const isFlatTopStyle = /Flat Top/i.test(styleText);
+          const isExtendedPicketWithoutFinials = /Extended Picket/i.test(styleText) && !hasFinialsInStyle;
+          if(p.finialStyle && !isFlatTopStyle && !isExtendedPicketWithoutFinials){
+            panelDescParts.push(`(${p.finialStyle})`);
+          }
           const picketLabel = p.picketSize ? `${p.picketSize} pickets` : '';
           const panelDesc = panelDescParts.length ? panelDescParts.join(' ') : 'wrought iron';
           const labelParts = [`prefab fence panel ${panelDesc}`];
