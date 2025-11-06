@@ -2711,7 +2711,10 @@ document.addEventListener('DOMContentLoaded', function(){
           const { qty, widthIn, railSize, picketSize, height, style, finialStyle } = entry;
           const feet = feetFromHeightStr(height);
           const eligible = isPrefabEligible(widthIn, railSize, picketSize);
-          const desc = `${height}, ${style}, rails ${railSize}, pickets ${picketSize} ${eligible?'(prefab eligible)':'(build on site)'}`;
+          const hasFinials = /Finials/i.test(style);
+          const finStyleLabel = hasFinials ? (finialStyle || SEED.finialStyles[0]) : '';
+          const finialNote = hasFinials && finStyleLabel ? ` (finials: ${finStyleLabel})` : '';
+          const desc = `${height}, ${style}${finialNote}, rails ${railSize}, pickets ${picketSize} ${eligible?'(prefab eligible)':'(build on site)'}`;
           lines.push(`  - ${qty} × ${widthIn}" wide panel — ${desc}`);
           const panelHours = eligible ? qty * 0.5 : qty * 1.5;
           manHours += panelHours;
@@ -2736,9 +2739,8 @@ document.addEventListener('DOMContentLoaded', function(){
             finialStyle,
             source
           });
-          if(/Finials/i.test(style) && !eligible){
-            const finStyleLabel = finialStyle || SEED.finialStyles[0];
-            addMat(materials, `finials - Cast Iron - ${finStyleLabel} (${picketSize})`, qty*26);
+          if(hasFinials){
+            addMat(materials, `finials - Cast Iron - ${finStyleLabel} (${picketSize})`, qty*25);
           }
         });
         if(source === 'install' && extra.installInfo){
