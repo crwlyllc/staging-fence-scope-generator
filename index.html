@@ -190,7 +190,10 @@
         <div class="sp-field col-12">
           <label class="sp-label" for="sp-estimate-number">Estimate Number from Housecall Pro</label>
           <input class="sp-input" id="sp-estimate-number" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" />
-          <div class="sp-hint">Enter the estimate number to enable sending notes directly to Housecall Pro.</div>
+          <div class="sp-row" style="margin-top:8px">
+            <button class="sp-btn ghost" id="sp-estimate-lookup" type="button">Fetch Estimate Address</button>
+          </div>
+          <div class="sp-hint">Enter the estimate number and click “Fetch Estimate Address” to load the service address from Housecall Pro.</div>
           <div class="sp-hint" id="sp-estimate-status" aria-live="polite"></div>
         </div>
       </div>
@@ -343,18 +346,18 @@ document.addEventListener('DOMContentLoaded', function(){
   const notesEl    = $('#sp-notes');
   const notesSubEl = $('#sp-notes-sub');
   const estimateNumberInput = document.getElementById('sp-estimate-number');
+  const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
   const mapAddressInput = document.getElementById('sp-map-address');
   const estimateStatusEl = document.getElementById('sp-estimate-status');
   const defaultEstimateStatus = estimateStatusEl ? estimateStatusEl.textContent : '';
-  const HCP_API_TOKEN = '7512817f855d4a13b8754d31790e08b3';
   const pushHcpBtn = document.getElementById('sp-push-hcp');
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
   const serviceCopyAllBtn = $('#sp-copy-service');
+  const estimateLookupBtnLabel = estimateLookupBtn ? estimateLookupBtn.textContent : '';
   let lastServiceLines = [];
   let autoGenerateTimer = null;
   let isGeneratingNotes = false;
-  let estimateLookupTimer = null;
   let estimateLookupController = null;
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
@@ -406,6 +409,94 @@ document.addEventListener('DOMContentLoaded', function(){
     return segments.join(', ');
   }
 
+  function extractEstimateAddressPayload(payload){
+    if(!payload){
+      return { formatted: '', hasAddress: false };
+    }
+
+    if(typeof payload === 'string'){
+      const formatted = payload.trim();
+      return { formatted, hasAddress: !!formatted };
+    }
+
+    if(Array.isArray(payload)){
+      for(const item of payload){
+        const result = extractEstimateAddressPayload(item);
+        if(result.hasAddress){
+          return result;
+        }
+      }
+      return { formatted: '', hasAddress: false };
+    }
+
+    const candidates = [payload];
+    ['data', 'result', 'estimate'].forEach(key=>{
+      if(payload && payload[key]){
+        candidates.push(payload[key]);
+      }
+    });
+
+    for(const candidate of candidates){
+      if(!candidate || typeof candidate !== 'object'){
+        continue;
+      }
+      if(typeof candidate.address === 'string'){
+        const formatted = candidate.address.trim();
+        if(formatted){
+          return { formatted, hasAddress: true };
+        }
+      }
+      if(candidate.formatted_address){
+        const formatted = String(candidate.formatted_address).trim();
+        if(formatted){
+          return { formatted, hasAddress: true };
+        }
+      }
+      if(candidate.address && typeof candidate.address === 'object'){
+        const formatted = formatEstimateAddress(candidate.address);
+        if(formatted){
+          return { formatted, hasAddress: true };
+        }
+      }
+      const streetLike = candidate.street || candidate.address_line_1 || candidate.address1 || candidate.line1;
+      const cityLike = candidate.city;
+      const stateLike = candidate.state || candidate.region;
+      const zipLike = candidate.zip || candidate.postal_code || candidate.zipcode;
+      if(streetLike || candidate.street_line_2 || cityLike || stateLike || zipLike){
+        const formatted = formatEstimateAddress({
+          street: streetLike,
+          street_line_2: candidate.street_line_2 || candidate.address_line_2 || candidate.address2 || candidate.line2,
+          city: cityLike,
+          state: stateLike,
+          zip: zipLike,
+          country: candidate.country,
+        });
+        if(formatted){
+          return { formatted, hasAddress: true };
+        }
+      }
+    }
+
+    return { formatted: '', hasAddress: false };
+  }
+
+  function isEstimateNotFound(payload){
+    if(!payload || typeof payload !== 'object'){
+      return !payload;
+    }
+    if(payload.found === false || payload.notFound === true){
+      return true;
+    }
+    if(payload.success === false && typeof payload.error === 'string' && payload.error.toLowerCase().includes('not found')){
+      return true;
+    }
+    const nestedKeys = ['data', 'result', 'estimate'];
+    return nestedKeys.some(key=>{
+      const value = payload[key];
+      return value && typeof value === 'object' ? isEstimateNotFound(value) : false;
+    });
+  }
+
   function focusMapOnAddress(address){
     const value = (address || '').trim();
     if(!value){
@@ -444,55 +535,31 @@ document.addEventListener('DOMContentLoaded', function(){
   async function fetchEstimateByNumber(estimateNumber, options){
     const opts = options || {};
     const signal = opts.signal;
-    const pageSize = 100;
-    const maxPages = 40;
-    let page = 1;
-    const baseUrl = 'https://api.housecallpro.com/estimates';
+    const response = await fetch('https://api.strongclicks.io/webhook/get-estimate-address', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ estimateNumber }),
+      signal,
+    });
 
-    while(page <= maxPages){
-      const params = new URLSearchParams({
-        page: String(page),
-        page_size: String(pageSize),
-        sort_by: 'id',
-        sort_direction: 'desc',
-      });
-      const response = await fetch(`${baseUrl}?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${HCP_API_TOKEN}`,
-        },
-        signal,
-      });
-
-      if(signal && signal.aborted){
-        throw new DOMException('Aborted', 'AbortError');
-      }
-
-      if(!response.ok){
-        const text = await response.text();
-        throw new Error(text || `Housecall Pro request failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      if(data && Array.isArray(data.estimates)){
-        const match = data.estimates.find(item => sanitizeEstimateNumber(item && item.estimate_number) === estimateNumber);
-        if(match){
-          return match;
-        }
-        if(data.estimates.length < pageSize){
-          break;
-        }
-      }
-
-      const totalPages = data && typeof data.total_pages !== 'undefined' ? Number(data.total_pages) : NaN;
-      if(!Number.isFinite(totalPages) || page >= totalPages){
-        break;
-      }
-      page += 1;
+    if(signal && signal.aborted){
+      throw new DOMException('Aborted', 'AbortError');
     }
 
-    return null;
+    if(!response.ok){
+      const text = await response.text();
+      throw new Error(text || `Estimate lookup failed with status ${response.status}`);
+    }
+
+    try{
+      return await response.json();
+    }catch(err){
+      console.error('Failed to parse estimate lookup response', err);
+      throw new Error('Received an invalid response while fetching the estimate address.');
+    }
   }
 
   async function lookupEstimateAddress(estimateNumber){
@@ -506,14 +573,19 @@ document.addEventListener('DOMContentLoaded', function(){
     estimateLookupController = controller;
 
     updateEstimateStatus('Looking up estimate address…', 'loading');
+    if(estimateLookupBtn){
+      estimateLookupBtn.disabled = true;
+      estimateLookupBtn.textContent = 'Fetching…';
+    }
 
     try{
       const estimate = await fetchEstimateByNumber(estimateNumber, controller ? { signal: controller.signal } : {});
       if(controller && controller.signal && controller.signal.aborted){
         return;
       }
-      if(estimate && estimate.address){
-        const formatted = formatEstimateAddress(estimate.address);
+      const addressResult = extractEstimateAddressPayload(estimate);
+      if(addressResult.hasAddress){
+        const formatted = addressResult.formatted;
         lastEstimateLookupNumber = estimateNumber;
         lastEstimateAddress = formatted;
         if(formatted){
@@ -523,9 +595,16 @@ document.addEventListener('DOMContentLoaded', function(){
           updateEstimateStatus('Estimate found but no address was provided.', 'warn');
         }
       }else if(estimate){
-        lastEstimateLookupNumber = estimateNumber;
-        lastEstimateAddress = '';
-        updateEstimateStatus('Estimate found but no address was provided.', 'warn');
+        const notFound = isEstimateNotFound(estimate);
+        if(notFound){
+          lastEstimateLookupNumber = estimateNumber;
+          lastEstimateAddress = '';
+          updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
+        }else{
+          lastEstimateLookupNumber = estimateNumber;
+          lastEstimateAddress = '';
+          updateEstimateStatus('Estimate found but no address was provided.', 'warn');
+        }
       }else{
         lastEstimateLookupNumber = estimateNumber;
         lastEstimateAddress = '';
@@ -542,6 +621,10 @@ document.addEventListener('DOMContentLoaded', function(){
     }finally{
       if(estimateLookupController === controller){
         estimateLookupController = null;
+      }
+      if(estimateLookupBtn){
+        estimateLookupBtn.disabled = false;
+        estimateLookupBtn.textContent = estimateLookupBtnLabel || 'Fetch Estimate Address';
       }
     }
   }
@@ -565,25 +648,6 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
     lookupEstimateAddress(digits);
-  }
-
-  function scheduleEstimateLookup(options){
-    const immediate = options && options.immediate;
-    if(immediate){
-      if(estimateLookupTimer){
-        clearTimeout(estimateLookupTimer);
-        estimateLookupTimer = null;
-      }
-      runEstimateLookup();
-      return;
-    }
-    if(estimateLookupTimer){
-      clearTimeout(estimateLookupTimer);
-    }
-    estimateLookupTimer = window.setTimeout(()=>{
-      estimateLookupTimer = null;
-      runEstimateLookup();
-    }, 600);
   }
 
   function createSectionBase(data={}){
@@ -5063,14 +5127,27 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('sp-copy').addEventListener('click', copyNotes);
   document.getElementById('sp-copy-sub').addEventListener('click', copySubNotes);
   if(estimateNumberInput){
-    estimateNumberInput.addEventListener('input', ()=>scheduleEstimateLookup());
-    estimateNumberInput.addEventListener('blur', ()=>scheduleEstimateLookup({ immediate: true }));
+    estimateNumberInput.addEventListener('input', ()=>{
+      const digits = sanitizeEstimateNumber(estimateNumberInput.value || '');
+      if(!digits){
+        if(estimateLookupController && typeof estimateLookupController.abort === 'function'){
+          estimateLookupController.abort();
+          estimateLookupController = null;
+        }
+        lastEstimateLookupNumber = '';
+        lastEstimateAddress = '';
+        updateEstimateStatus('', '');
+      }
+    });
     estimateNumberInput.addEventListener('keydown', evt=>{
       if(evt.key === 'Enter'){
         evt.preventDefault();
-        scheduleEstimateLookup({ immediate: true });
+        runEstimateLookup();
       }
     });
+  }
+  if(estimateLookupBtn){
+    estimateLookupBtn.addEventListener('click', ()=>runEstimateLookup());
   }
   if(pushHcpBtn){
     pushHcpBtn.addEventListener('click', pushNotesToHcp);
@@ -5085,7 +5162,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   if(estimateNumberInput && estimateNumberInput.value){
-    scheduleEstimateLookup({ immediate: true });
+    runEstimateLookup();
   }
 
   if(!restore()){ addSection(); }
