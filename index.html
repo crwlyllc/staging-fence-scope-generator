@@ -245,6 +245,11 @@ document.addEventListener('DOMContentLoaded', function(){
     capPostSizes:["1 1/2\" x 1 1/2\"","2x2","3x3","4x4"],
   };
 
+  const POST_REALIGN_METHODS = [
+    { value: 'concrete', label: 'Concrete' },
+    { value: 'cut-weld', label: 'Cut & Weld' }
+  ];
+
   const PUPPY_INSERT_SIZES = ['1/2"','5/8"'];
 
   const GATE = {
@@ -439,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <div data-post-realign></div>
           <div class="sp-row" style="margin-top:6px">
             <button class="sp-btn ghost" type="button" data-post-realign-add>+ Add Post Realignment</button>
-            <span class="sp-hint">Track leaning posts by size for realignment.</span>
+            <span class="sp-hint">Track leaning posts and choose the realignment method.</span>
           </div>
         </div>
 
@@ -788,8 +793,15 @@ document.addEventListener('DOMContentLoaded', function(){
       const rows = Array.from(postRealignCont.querySelectorAll('[data-post-realign-row]'));
       rows.forEach(row=>{
         const qty = parseInt((row.querySelector('[data-post-realign-qty] input')?.value)||'0',10) || 0;
-        const size = (row.querySelector('[data-post-realign-size]')?.value) || SEED.postRealignSize[0];
-        if(qty>0){ postRealignments.push({ qty, size }); }
+        const rawMethod = (row.querySelector('[data-post-realign-method]')?.value) || 'concrete';
+        const method = rawMethod === 'cut-weld' ? 'cut-weld' : 'concrete';
+        const size = method === 'cut-weld'
+          ? ''
+          : ((row.querySelector('[data-post-realign-size]')?.value) || SEED.postRealignSize[0]);
+        if(qty>0){
+          const entry = { qty, method, size };
+          postRealignments.push(entry);
+        }
       });
     }
 
@@ -1043,6 +1055,23 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  function persistPostRealignmentsFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-post-realign]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-post-realign-row]')) : [];
+    s.postRealignments = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-post-realign-qty] input')?.value)||'0',10) || 0;
+      const rawMethod = (row.querySelector('[data-post-realign-method]')?.value) || 'concrete';
+      const method = rawMethod === 'cut-weld' ? 'cut-weld' : 'concrete';
+      const size = method === 'cut-weld'
+        ? ''
+        : ((row.querySelector('[data-post-realign-size]')?.value) || SEED.postRealignSize[0] || '');
+      return { qty, method, size };
+    });
+  }
+
   function renderPostReplacementControls(card, data){
     renderPostGroups(card, data, {
       prop: 'postReplacements',
@@ -1061,21 +1090,114 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  function updatePostRealignRowState(row){
+    if(!row) return;
+    const methodSel = row.querySelector('[data-post-realign-method]');
+    const sizeWrap = row.querySelector('[data-post-realign-size-wrap]');
+    const sizeSel = row.querySelector('[data-post-realign-size]');
+    const method = (methodSel?.value) || 'concrete';
+    const isCutWeld = method === 'cut-weld';
+    if(sizeWrap){
+      sizeWrap.style.display = isCutWeld ? 'none' : '';
+    }
+    if(sizeSel){
+      sizeSel.disabled = isCutWeld;
+    }
+  }
+
   function renderPostRealignControls(card, data){
-    renderPostGroups(card, data, {
-      prop: 'postRealignments',
-      container: '[data-post-realign]',
-      rowAttr: 'data-post-realign-row',
-      rowSel: '[data-post-realign-row]',
-      qtyAttr: 'data-post-realign-qty',
-      qtySel: '[data-post-realign-qty]',
-      sizeAttr: 'data-post-realign-size',
-      sizeSel: '[data-post-realign-size]',
-      removeAttr: 'data-post-realign-remove',
-      removeSel: '[data-post-realign-remove]',
-      addBtn: '[data-post-realign-add]',
-      options: SEED.postRealignSize,
-      defaultSize: ()=> SEED.postRealignSize[0] || '2x2'
+    const cont = card.querySelector('[data-post-realign]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const arr = Array.isArray(data.postRealignments) ? data.postRealignments : [];
+    const methodOptions = POST_REALIGN_METHODS.map(opt=>`<option value="${escapeAttr(opt.value)}">${escapeHtml(opt.label)}</option>`).join('');
+
+    arr.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-post-realign-row','');
+      row.innerHTML = `
+        <div class="sp-field col-2">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-post-realign-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${item.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-4">
+          <label class="sp-label">Method</label>
+          <select class="sp-select" data-post-realign-method>${methodOptions}</select>
+        </div>
+        <div class="sp-field col-4" data-post-realign-size-wrap>
+          <label class="sp-label">Post Size</label>
+          <select class="sp-select" data-post-realign-size>${createSelect(SEED.postRealignSize)}</select>
+        </div>
+        <div class="sp-field col-2" style="align-self:end">
+          <button class="sp-btn danger" data-post-realign-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const methodSel = row.querySelector('[data-post-realign-method]');
+      if(methodSel){
+        const normalized = String(item.method || 'concrete').toLowerCase() === 'cut-weld' ? 'cut-weld' : 'concrete';
+        methodSel.value = normalized;
+      }
+      const sizeSel = row.querySelector('[data-post-realign-size]');
+      if(sizeSel){ sizeSel.value = item.size || SEED.postRealignSize[0]; }
+      updatePostRealignRowState(row);
+    });
+
+    const addBtn = card.querySelector('[data-post-realign-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s.postRealignments)) s.postRealignments = [];
+        const defaultSize = SEED.postRealignSize[0] || '2x2';
+        s.postRealignments.push({ qty: 1, size: defaultSize, method: 'concrete' });
+        renderPostRealignControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-post-realign-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-post-realign-row]'));
+      const row = btn.closest('[data-post-realign-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.postRealignments)) return;
+      if(idx >= 0){
+        s.postRealignments.splice(idx,1);
+        renderPostRealignControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('change', (e)=>{
+      const methodSel = e.target.closest('[data-post-realign-method]');
+      const sizeSel = e.target.closest('[data-post-realign-size]');
+      if(methodSel){
+        const row = methodSel.closest('[data-post-realign-row]');
+        updatePostRealignRowState(row);
+        persistPostRealignmentsFromDOM(card);
+        persist();
+      } else if(sizeSel){
+        persistPostRealignmentsFromDOM(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-post-realign-qty]')){
+        persistPostRealignmentsFromDOM(card);
+        persist();
+      }
     });
   }
 
@@ -1106,12 +1228,25 @@ document.addEventListener('DOMContentLoaded', function(){
     (Array.isArray(arr) ? arr : []).forEach(item=>{
       const qty = parseInt(item?.qty,10) || 0;
       if(qty <= 0) return;
+      if((item?.method || 'concrete') === 'cut-weld') return;
       const key = postSizeKey(item?.size || item?.postSize);
       if(key && Object.prototype.hasOwnProperty.call(counts, key)){
         counts[key] += qty;
       }
     });
     return counts;
+  }
+
+  function countRealignCutWeld(arr){
+    let total = 0;
+    (Array.isArray(arr) ? arr : []).forEach(item=>{
+      const qty = parseInt(item?.qty,10) || 0;
+      if(qty <= 0) return;
+      if((item?.method || 'concrete') === 'cut-weld'){
+        total += qty;
+      }
+    });
+    return total;
   }
 
   function addPostCounts(target, counts){
@@ -2409,7 +2544,7 @@ document.addEventListener('DOMContentLoaded', function(){
       wiRailGapSizes: new Set(),
       diagonalBraceSizes: new Map(),
       puppyInsertSizes: new Map(),
-      posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0,
+      posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0, postsRealignCutWeld:0,
       walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
       walkGateAdds:0,
       walkGateAddsSingle:0,
@@ -2637,6 +2772,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const picketReplaceCount = isRepair ? i(s.wiPickets) : 0;
       const replaceCounts = isRepair ? countPostGroups(s.postReplacements) : zeroPostCounts();
       const realignCounts = isRepair ? countPostGroups(s.postRealignments) : zeroPostCounts();
+      const realignCutWeld = isRepair ? countRealignCutWeld(s.postRealignments) : 0;
       if(isRepair){
         lines.push(`- Repairs:`);
         lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
@@ -2654,6 +2790,9 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
         lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
         lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
+        if(realignCutWeld > 0){
+          lines.push(`  - Posts to realign (cut & weld): ${realignCutWeld}`);
+        }
         if(braceTotalQty > 0){
           const braceSummary = braceLineParts.length ? ` (${braceLineParts.join('; ')})` : '';
           lines.push(`  - Diagonal brace additions: ${braceTotalQty}${braceSummary}`);
@@ -2860,6 +2999,7 @@ document.addEventListener('DOMContentLoaded', function(){
         addPostCounts(totals, replaceCounts);
         totals.postsRealign2x2 += realignCounts.posts2x2;
         totals.postsRealign3x3 += realignCounts.posts3x3;
+        totals.postsRealignCutWeld += realignCutWeld;
         totals.walkGates   += wg;
         totals.walkRealign += wgr;
         totals.walkHardware+= wgh;
@@ -2910,6 +3050,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postSummary('Posts to set (new sections)', t.postsInstall || zeroPostCounts());
       if (t.postsRealign2x2) lines.push(`- 2x2 posts to realign: ${t.postsRealign2x2}`);
       if (t.postsRealign3x3) lines.push(`- 3x3 posts to realign: ${t.postsRealign3x3}`);
+      if (t.postsRealignCutWeld) lines.push(`- Posts to realign (cut & weld): ${t.postsRealignCutWeld}`);
       if (t.walkGates)     lines.push(`- Walk gates: ${t.walkGates}`);
       if (t.walkRealign)   lines.push(`- Walk gates to realign: ${t.walkRealign}`);
       if (t.walkHardware)  lines.push(`- Walk gate hardware replacements: ${t.walkHardware}`);
@@ -3049,6 +3190,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const partText = joinParts(parts);
       if(partText) addServiceLine('Realign Leaning Posts', `Plumb and secure ${partText} without replacement.`);
     }
+    if (totals.postsRealignCutWeld > 0){
+      addServiceLine(
+        'Realign Leaning Posts (Cut & Weld)',
+        `Cut, brace, and weld ${describeCount(totals.postsRealignCutWeld, 'leaning post', 'leaning posts')} back plumb without resetting in concrete.`
+      );
+    }
     if (totals.finials > 0){
       addServiceLine('Finial Replacement', `Install ${describeCount(totals.finials, 'new finial', 'new finials')} to restore decorative picket tops.`);
     }
@@ -3134,6 +3281,13 @@ document.addEventListener('DOMContentLoaded', function(){
     )/60;
     manHours += weldRepairHours;
     welderHours += weldRepairHours;
+    const cutWeldWelderHours = totals.postsRealignCutWeld * 0.5;
+    const cutWeldHelperHours = totals.postsRealignCutWeld * 0.5;
+    if(totals.postsRealignCutWeld > 0){
+      manHours += cutWeldWelderHours + cutWeldHelperHours;
+      welderHours += cutWeldWelderHours;
+      helperHours += cutWeldHelperHours;
+    }
     const gateRepairHours = totals.walkRealign * 1 + totals.walkHardware * 1 + totals.walkRebuild * 3;
     manHours += gateRepairHours;
     welderHours += gateRepairHours;
@@ -3869,6 +4023,7 @@ document.addEventListener('DOMContentLoaded', function(){
     pushPostLinesSub('Posts to set (new sections)', totals.postsInstall || zeroPostCounts());
     if (totals.postsRealign2x2 > 0) sub.push('- 2x2 posts to realign: '+totals.postsRealign2x2);
     if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
+    if (totals.postsRealignCutWeld > 0) sub.push('- Posts to realign (cut & weld): '+totals.postsRealignCutWeld);
     if (totals.walkGates > 0)       sub.push('- Walk gates: '+totals.walkGates);
     if (totals.walkRealign > 0)     sub.push('- Walk gates to realign: '+totals.walkRealign);
     if (totals.walkHardware > 0)    sub.push('- Walk gate hardware replacements: '+totals.walkHardware);
