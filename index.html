@@ -3828,7 +3828,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const HOURS_PER_PERSON = 8;
     const MAX_CREW_PER_DAY = 4;
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
-    const MIN_CREW_PER_DAY = hasInstallOrReplace ? 2 : 1;
+    const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0);
+    const MIN_CREW_PER_DAY = requiresTwoPersonCrew ? 2 : 1;
     const day2Hours = primePaintReturnHours;
     const helperHoursDay2 = day2Hours;
     const helperHoursDay1 = Math.max(0, helperHours - helperHoursDay2);
