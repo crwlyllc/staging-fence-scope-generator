@@ -342,6 +342,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const serviceListEl = $('#sp-service-lines');
   const serviceCopyAllBtn = $('#sp-copy-service');
   let lastServiceLines = [];
+  let autoGenerateTimer = null;
+  let isGeneratingNotes = false;
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
 
@@ -2665,9 +2667,32 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  function generateNotes(){
-    syncStateFromDOM();
-    state.sections.forEach(s=>{ delete s._panelCalc; delete s._installCalc; });
+  function generateNotes(eventOrOptions){
+    let options = {};
+    if(eventOrOptions && typeof eventOrOptions === 'object'){
+      if('target' in eventOrOptions || 'currentTarget' in eventOrOptions){
+        if(typeof eventOrOptions.preventDefault === 'function'){
+          eventOrOptions.preventDefault();
+        }
+      }else{
+        options = eventOrOptions;
+      }
+    }
+
+    if(autoGenerateTimer){
+      clearTimeout(autoGenerateTimer);
+      autoGenerateTimer = null;
+    }
+    if(isGeneratingNotes){
+      return;
+    }
+    isGeneratingNotes = true;
+
+    const shouldScroll = !options.skipScroll;
+
+    try{
+      syncStateFromDOM();
+      state.sections.forEach(s=>{ delete s._panelCalc; delete s._installCalc; });
 
     // --- PANEL REPLACEMENT helpers ---
     const PANEL_PRICE = {
@@ -4484,8 +4509,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if (window.parentIFrame && typeof window.parentIFrame.size === 'function') {
       try { window.parentIFrame.size(); } catch(e){}
     }
-    scrollTo(outputEl);
+    if(shouldScroll){
+      scrollTo(outputEl);
+    }
     persist();
+    } finally {
+      isGeneratingNotes = false;
+    }
   }
 
   function renderServiceLineNotes(items){
@@ -4728,7 +4758,33 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   const KEY = 'sp_scope_v1';
-  function persist(){}
+
+  function scheduleAutoGenerateNotes(){
+    if(isGeneratingNotes){
+      return;
+    }
+    if(autoGenerateTimer){
+      clearTimeout(autoGenerateTimer);
+    }
+    autoGenerateTimer = window.setTimeout(()=>{
+      autoGenerateTimer = null;
+      if(isGeneratingNotes){
+        return;
+      }
+      try{
+        generateNotes({ skipScroll: true });
+      }catch(err){
+        console.error('Auto note generation failed', err);
+      }
+    }, 250);
+  }
+
+  function persist(){
+    if(isGeneratingNotes){
+      return;
+    }
+    scheduleAutoGenerateNotes();
+  }
 
   function restore(){
     try { localStorage.removeItem(KEY); } catch(e){}
