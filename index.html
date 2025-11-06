@@ -107,6 +107,10 @@
   .sp-copy-row .sp-textarea{min-height:80px}
   .sp-copy-row .sp-btn{white-space:nowrap}
   .sp-hint{font-size:12px;color:var(--sp-muted);margin-top:6px}
+  .sp-hint[data-state="loading"]{color:#2563eb}
+  .sp-hint[data-state="success"]{color:#047857}
+  .sp-hint[data-state="warn"]{color:#b45309}
+  .sp-hint[data-state="error"]{color:#b91c1c}
   .sp-divider{height:1px;background:var(--sp-border);margin:12px 0}
   .sp-chip{border:1px dashed var(--sp-border);padding:4px 8px;border-radius:999px;font-size:12px;color:var(--sp-muted)}
   .sp-chip.is-success{background:#ecfdf5;color:#047857;border-color:#bbf7d0}
@@ -187,6 +191,7 @@
           <label class="sp-label" for="sp-estimate-number">Estimate Number from Housecall Pro</label>
           <input class="sp-input" id="sp-estimate-number" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" />
           <div class="sp-hint">Enter the estimate number to enable sending notes directly to Housecall Pro.</div>
+          <div class="sp-hint" id="sp-estimate-status" aria-live="polite"></div>
         </div>
       </div>
     </div>
@@ -329,6 +334,7 @@ document.addEventListener('DOMContentLoaded', function(){
     geocoder: null,
     autocomplete: null,
     nextPolylineId: 1,
+    pendingAddress: '',
   };
   let mapUpdateScheduled = false;
 
@@ -337,6 +343,10 @@ document.addEventListener('DOMContentLoaded', function(){
   const notesEl    = $('#sp-notes');
   const notesSubEl = $('#sp-notes-sub');
   const estimateNumberInput = document.getElementById('sp-estimate-number');
+  const mapAddressInput = document.getElementById('sp-map-address');
+  const estimateStatusEl = document.getElementById('sp-estimate-status');
+  const defaultEstimateStatus = estimateStatusEl ? estimateStatusEl.textContent : '';
+  const HCP_API_TOKEN = '7512817f855d4a13b8754d31790e08b3';
   const pushHcpBtn = document.getElementById('sp-push-hcp');
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
@@ -344,8 +354,237 @@ document.addEventListener('DOMContentLoaded', function(){
   let lastServiceLines = [];
   let autoGenerateTimer = null;
   let isGeneratingNotes = false;
+  let estimateLookupTimer = null;
+  let estimateLookupController = null;
+  let lastEstimateLookupNumber = '';
+  let lastEstimateAddress = '';
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
+
+  function sanitizeEstimateNumber(value){
+    return (value || '').replace(/[^0-9]/g, '');
+  }
+
+  function updateEstimateStatus(message, state){
+    if(!estimateStatusEl){
+      return;
+    }
+    const nextState = state || (message ? 'info' : '');
+    if(message){
+      estimateStatusEl.textContent = message;
+    }else{
+      estimateStatusEl.textContent = defaultEstimateStatus || '';
+    }
+    if(nextState){
+      estimateStatusEl.setAttribute('data-state', nextState);
+    }else{
+      estimateStatusEl.removeAttribute('data-state');
+    }
+  }
+
+  function formatEstimateAddress(address){
+    if(!address || typeof address !== 'object'){
+      return '';
+    }
+    const segments = [];
+    if(address.street){
+      segments.push(address.street);
+    }
+    if(address.street_line_2){
+      segments.push(address.street_line_2);
+    }
+    const cityState = [address.city, address.state].filter(Boolean).join(', ');
+    if(cityState){
+      segments.push(cityState);
+    }
+    if(address.zip){
+      segments.push(address.zip);
+    }
+    if(address.country && address.country.toLowerCase() !== 'usa' && address.country.toLowerCase() !== 'us'){
+      segments.push(address.country);
+    }
+    return segments.join(', ');
+  }
+
+  function focusMapOnAddress(address){
+    const value = (address || '').trim();
+    if(!value){
+      mapState.pendingAddress = '';
+      return;
+    }
+    mapState.pendingAddress = value;
+    if(!mapState.map || !mapState.geocoder){
+      return;
+    }
+    mapState.geocoder.geocode({ address: value }, (results, status)=>{
+      if(status === 'OK' && results && results[0]){
+        const loc = results[0].geometry.location;
+        if(results[0].geometry.viewport){
+          mapState.map.fitBounds(results[0].geometry.viewport);
+        }else if(loc){
+          mapState.map.setCenter(loc);
+          mapState.map.setZoom(19);
+        }
+      }else{
+        console.warn('Geocode failed for address', value, status);
+      }
+    });
+  }
+
+  function setMapAddressFromEstimate(address){
+    if(!address){
+      return;
+    }
+    if(mapAddressInput){
+      mapAddressInput.value = address;
+    }
+    focusMapOnAddress(address);
+  }
+
+  async function fetchEstimateByNumber(estimateNumber, options){
+    const opts = options || {};
+    const signal = opts.signal;
+    const pageSize = 100;
+    const maxPages = 40;
+    let page = 1;
+    const baseUrl = 'https://api.housecallpro.com/estimates';
+
+    while(page <= maxPages){
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+        sort_by: 'id',
+        sort_direction: 'desc',
+      });
+      const response = await fetch(`${baseUrl}?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${HCP_API_TOKEN}`,
+        },
+        signal,
+      });
+
+      if(signal && signal.aborted){
+        throw new DOMException('Aborted', 'AbortError');
+      }
+
+      if(!response.ok){
+        const text = await response.text();
+        throw new Error(text || `Housecall Pro request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      if(data && Array.isArray(data.estimates)){
+        const match = data.estimates.find(item => sanitizeEstimateNumber(item && item.estimate_number) === estimateNumber);
+        if(match){
+          return match;
+        }
+        if(data.estimates.length < pageSize){
+          break;
+        }
+      }
+
+      const totalPages = data && typeof data.total_pages !== 'undefined' ? Number(data.total_pages) : NaN;
+      if(!Number.isFinite(totalPages) || page >= totalPages){
+        break;
+      }
+      page += 1;
+    }
+
+    return null;
+  }
+
+  async function lookupEstimateAddress(estimateNumber){
+    if(!estimateNumber){
+      return;
+    }
+    if(estimateLookupController && typeof estimateLookupController.abort === 'function'){
+      estimateLookupController.abort();
+    }
+    const controller = (typeof AbortController === 'function') ? new AbortController() : null;
+    estimateLookupController = controller;
+
+    updateEstimateStatus('Looking up estimate address…', 'loading');
+
+    try{
+      const estimate = await fetchEstimateByNumber(estimateNumber, controller ? { signal: controller.signal } : {});
+      if(controller && controller.signal && controller.signal.aborted){
+        return;
+      }
+      if(estimate && estimate.address){
+        const formatted = formatEstimateAddress(estimate.address);
+        lastEstimateLookupNumber = estimateNumber;
+        lastEstimateAddress = formatted;
+        if(formatted){
+          setMapAddressFromEstimate(formatted);
+          updateEstimateStatus('Address loaded from Housecall Pro.', 'success');
+        }else{
+          updateEstimateStatus('Estimate found but no address was provided.', 'warn');
+        }
+      }else if(estimate){
+        lastEstimateLookupNumber = estimateNumber;
+        lastEstimateAddress = '';
+        updateEstimateStatus('Estimate found but no address was provided.', 'warn');
+      }else{
+        lastEstimateLookupNumber = estimateNumber;
+        lastEstimateAddress = '';
+        updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
+      }
+    }catch(err){
+      if(controller && controller.signal && controller.signal.aborted){
+        return;
+      }
+      console.error('Estimate lookup failed', err);
+      lastEstimateLookupNumber = '';
+      lastEstimateAddress = '';
+      updateEstimateStatus('Unable to load estimate address. Please try again.', 'error');
+    }finally{
+      if(estimateLookupController === controller){
+        estimateLookupController = null;
+      }
+    }
+  }
+
+  function runEstimateLookup(){
+    if(!estimateNumberInput){
+      return;
+    }
+    const digits = sanitizeEstimateNumber(estimateNumberInput.value || '');
+    if(!digits){
+      lastEstimateLookupNumber = '';
+      lastEstimateAddress = '';
+      updateEstimateStatus('', '');
+      return;
+    }
+    if(digits === lastEstimateLookupNumber){
+      if(lastEstimateAddress && mapAddressInput && !mapAddressInput.value.trim()){
+        setMapAddressFromEstimate(lastEstimateAddress);
+        updateEstimateStatus('Address loaded from Housecall Pro.', 'success');
+      }
+      return;
+    }
+    lookupEstimateAddress(digits);
+  }
+
+  function scheduleEstimateLookup(options){
+    const immediate = options && options.immediate;
+    if(immediate){
+      if(estimateLookupTimer){
+        clearTimeout(estimateLookupTimer);
+        estimateLookupTimer = null;
+      }
+      runEstimateLookup();
+      return;
+    }
+    if(estimateLookupTimer){
+      clearTimeout(estimateLookupTimer);
+    }
+    estimateLookupTimer = window.setTimeout(()=>{
+      estimateLookupTimer = null;
+      runEstimateLookup();
+    }, 600);
+  }
 
   function createSectionBase(data={}){
     const base = {
@@ -600,9 +839,11 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     mapState.geocoder = new google.maps.Geocoder();
-    const addressInput = document.getElementById('sp-map-address');
-    if(addressInput){
-      mapState.autocomplete = new google.maps.places.Autocomplete(addressInput);
+    if(mapState.pendingAddress){
+      focusMapOnAddress(mapState.pendingAddress);
+    }
+    if(mapAddressInput){
+      mapState.autocomplete = new google.maps.places.Autocomplete(mapAddressInput);
       mapState.autocomplete.addListener('place_changed', ()=>{
         const place = mapState.autocomplete.getPlace();
         if(place && place.geometry){
@@ -614,10 +855,10 @@ document.addEventListener('DOMContentLoaded', function(){
           }
         }
       });
-      addressInput.addEventListener('keydown', evt=>{
+      mapAddressInput.addEventListener('keydown', evt=>{
         if(evt.key === 'Enter'){
           evt.preventDefault();
-          const value = addressInput.value.trim();
+          const value = mapAddressInput.value.trim();
           if(!value || !mapState.geocoder) return;
           mapState.geocoder.geocode({ address: value }, (results, status)=>{
             if(status === 'OK' && results && results[0]){
@@ -4821,6 +5062,16 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('sp-complete').addEventListener('click', generateNotes);
   document.getElementById('sp-copy').addEventListener('click', copyNotes);
   document.getElementById('sp-copy-sub').addEventListener('click', copySubNotes);
+  if(estimateNumberInput){
+    estimateNumberInput.addEventListener('input', ()=>scheduleEstimateLookup());
+    estimateNumberInput.addEventListener('blur', ()=>scheduleEstimateLookup({ immediate: true }));
+    estimateNumberInput.addEventListener('keydown', evt=>{
+      if(evt.key === 'Enter'){
+        evt.preventDefault();
+        scheduleEstimateLookup({ immediate: true });
+      }
+    });
+  }
   if(pushHcpBtn){
     pushHcpBtn.addEventListener('click', pushNotesToHcp);
   }
@@ -4831,6 +5082,10 @@ document.addEventListener('DOMContentLoaded', function(){
   const backTopBtn = document.getElementById('sp-top-btn');
   if (backTopBtn){
     backTopBtn.addEventListener('click', ()=> window.scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+
+  if(estimateNumberInput && estimateNumberInput.value){
+    scheduleEstimateLookup({ immediate: true });
   }
 
   if(!restore()){ addSection(); }
