@@ -132,6 +132,33 @@
   @media(max-width:719px){
     .sp-top{ right:12px; bottom:12px; }
   }
+
+  #sp-map{
+    width:100%;
+    height:380px;
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .sp-map-note{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--sp-muted);
+  }
+  .sp-number.is-map-linked{
+    background:#f5f3ff;
+    border-color:rgba(79,70,229,0.35);
+  }
+  .sp-number.is-map-linked input{
+    background:transparent;
+  }
+  .sp-number.is-map-linked .sp-step{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+  .sp-btn[disabled]{
+    opacity:0.55;
+    cursor:not-allowed;
+  }
   </style>
 </head>
 <body>
@@ -160,6 +187,25 @@
           <label class="sp-label" for="sp-estimate-number">Estimate Number from Housecall Pro</label>
           <input class="sp-input" id="sp-estimate-number" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" />
           <div class="sp-hint">Enter the estimate number to enable sending notes directly to Housecall Pro.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sp-card" id="sp-map-card">
+      <div class="sp-card-header">
+        <div class="sp-card-title">Map Measurements</div>
+        <div class="sp-row">
+          <button class="sp-btn ghost" id="sp-map-clear" type="button" disabled>Clear Map Sections</button>
+        </div>
+      </div>
+      <div class="sp-grid">
+        <div class="sp-field col-12">
+          <label class="sp-label" for="sp-map-address">Search Address</label>
+          <input class="sp-input" id="sp-map-address" type="text" placeholder="Search for a property" autocomplete="off" />
+        </div>
+        <div class="col-12">
+          <div id="sp-map"></div>
+          <div class="sp-map-note">Draw polylines to trace each fence run. Segments automatically create scope sections, stay in sync as you edit, and can be cleared with the button above. Right-click a line to remove vertices or delete the entire run.</div>
         </div>
       </div>
     </div>
@@ -208,6 +254,14 @@
 <button class="sp-top" id="sp-top-btn" type="button" aria-label="Back to top">↑ Top</button>
 <script src="https://cdn.jsdelivr.net/npm/iframe-resizer/js/iframeResizer.contentWindow.min.js"></script>
 <script>
+window._spGoogleMapsReady = window._spGoogleMapsReady || false;
+window._spInitializeMap = window._spInitializeMap || null;
+window.initMap = function(){
+  window._spGoogleMapsReady = true;
+  if (typeof window._spInitializeMap === 'function') {
+    window._spInitializeMap();
+  }
+};
 document.addEventListener('DOMContentLoaded', function(){
   document.title = 'Stage Scope Generator';
   // Set favicon
@@ -268,6 +322,15 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 
   const state = { sections: [] };
+  const mapState = {
+    map: null,
+    drawingManager: null,
+    polylines: [],
+    geocoder: null,
+    autocomplete: null,
+    nextPolylineId: 1,
+  };
+  let mapUpdateScheduled = false;
 
   const sectionsEl = $('#sp-sections');
   const outputEl   = $('#sp-output');
@@ -281,6 +344,295 @@ document.addEventListener('DOMContentLoaded', function(){
   let lastServiceLines = [];
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
+
+  function createSectionBase(data={}){
+    const base = {
+      id: uid(),
+      collapsed:false,
+      railsCount:2,
+      rails:[
+        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
+        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
+      ],
+      postSize: '2x2',
+      postReplacements: [],
+      postRealignments: [],
+      gapAdditions: [],
+      diagonalBraces: [],
+      walkGates: 0,
+      walkGatesRealign: 0,
+      walkGatesHardware: 0,
+      walkGatesRebuild: 0,
+      walkLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      walkRebuildFrame: SEED.railSize[0],
+      walkRebuildPicket: SEED.picketSize[0],
+      walkRebuildLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkRebuildHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      walkGatesAdd: 0,
+      walkAddType: 'Single Swing Walk Gate',
+      walkAddPostSize: '2x2',
+      walkAddFrameSize: SEED.railSize[0],
+      walkAddPicketSize: SEED.picketSize[0],
+      walkAddLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkAddHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      scopeType: 'repair',
+      postSpacing: '8',
+      panelAttachment: 'Welding',
+      installFinialStyle: SEED.finialStyles[0],
+      finials: [],
+      caps: [],
+      panels: [],
+      puppyInserts: [],
+      mapGenerated: false,
+      mapSegmentId: '',
+      mapGeneratedLabel: '',
+      notes: '',
+    };
+    return { ...base, ...data };
+  }
+
+  function isSectionPristine(section){
+    if(!section) return false;
+    const clean = v => String(v||'').trim();
+    return !section.mapGenerated &&
+      !clean(section.label) &&
+      Number(section.length||0) === 0 &&
+      Number(section.hardscape||0) === 0 &&
+      Number(section.trim||0) === 0 &&
+      Number(section.digOut||0) === 0 &&
+      Number(section.walkGates||0) === 0 &&
+      clean(section.notes) === '' &&
+      (!section.postReplacements || section.postReplacements.length === 0) &&
+      (!section.postRealignments || section.postRealignments.length === 0) &&
+      (!section.gapAdditions || section.gapAdditions.length === 0) &&
+      (!section.diagonalBraces || section.diagonalBraces.length === 0) &&
+      (!section.panels || section.panels.length === 0) &&
+      (!section.puppyInserts || section.puppyInserts.length === 0) &&
+      (!section.finials || section.finials.length === 0) &&
+      (!section.caps || section.caps.length === 0);
+  }
+
+  function updateMapControlsUI(){
+    const clearBtn = document.getElementById('sp-map-clear');
+    if(clearBtn){
+      const hasLinkedSections = state.sections.some(sec=>sec.mapGenerated);
+      clearBtn.disabled = mapState.polylines.length === 0 && !hasLinkedSections;
+    }
+  }
+
+  function clearMapDrawing(options={}){
+    mapState.polylines.forEach(poly=>poly.setMap(null));
+    mapState.polylines = [];
+    updateMapControlsUI();
+    if(!options.skipSections){
+      applySegmentsToSections([]);
+    }
+  }
+
+  function scheduleMapSectionsUpdate(){
+    if(mapUpdateScheduled) return;
+    mapUpdateScheduled = true;
+    const run = ()=>{
+      mapUpdateScheduled = false;
+      refreshSectionsFromMap();
+    };
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(run);
+    }else{
+      setTimeout(run, 80);
+    }
+  }
+
+  function refreshSectionsFromMap(){
+    if(!mapState.polylines.length){
+      updateMapControlsUI();
+      applySegmentsToSections([]);
+      return;
+    }
+    if(typeof google === 'undefined' || !google.maps || !google.maps.geometry){
+      return;
+    }
+    mapState.polylines = mapState.polylines.filter(poly=>!!poly.getMap());
+    updateMapControlsUI();
+    const segments = [];
+    mapState.polylines.forEach((polyline, runIndex)=>{
+      const path = polyline.getPath();
+      if(!path) return;
+      const length = path.getLength();
+      for(let i=0;i<length-1;i++){
+        const start = path.getAt(i);
+        const end = path.getAt(i+1);
+        if(!start || !end) continue;
+        const meters = google.maps.geometry.spherical.computeDistanceBetween(start, end);
+        const feet = meters * 3.28084;
+        if(!isFinite(feet) || feet <= 0.1) continue;
+        const segId = `${polyline.__spPolylineId}:${i}`;
+        segments.push({
+          id: segId,
+          label: `Map Run ${runIndex+1} – Segment ${i+1}`,
+          lengthFeet: feet
+        });
+      }
+    });
+    applySegmentsToSections(segments);
+  }
+
+  function applySegmentsToSections(segments){
+    syncStateFromDOM();
+    let needsRender = false;
+    let manualSections = [];
+    const existingMapSections = new Map();
+    state.sections.forEach(sec=>{
+      if(sec.mapGenerated){
+        existingMapSections.set(sec.mapSegmentId, sec);
+      }else{
+        manualSections.push(sec);
+      }
+    });
+
+    if(segments.length>0 && manualSections.length===1 && isSectionPristine(manualSections[0])){
+      manualSections = [];
+      needsRender = true;
+    }
+
+    const updatedMapSections = [];
+    segments.forEach(segment=>{
+      const lengthFeet = Math.round(segment.lengthFeet);
+      if(!lengthFeet) return;
+      const existing = existingMapSections.get(segment.id);
+      if(existing){
+        const prevLength = Number(existing.length)||0;
+        const prevLabel = existing.label||'';
+        const prevGeneratedLabel = existing.mapGeneratedLabel||'';
+        if(prevLength !== lengthFeet) needsRender = true;
+        existing.length = lengthFeet;
+        existing.mapGenerated = true;
+        existing.mapSegmentId = segment.id;
+        existing.mapGeneratedLabel = segment.label;
+        if(!prevLabel.trim() || prevLabel === prevGeneratedLabel || prevLabel.startsWith('Map Run ')){
+          if(prevLabel !== segment.label) needsRender = true;
+          existing.label = segment.label;
+        }
+        updatedMapSections.push(existing);
+        existingMapSections.delete(segment.id);
+      }else{
+        const newSection = createSectionBase({
+          label: segment.label,
+          length: lengthFeet,
+          scopeType: 'install',
+          mapGenerated: true,
+          mapSegmentId: segment.id,
+          mapGeneratedLabel: segment.label,
+        });
+        updatedMapSections.push(newSection);
+        needsRender = true;
+      }
+    });
+
+    if(existingMapSections.size>0){
+      needsRender = true;
+    }
+
+    const nextSections = manualSections.concat(updatedMapSections);
+    if(needsRender || nextSections.length !== state.sections.length){
+      state.sections = nextSections;
+      render();
+      persist();
+    }
+  }
+
+  function attachMapPolyline(polyline){
+    polyline.__spPolylineId = polyline.__spPolylineId || `poly-${mapState.nextPolylineId++}`;
+    mapState.polylines.push(polyline);
+    updateMapControlsUI();
+    const path = polyline.getPath();
+    ['insert_at','set_at','remove_at'].forEach(evt=>{
+      google.maps.event.addListener(path, evt, scheduleMapSectionsUpdate);
+    });
+    google.maps.event.addListener(polyline, 'rightclick', evt=>{
+      if(typeof evt.vertex === 'number'){
+        path.removeAt(evt.vertex);
+        return;
+      }
+      if(confirm('Remove this fence run?')){
+        polyline.setMap(null);
+        mapState.polylines = mapState.polylines.filter(p=>p!==polyline);
+        scheduleMapSectionsUpdate();
+      }
+    });
+    scheduleMapSectionsUpdate();
+  }
+
+  function initializeMap(){
+    if(mapState.map) return;
+    if(typeof google === 'undefined' || !google.maps || !google.maps.drawing) return;
+    const mapEl = document.getElementById('sp-map');
+    if(!mapEl) return;
+    mapState.map = new google.maps.Map(mapEl, {
+      zoom: 19,
+      mapTypeId: 'hybrid',
+      center: { lat: 32.7547776, lng: -96.4315143 },
+      zoomControl: true,
+      streetViewControl: false,
+      mapTypeControl: false,
+    });
+    mapState.drawingManager = new google.maps.drawing.DrawingManager({
+      drawingMode: null,
+      drawingControl: true,
+      drawingControlOptions: {
+        position: google.maps.ControlPosition.TOP_CENTER,
+        drawingModes: [google.maps.drawing.OverlayType.POLYLINE]
+      },
+      polylineOptions: {
+        editable: true,
+        draggable: true,
+        strokeColor: '#d97706',
+        strokeWeight: 3
+      }
+    });
+    mapState.drawingManager.setMap(mapState.map);
+    google.maps.event.addListener(mapState.drawingManager, 'polylinecomplete', polyline=>{
+      attachMapPolyline(polyline);
+      mapState.drawingManager.setDrawingMode(null);
+    });
+
+    mapState.geocoder = new google.maps.Geocoder();
+    const addressInput = document.getElementById('sp-map-address');
+    if(addressInput){
+      mapState.autocomplete = new google.maps.places.Autocomplete(addressInput);
+      mapState.autocomplete.addListener('place_changed', ()=>{
+        const place = mapState.autocomplete.getPlace();
+        if(place && place.geometry){
+          if(place.geometry.viewport){
+            mapState.map.fitBounds(place.geometry.viewport);
+          }else{
+            mapState.map.setCenter(place.geometry.location);
+            mapState.map.setZoom(19);
+          }
+        }
+      });
+      addressInput.addEventListener('keydown', evt=>{
+        if(evt.key === 'Enter'){
+          evt.preventDefault();
+          const value = addressInput.value.trim();
+          if(!value || !mapState.geocoder) return;
+          mapState.geocoder.geocode({ address: value }, (results, status)=>{
+            if(status === 'OK' && results && results[0]){
+              const loc = results[0].geometry.location;
+              mapState.map.setCenter(loc);
+              if(results[0].geometry.viewport){
+                mapState.map.fitBounds(results[0].geometry.viewport);
+              }else{
+                mapState.map.setZoom(19);
+              }
+            }
+          });
+        }
+      });
+    }
+    updateMapControlsUI();
+  }
 
   function escapeHtml(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escapeAttr(t){ return escapeHtml(t).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -602,56 +954,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function addSection(data={}){
     syncStateFromDOM();
-    const id = uid();
-    state.sections.push({
-      id,
-      collapsed:false,
-      railsCount:2,
-      rails:[
-        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
-        {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
-      ],
-      postSize: '2x2',
-      postReplacements: [],
-      postRealignments: [],
-      gapAdditions: [],
-      diagonalBraces: [],
-      walkGates: 0,
-      walkGatesRealign: 0,
-      walkGatesHardware: 0,
-      walkGatesRebuild: 0,
-      walkLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
-      walkHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
-      walkRebuildFrame: SEED.railSize[0],
-      walkRebuildPicket: SEED.picketSize[0],
-      walkRebuildLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
-      walkRebuildHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
-
-      // NEW: Add Walk Gate fields
-      walkGatesAdd: 0,
-      walkAddType: 'Single Swing Walk Gate',
-      walkAddPostSize: '2x2',
-      walkAddFrameSize: SEED.railSize[0],
-      walkAddPicketSize: SEED.picketSize[0],
-      walkAddLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
-      walkAddHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
-
-      scopeType: 'repair',
-      postSpacing: '8',
-      panelAttachment: 'Welding',
-      installFinialStyle: SEED.finialStyles[0],
-
-      // NEW: Finials
-      finials: [],
-      // NEW: Post Caps
-      caps: [],
-      // NEW: Panel Replacements
-      panels: [],
-      // NEW: Puppy Picket Inserts
-      puppyInserts: [],
-
-      ...data
-    });
+    state.sections.push(createSectionBase(data));
     render();
   }
   function duplicateSection(id){
@@ -661,6 +964,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const copy = JSON.parse(JSON.stringify(src));
     copy.id = uid();
     copy.collapsed = false;
+    copy.mapGenerated = false;
+    delete copy.mapSegmentId;
+    delete copy.mapGeneratedLabel;
     state.sections.push(copy);
     render();
   }
@@ -865,6 +1171,10 @@ document.addEventListener('DOMContentLoaded', function(){
       // NEW: panels
       panels,
 
+      mapGenerated: card.dataset.mapGenerated === 'true',
+      mapSegmentId: card.dataset.mapSegmentId || '',
+      mapGeneratedLabel: card.dataset.mapGeneratedLabel || '',
+
       notes: val('notes').trim()
     };
   }
@@ -893,6 +1203,17 @@ document.addEventListener('DOMContentLoaded', function(){
       } else if(el.tagName==='SELECT' || el.tagName==='INPUT' || el.tagName==='TEXTAREA'){
         el.value = value ?? '';
       }
+    }
+    card.dataset.mapGenerated = data.mapGenerated ? 'true' : 'false';
+    if(data.mapSegmentId){
+      card.dataset.mapSegmentId = data.mapSegmentId;
+    }else{
+      delete card.dataset.mapSegmentId;
+    }
+    if(data.mapGeneratedLabel){
+      card.dataset.mapGeneratedLabel = data.mapGeneratedLabel;
+    }else{
+      delete card.dataset.mapGeneratedLabel;
     }
     set('label', data.label||'');
     set('scopeType', data.scopeType||'repair');
@@ -1039,6 +1360,7 @@ document.addEventListener('DOMContentLoaded', function(){
         persist();
       }
     });
+    updateMapControlsUI();
   }
 
   function persistPostGroupsFromDOM(card, cfg){
@@ -2066,6 +2388,73 @@ document.addEventListener('DOMContentLoaded', function(){
     if(addWrap){ addWrap.style.display = add>0 ? 'block' : 'none'; }
   }
 
+  function applyMapLinkedStateToCard(card, sectionData){
+    const lengthControl = card.querySelector('[data-field="length"]');
+    if(lengthControl && lengthControl.classList.contains('sp-number')){
+      const input = lengthControl.querySelector('input');
+      const buttons = lengthControl.querySelectorAll('button');
+      if(sectionData.mapGenerated){
+        lengthControl.classList.add('is-map-linked');
+        if(input){
+          input.readOnly = true;
+          input.setAttribute('aria-readonly','true');
+        }
+        buttons.forEach(btn=>{
+          btn.disabled = true;
+          btn.setAttribute('aria-disabled','true');
+        });
+      }else{
+        lengthControl.classList.remove('is-map-linked');
+        if(input){
+          input.readOnly = false;
+          input.removeAttribute('aria-readonly');
+        }
+        buttons.forEach(btn=>{
+          btn.disabled = false;
+          btn.removeAttribute('aria-disabled');
+        });
+      }
+    }
+
+    const removeBtn = card.querySelector('.sp-del');
+    if(removeBtn){
+      if(sectionData.mapGenerated){
+        removeBtn.disabled = true;
+        removeBtn.title = 'Remove this run on the map to delete the section';
+      }else{
+        removeBtn.disabled = false;
+        removeBtn.title = '';
+      }
+    }
+
+    const duplicateBtn = card.querySelector('.sp-dup');
+    if(duplicateBtn){
+      if(sectionData.mapGenerated){
+        duplicateBtn.disabled = true;
+        duplicateBtn.title = 'Duplicate not available for map-linked sections';
+      }else{
+        duplicateBtn.disabled = false;
+        duplicateBtn.title = '';
+      }
+    }
+
+    const actionRow = card.querySelector('.sp-card-header .sp-row');
+    if(actionRow){
+      let chip = actionRow.querySelector('[data-map-chip]');
+      if(sectionData.mapGenerated){
+        if(!chip){
+          chip = document.createElement('span');
+          chip.className = 'sp-chip is-info';
+          chip.dataset.mapChip = 'true';
+          chip.textContent = 'Map linked';
+          actionRow.insertBefore(chip, actionRow.firstChild);
+        }
+      }else if(chip){
+        chip.remove();
+      }
+    }
+  }
+
   function render(){
     const sectionsEl = document.getElementById('sp-sections');
     sectionsEl.innerHTML = '';
@@ -2079,6 +2468,7 @@ document.addEventListener('DOMContentLoaded', function(){
       attachRailsHandlers(card);
       updateWalkGateConditional(card);
       updateInstallConditional(card);
+      applyMapLinkedStateToCard(card, s);
 
       const titleEl = $('.sp-card-title', card);
       const labelInput = card.querySelector('[data-field="label"]');
@@ -4346,11 +4736,29 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   function resetAll(){
     if(!confirm('Clear all sections?')) return;
+    clearMapDrawing({ skipSections: true });
     state.sections = [];
     localStorage.removeItem(KEY);
     render();
     outputEl.style.display='none';
     renderServiceLineNotes([]);
+  }
+
+  window._spInitializeMap = initializeMap;
+  if(window._spGoogleMapsReady){
+    initializeMap();
+  }
+  updateMapControlsUI();
+
+  const mapClearBtn = document.getElementById('sp-map-clear');
+  if(mapClearBtn){
+    mapClearBtn.addEventListener('click', ()=>{
+      syncStateFromDOM();
+      const hasLinkedSections = state.sections.some(sec=>sec.mapGenerated);
+      if(!mapState.polylines.length && !hasLinkedSections) return;
+      if(!confirm('Remove all map drawings and linked sections?')) return;
+      clearMapDrawing();
+    });
   }
 
   document.getElementById('sp-add').addEventListener('click', ()=>{ addSection(); persist(); });
@@ -4373,5 +4781,6 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 });
 </script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDW2GCWGKbnbA9lA2wPJSmciyMcghOZlxc&libraries=geometry,places,drawing&callback=initMap&loading=async"></script>
 </body>
 </html>
