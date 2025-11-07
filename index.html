@@ -336,6 +336,7 @@ document.addEventListener('DOMContentLoaded', function(){
     polylines: [],
     geocoder: null,
     autocomplete: null,
+    marker: null,
     nextPolylineId: 1,
     pendingAddress: '',
   };
@@ -501,6 +502,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const value = (address || '').trim();
     if(!value){
       mapState.pendingAddress = '';
+      updateMapAddressMarker(null);
       return;
     }
     mapState.pendingAddress = value;
@@ -509,12 +511,20 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     mapState.geocoder.geocode({ address: value }, (results, status)=>{
       if(status === 'OK' && results && results[0]){
-        const loc = results[0].geometry.location;
-        if(results[0].geometry.viewport){
-          mapState.map.fitBounds(results[0].geometry.viewport);
+        const geometry = results[0].geometry || {};
+        const viewport = geometry.viewport;
+        let loc = geometry.location;
+        if(!loc && viewport && typeof viewport.getCenter === 'function'){
+          loc = viewport.getCenter();
+        }
+        if(viewport){
+          mapState.map.fitBounds(viewport);
         }else if(loc){
           mapState.map.setCenter(loc);
           mapState.map.setZoom(19);
+        }
+        if(loc){
+          updateMapAddressMarker(loc);
         }
       }else{
         console.warn('Geocode failed for address', value, status);
@@ -735,6 +745,26 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function updateMapAddressMarker(location){
+    if(typeof google === 'undefined' || !google.maps || !mapState.map){
+      return;
+    }
+    if(!location){
+      if(mapState.marker){
+        mapState.marker.setMap(null);
+      }
+      return;
+    }
+    if(!mapState.marker){
+      mapState.marker = new google.maps.Marker({
+        map: mapState.map,
+        clickable: false,
+      });
+    }
+    mapState.marker.setMap(mapState.map);
+    mapState.marker.setPosition(location);
+  }
+
   function scheduleMapSectionsUpdate(){
     if(mapUpdateScheduled) return;
     mapUpdateScheduled = true;
@@ -911,11 +941,19 @@ document.addEventListener('DOMContentLoaded', function(){
       mapState.autocomplete.addListener('place_changed', ()=>{
         const place = mapState.autocomplete.getPlace();
         if(place && place.geometry){
-          if(place.geometry.viewport){
-            mapState.map.fitBounds(place.geometry.viewport);
-          }else{
-            mapState.map.setCenter(place.geometry.location);
+          const viewport = place.geometry.viewport;
+          let loc = place.geometry.location;
+          if(!loc && viewport && typeof viewport.getCenter === 'function'){
+            loc = viewport.getCenter();
+          }
+          if(viewport){
+            mapState.map.fitBounds(viewport);
+          }else if(loc){
+            mapState.map.setCenter(loc);
             mapState.map.setZoom(19);
+          }
+          if(loc){
+            updateMapAddressMarker(loc);
           }
         }
       });
@@ -926,15 +964,30 @@ document.addEventListener('DOMContentLoaded', function(){
           if(!value || !mapState.geocoder) return;
           mapState.geocoder.geocode({ address: value }, (results, status)=>{
             if(status === 'OK' && results && results[0]){
-              const loc = results[0].geometry.location;
-              mapState.map.setCenter(loc);
-              if(results[0].geometry.viewport){
-                mapState.map.fitBounds(results[0].geometry.viewport);
+              const geometry = results[0].geometry || {};
+              const viewport = geometry.viewport;
+              let loc = geometry.location;
+              if(!loc && viewport && typeof viewport.getCenter === 'function'){
+                loc = viewport.getCenter();
+              }
+              if(loc){
+                mapState.map.setCenter(loc);
+              }
+              if(viewport){
+                mapState.map.fitBounds(viewport);
               }else{
                 mapState.map.setZoom(19);
               }
+              if(loc){
+                updateMapAddressMarker(loc);
+              }
             }
           });
+        }
+      });
+      mapAddressInput.addEventListener('input', ()=>{
+        if(!mapAddressInput.value.trim()){
+          updateMapAddressMarker(null);
         }
       });
     }
