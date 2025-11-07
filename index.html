@@ -201,6 +201,23 @@
       </div>
     </div>
 
+    <div class="sp-card" id="sp-crew-card">
+      <div class="sp-card-header">
+        <div class="sp-card-title">Crew &amp; Labor</div>
+      </div>
+      <div class="sp-grid">
+        <div class="sp-field col-6">
+          <label class="sp-label" for="sp-crew-select">Crew Lead</label>
+          <select class="sp-select" id="sp-crew-select">
+            <option value="robert">Robert</option>
+            <option value="jesus">Jesus</option>
+            <option value="rodney">Rodney</option>
+          </select>
+          <div class="sp-hint" id="sp-crew-details"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="sp-card" id="sp-map-card">
       <div class="sp-card-header">
         <div class="sp-card-title">Map Measurements</div>
@@ -341,7 +358,62 @@ document.addEventListener('DOMContentLoaded', function(){
     ]
   };
 
-  const state = { sections: [] };
+  const CREWS = {
+    robert: {
+      id: 'robert',
+      label: 'Robert',
+      maxCrew: 7,
+      maxWelders: 2,
+      minCrew: 3,
+      description: 'Up to 7 guys (max 2 welders). $1,000/day for 3 crew; +$200 for each additional.',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        const baseRate = 1000;
+        if(count <= 3) return baseRate;
+        return baseRate + (count - 3) * 200;
+      }
+    },
+    jesus: {
+      id: 'jesus',
+      label: 'Jesus',
+      maxCrew: 4,
+      maxWelders: 1,
+      minCrew: 1,
+      description: 'Up to 4 guys (max 1 welder). $350 for the first, $250 second, $200 third & fourth.',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        const tiers = [0, 350, 250, 200, 200];
+        let total = 0;
+        for(let i=1;i<=count;i++){
+          const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
+          total += rate;
+        }
+        return total;
+      }
+    },
+    rodney: {
+      id: 'rodney',
+      label: 'Rodney',
+      maxCrew: 3,
+      maxWelders: 1,
+      minCrew: 1,
+      description: 'Up to 3 guys (max 1 welder). $300 for the first, $200 second & third.',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        const tiers = [0, 300, 200, 200];
+        let total = 0;
+        for(let i=1;i<=count;i++){
+          const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
+          total += rate;
+        }
+        return total;
+      }
+    }
+  };
+
+  const DEFAULT_CREW_ID = 'robert';
+
+  const state = { sections: [], crew: DEFAULT_CREW_ID };
   const mapState = {
     map: null,
     drawingManager: null,
@@ -368,6 +440,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
   const serviceCopyAllBtn = $('#sp-copy-service');
+  const crewSelectEl = document.getElementById('sp-crew-select');
+  const crewDetailsEl = document.getElementById('sp-crew-details');
   const estimateLookupBtnLabel = estimateLookupBtn ? estimateLookupBtn.textContent : '';
   let lastServiceLines = [];
   let autoGenerateTimer = null;
@@ -381,6 +455,17 @@ document.addEventListener('DOMContentLoaded', function(){
   function sanitizeEstimateNumber(value){
     return (value || '').replace(/[^0-9]/g, '');
   }
+
+  function updateCrewUI(){
+    const crewDef = getCrewDefinition(state.crew);
+    if(crewSelectEl && crewDef){
+      crewSelectEl.value = crewDef.id;
+    }
+    if(crewDetailsEl){
+      crewDetailsEl.textContent = crewSummary(crewDef);
+    }
+  }
+  updateCrewUI();
 
   function updateEstimateStatus(message, state){
     if(!estimateStatusEl){
@@ -1579,6 +1664,10 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function syncStateFromDOM(){
+    if(crewSelectEl){
+      const val = crewSelectEl.value || DEFAULT_CREW_ID;
+      state.crew = val in CREWS ? val : DEFAULT_CREW_ID;
+    }
     const cards = $$('.sp-card', sectionsEl);
     if(!cards.length) return;
     const newSections = cards.map(readSectionFromDOM);
@@ -2855,6 +2944,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function render(){
+    updateCrewUI();
     const sectionsEl = document.getElementById('sp-sections');
     sectionsEl.innerHTML = '';
     state.sections.forEach((s, idx)=>{
@@ -3020,12 +3110,16 @@ document.addEventListener('DOMContentLoaded', function(){
     concrete: 12,
     post2x2: { 8:18, 9:24 }
   };
-  function laborCost(crew){
-    if(crew<=0) return 0;
-    if(crew===1) return 350;
-    if(crew===2) return 600;
-    if(crew===3) return 800;
-    return 800 + (crew-3)*200;
+  function getCrewDefinition(id){
+    return CREWS[id] || CREWS[DEFAULT_CREW_ID];
+  }
+  function crewCostForCount(crewDef, count){
+    if(!crewDef || typeof crewDef.dailyCost !== 'function') return 0;
+    return crewDef.dailyCost(count);
+  }
+  function crewSummary(crewDef){
+    if(!crewDef) return 'TBD';
+    return `${crewDef.label} – ${crewDef.description}`;
   }
   function money(n){ return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
 
@@ -4636,12 +4730,15 @@ document.addEventListener('DOMContentLoaded', function(){
       return parts.join(' + ');
     }
 
+    const crewDef = getCrewDefinition(state.crew);
     const primePaintScheduled = totalLenPrimePaint > 0;
     const HOURS_PER_PERSON = 7;
-    const MAX_CREW_PER_DAY = 7;
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
     const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0);
-    const MIN_CREW_PER_DAY = requiresTwoPersonCrew ? 2 : 1;
+    const minCrewBase = requiresTwoPersonCrew ? 2 : 1;
+    const MIN_CREW_PER_DAY = Math.max(minCrewBase, crewDef && typeof crewDef.minCrew === 'number' ? crewDef.minCrew : 1);
+    const MAX_CREW_PER_DAY = crewDef && typeof crewDef.maxCrew === 'number' ? crewDef.maxCrew : 7;
+    const MAX_WELDERS = Math.max(0, crewDef && typeof crewDef.maxWelders === 'number' ? crewDef.maxWelders : MAX_CREW_PER_DAY);
     const day2Hours = primePaintReturnHours;
     const helperHoursDay2 = day2Hours;
     const helperHoursDay1 = Math.max(0, helperHours - helperHoursDay2);
@@ -4649,53 +4746,50 @@ document.addEventListener('DOMContentLoaded', function(){
     const baseHelperHours = Math.max(0, helperHoursDay1);
 
     const baseDays = [];
-    let remainingBaseHours = baseWelderHours + baseHelperHours;
-    while(remainingBaseHours > 0.01){
-      let crewCount = Math.max(MIN_CREW_PER_DAY, Math.ceil(remainingBaseHours / HOURS_PER_PERSON));
-      crewCount = Math.min(MAX_CREW_PER_DAY, crewCount);
-      baseDays.push({ crew: crewCount });
-      remainingBaseHours = Math.max(0, remainingBaseHours - crewCount * HOURS_PER_PERSON);
-    }
-
     let remainingWelderHours = baseWelderHours;
     let remainingHelperHours = baseHelperHours;
-    baseDays.forEach(day => {
+    while(remainingWelderHours > 0.01 || remainingHelperHours > 0.01){
       let welderCount = 0;
-      if(remainingWelderHours > 0){
-        welderCount = Math.min(day.crew, Math.max(1, Math.ceil(remainingWelderHours / HOURS_PER_PERSON)));
+      if(remainingWelderHours > 0.01){
+        const welderNeeded = Math.ceil(remainingWelderHours / HOURS_PER_PERSON);
+        welderCount = Math.max(1, Math.min(welderNeeded, MAX_WELDERS, MAX_CREW_PER_DAY));
       }
-      if(remainingWelderHours <= 0){ welderCount = 0; }
-
-      let helperCount = day.crew - welderCount;
-      if(remainingHelperHours > 0){
+      let helperCount = 0;
+      if(remainingHelperHours > 0.01){
         const helperNeeded = Math.ceil(remainingHelperHours / HOURS_PER_PERSON);
-        if(helperCount < Math.min(day.crew - welderCount, helperNeeded)){
-          helperCount = Math.min(day.crew - welderCount, helperNeeded);
-        }
+        helperCount = Math.min(helperNeeded, Math.max(0, MAX_CREW_PER_DAY - welderCount));
       }
-      if(remainingHelperHours <= 0){
-        helperCount = Math.max(0, day.crew - welderCount);
+      let crewCount = welderCount + helperCount;
+      if(crewCount < MIN_CREW_PER_DAY){
+        crewCount = Math.min(MAX_CREW_PER_DAY, Math.max(MIN_CREW_PER_DAY, welderCount));
       }
-
-      if(helperCount < 0){ helperCount = 0; }
-      if(welderCount + helperCount < day.crew){
-        helperCount = day.crew - welderCount;
+      if(crewCount <= 0){
+        crewCount = Math.min(MAX_CREW_PER_DAY, MIN_CREW_PER_DAY);
       }
-
-      day.welderCount = welderCount;
-      day.helperCount = helperCount;
-
+      if(crewCount > MAX_CREW_PER_DAY){
+        crewCount = MAX_CREW_PER_DAY;
+      }
+      helperCount = Math.min(helperCount, Math.max(0, crewCount - welderCount));
+      if(welderCount + helperCount < crewCount){
+        helperCount = crewCount - welderCount;
+      }
+      baseDays.push({ crew: crewCount, welderCount, helperCount });
       remainingWelderHours = Math.max(0, remainingWelderHours - welderCount * HOURS_PER_PERSON);
       remainingHelperHours = Math.max(0, remainingHelperHours - helperCount * HOURS_PER_PERSON);
-    });
+      if(welderCount === 0 && helperCount === 0){
+        break;
+      }
+    }
 
     const finishDays = [];
     let remainingFinishHours = helperHoursDay2;
     while(remainingFinishHours > 0.01){
-      let crewCount = Math.max(MIN_CREW_PER_DAY, Math.ceil(remainingFinishHours / HOURS_PER_PERSON));
+      const helperNeeded = Math.ceil(remainingFinishHours / HOURS_PER_PERSON);
+      let crewCount = Math.max(MIN_CREW_PER_DAY, helperNeeded);
       crewCount = Math.min(MAX_CREW_PER_DAY, crewCount);
-      finishDays.push({ crew: crewCount, welderCount: 0, helperCount: crewCount });
-      remainingFinishHours = Math.max(0, remainingFinishHours - crewCount * HOURS_PER_PERSON);
+      const helperCount = crewCount;
+      finishDays.push({ crew: crewCount, welderCount: 0, helperCount });
+      remainingFinishHours = Math.max(0, remainingFinishHours - helperCount * HOURS_PER_PERSON);
     }
 
     const crewSchedule = [];
@@ -4714,10 +4808,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const suffix = day.kind === 'finish'
         ? ' (return for finish coat)'
         : (primePaintScheduled ? ' (prime/repairs)' : '');
+      const cost = crewCostForCount(crewDef, day.crew);
       return {
         number: idx + 1,
         crewLabel,
         suffix,
+        cost,
       };
     });
 
@@ -4732,13 +4828,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
     lines.push('');
     lines.push('CREW');
+    lines.push(`- Lead: ${crewSummary(crewDef)}`);
     if(scheduleEntries.length){
       scheduleEntries.forEach(entry => {
         const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
-        lines.push(`- ${dayTitle}: ${entry.crewLabel}`);
+        const costPart = entry.cost > 0 ? ` ($${money(entry.cost)})` : '';
+        lines.push(`- ${dayTitle}: ${entry.crewLabel}${costPart}`);
       });
     } else {
-      lines.push('- Crew: TBD');
+      lines.push('- Schedule: TBD');
     }
 
     const materialEntries = Object.keys(materials)
@@ -4755,6 +4853,17 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const sub = [];
+    sub.push(`CREW: ${crewSummary(crewDef)}`);
+    if(scheduleEntries.length){
+      scheduleEntries.forEach(entry => {
+        const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
+        const costPart = entry.cost > 0 ? ` ($${money(entry.cost)})` : '';
+        sub.push(`- ${dayTitle}: ${entry.crewLabel}${costPart}`);
+      });
+    } else {
+      sub.push('- Schedule: TBD');
+    }
+    sub.push('');
     sub.push('JOB DURATION');
     sub.push('- '+durationStr);
     sub.push('');
@@ -4855,17 +4964,10 @@ document.addEventListener('DOMContentLoaded', function(){
     if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then hand paint '+paintLenTotal+' ft of fence');
     if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
 
-    if(scheduleEntries.length > 1){
-      scheduleEntries.forEach(entry => {
-        const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
-        sub.push(`- ${dayTitle}: ${entry.crewLabel}`);
-      });
-    }
-
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
     const totalCrewCount = crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0);
-    const crewCost = laborCost(totalCrewCount);
+    const crewCost = crewSchedule.reduce((acc, day) => acc + crewCostForCount(crewDef, day.crew), 0);
     const removalCost = totals.removalCost || 0;
     const directCosts = crewCost + costMaterials + removalCost;
     const revenueRes = computeChargeRevenue(directCosts);
@@ -4876,11 +4978,16 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const cost = [];
     cost.push('ESTIMATED COST');
-    const crewScheduleDetail = scheduleEntries.map(entry => `Day ${entry.number}: ${entry.crewLabel}${entry.suffix}`);
+    const crewScheduleDetail = scheduleEntries.map(entry => {
+      const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
+      const costPart = entry.cost > 0 ? ` ($${money(entry.cost)})` : '';
+      return `${dayTitle}: ${entry.crewLabel}${costPart}`;
+    });
     const laborDetailWithDays = crewScheduleDetail.length
       ? `${crewScheduleDetail.join('; ')}; total crew-equivalent: ${totalCrewCount}`
       : 'TBD';
-    cost.push('- Labor: $'+money(crewCost)+' ('+laborDetailWithDays+')');
+    const laborLabel = crewDef ? `${crewDef.label}` : 'Crew';
+    cost.push(`- Labor (${laborLabel}): $${money(crewCost)} (${laborDetailWithDays})`);
     cost.push('- Materials: $'+money(costMaterials));
     if(removalCost>0){ cost.push('- Removal & disposal (paid to sub): $'+money(removalCost)); }
     matBreak.forEach(line=> cost.push(line));
@@ -5191,6 +5298,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!confirm('Clear all sections?')) return;
     clearMapDrawing({ skipSections: true });
     state.sections = [];
+    state.crew = DEFAULT_CREW_ID;
     localStorage.removeItem(KEY);
     render();
     outputEl.style.display='none';
@@ -5211,6 +5319,15 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!mapState.polylines.length && !hasLinkedSections) return;
       if(!confirm('Remove all map drawings and linked sections?')) return;
       clearMapDrawing();
+    });
+  }
+
+  if(crewSelectEl){
+    crewSelectEl.addEventListener('change', ()=>{
+      state.crew = crewSelectEl.value || DEFAULT_CREW_ID;
+      if(!(state.crew in CREWS)){ state.crew = DEFAULT_CREW_ID; }
+      updateCrewUI();
+      persist();
     });
   }
 
