@@ -14,7 +14,7 @@
     --sp-bg:#f8fafc;
     --sp-card:#ffffff;
     --sp-radius:14px;
-    --sp-stage-bg:#fdf5c2;
+    --sp-stage-bg:#EBEBEB;
   }
   #sp-scope{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji";color:var(--sp-ink)}
   #sp-scope *{box-sizing:border-box}
@@ -35,6 +35,7 @@
 
   .sp-sections{display:grid;gap:16px}
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  #sp-map-card{margin-bottom:16px}
   .sp-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .sp-card-title{font-size:16px;font-weight:800}
   .sp-card.is-collapsed .sp-grid{display:none}
@@ -57,6 +58,7 @@
     .sp-btn{width:100%}
     .sp-sections{gap:12px}
     .sp-card{padding:14px}
+    #sp-map-card{margin-bottom:12px}
     .sp-card-header{flex-direction:column;align-items:flex-start;gap:10px}
     .sp-card-header .sp-row{width:100%;justify-content:flex-start}
     .sp-card-title{font-size:18px}
@@ -272,6 +274,16 @@ window.initMap = function(){
 };
 document.addEventListener('DOMContentLoaded', function(){
   document.title = 'Stage Scope Generator';
+  (function setBackground(){
+    var root = document.documentElement;
+    if(!root) return;
+    var href = window.location.href || '';
+    if(href.indexOf('https://stagescope.strongperimeter.com/') !== -1){
+      root.style.setProperty('--sp-stage-bg', '#fdf5c2');
+    } else {
+      root.style.setProperty('--sp-stage-bg', '#EBEBEB');
+    }
+  })();
   // Set favicon
   (function setFavicon(){
     var href = 'https://cdn.prod.website-files.com/6594928d27a68dfdb6474334/66e8a1e05c9e00dea43e9a1b_Strong-Perimeter-Logo-32.jpg';
