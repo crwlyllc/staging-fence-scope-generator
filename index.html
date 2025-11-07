@@ -3135,7 +3135,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'puppy picket insert (5/8")': 62.59,
     'picket plugs (1/2")': 0.10,
     'picket plugs (5/8")': 0.11,
-    'prefab gate panel': 0
+    'prefab gate panel': 0,
+    'panel mount bracket': 1.27
   };
 
   const PRICE = {
@@ -3820,7 +3821,9 @@ document.addEventListener('DOMContentLoaded', function(){
           lines.push(`  - ${qty} × ${widthIn}" wide panel — ${desc}`);
           const panelHours = eligible ? qty * 0.5 : qty * 1.5;
           manHours += panelHours;
-          welderHours += panelHours;
+          const attachment = (source === 'install') ? (extra.attachment || 'Welding') : 'Welding';
+          const usesBrackets = attachment === 'Brackets';
+          if(!usesBrackets){ welderHours += panelHours; }
           if(eligible){
             totals.panelsPrefab += qty;
             if(source === 'install') totals.panelsInstallPrefab += qty;
@@ -3839,15 +3842,21 @@ document.addEventListener('DOMContentLoaded', function(){
             height,
             widthIn,
             finialStyle,
-            source
+            source,
+            attachment
           });
           if(hasFinials){
             addMat(materials, `finials - Cast Iron - ${finStyleLabel} (${picketSize})`, qty*25);
           }
+          if(source === 'install' && attachment === 'Brackets'){
+            addMat(materials, 'panel mount bracket', qty * 4);
+          }
         });
         if(source === 'install' && extra.installInfo){
           if(!extra.installInfo.panels) extra.installInfo.panels = [];
-          prepared.forEach(entry=>{ extra.installInfo.panels.push({ ...entry }); });
+          prepared.forEach(entry=>{
+            extra.installInfo.panels.push({ ...entry, attachment: extra.attachment || 'Welding' });
+          });
         }
       }
 
