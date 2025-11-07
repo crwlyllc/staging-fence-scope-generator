@@ -829,6 +829,7 @@ document.addEventListener('DOMContentLoaded', function(){
       mapGeneratedLabel: '',
       notes: '',
       painting: defaultPainting,
+      paintingApplication: 'By Hand',
     };
     return { ...base, ...data };
   }
@@ -1225,6 +1226,13 @@ document.addEventListener('DOMContentLoaded', function(){
             <option value="Prime and Paint">Prime and Paint</option>
             <option value="Spot Paint Welds">Spot Paint Welds</option>
             <option value="None">None</option>
+          </select>
+        </div>
+        <div class="sp-field col-3" data-painting-application style="display:none">
+          <label class="sp-label">Paint Application</label>
+          <select class="sp-select" data-field="paintingApplication">
+            <option value="By Hand">By Hand</option>
+            <option value="Spray">Spray</option>
           </select>
         </div>
 
@@ -1628,6 +1636,7 @@ document.addEventListener('DOMContentLoaded', function(){
       picketHeight: val('picketHeight'),
       puppy: val('puppy'),
       painting: val('painting'),
+      paintingApplication: val('paintingApplication'),
       length: val('length'),
       hardscape: val('hardscape'),
       trim: val('trim'),
@@ -1733,6 +1742,7 @@ document.addEventListener('DOMContentLoaded', function(){
       ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
       : (data.painting || 'Paint Section');
     set('painting', defaultPainting);
+    set('paintingApplication', data.paintingApplication || 'By Hand');
     set('length', data.length||'');
     set('hardscape', data.hardscape||'');
     set('trim', data.trim||'');
@@ -2843,6 +2853,24 @@ document.addEventListener('DOMContentLoaded', function(){
     return /finials/i.test(String(style||'')) || /finials/i.test(String(puppy||''));
   }
 
+  function updatePaintingApplicationUI(card){
+    const wrap = card.querySelector('[data-painting-application]');
+    if(!wrap) return;
+    const paintingSel = card.querySelector('[data-field="painting"]');
+    const methodSel = card.querySelector('[data-field="paintingApplication"]');
+    const paintingVal = paintingSel ? paintingSel.value : '';
+    const show = paintingVal === 'Paint Section' || paintingVal === 'Prime and Paint';
+    wrap.style.display = show ? '' : 'none';
+    if(show){
+      if(methodSel && !methodSel.value){
+        methodSel.value = 'By Hand';
+      }
+    }else if(methodSel && methodSel.value !== 'By Hand'){
+      methodSel.value = 'By Hand';
+      methodSel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+
   function updateInstallConditional(card){
     const scopeSel = card.querySelector('[data-field="scopeType"]');
     const scope = scopeSel ? scopeSel.value : 'repair';
@@ -2888,6 +2916,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
     }
+    updatePaintingApplicationUI(card);
   }
 
   function updateWalkGateConditional(card){
@@ -3713,6 +3742,10 @@ document.addEventListener('DOMContentLoaded', function(){
         ? 'None'
         : paintingDefault;
       lines.push(`- Painting: ${paintingLabel}`);
+      if(paintingLabel === 'Paint Section' || paintingLabel === 'Prime and Paint'){
+        const application = s.paintingApplication || 'By Hand';
+        lines.push(`- Paint application: ${application}`);
+      }
       const braceLine = braceLineParts.length ? `- Diagonal brace additions: ${braceLineParts.join('; ')} (4 ft each)` : '';
       if(braceLine && !isRepair){
         lines.push(braceLine);
@@ -4777,23 +4810,51 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Labor + totals
     let primePaintReturnHours = 0;
+    let sprayBaseHours = 0;
+    let sprayFinishHours = 0;
     const paintingHours = state.sections.reduce((acc, s)=>{
       if (s.painting !== 'Paint Section' && s.painting !== 'Prime and Paint') return acc;
       const len = parseInt(s.length||0,10) || 0;
-      if(!len) return acc;
-      const railsPenalty = railPacePenalty(s.railsCount || (s.rails||[]).length || 0);
-      const denom = styleFactor(s.style) - puppyAdj(s.puppy) - railsPenalty;
-      const baseHours = (len/8) / Math.max(0.5, denom);
-      const hardscapeHours = (parseInt(s.hardscape||0,10)||0) / 20;
-      const trimHours = (parseInt(s.trim||0,10)||0) / 50;
-      const totalSectionHours = baseHours + hardscapeHours + trimHours;
+      const method = s.paintingApplication || 'By Hand';
+      let totalSectionHours = 0;
+      if(method === 'Spray'){
+        let panelCount = 0;
+        if(Array.isArray(s.panels)){
+          panelCount = s.panels.reduce((sum, panel)=>{
+            const qty = parseInt(panel?.qty||0, 10) || 0;
+            return sum + qty;
+          }, 0);
+        }
+        if(panelCount <= 0 && len > 0){
+          panelCount = Math.max(1, Math.ceil(len / 8));
+        }
+        if(panelCount > 0){
+          totalSectionHours = panelCount / 4;
+        }
+      }else{
+        if(!len) return acc;
+        const railsPenalty = railPacePenalty(s.railsCount || (s.rails||[]).length || 0);
+        const denom = styleFactor(s.style) - puppyAdj(s.puppy) - railsPenalty;
+        const baseHours = (len/8) / Math.max(0.5, denom);
+        const hardscapeHours = (parseInt(s.hardscape||0,10)||0) / 20;
+        const trimHours = (parseInt(s.trim||0,10)||0) / 50;
+        totalSectionHours = baseHours + hardscapeHours + trimHours;
+      }
+      if(totalSectionHours <= 0) return acc;
+      if(method === 'Spray'){
+        sprayBaseHours += totalSectionHours;
+      }
       if (s.painting === 'Prime and Paint'){
         primePaintReturnHours += totalSectionHours;
+        if(method === 'Spray'){
+          sprayFinishHours += totalSectionHours;
+        }
       }
       return acc + totalSectionHours;
     }, 0);
     manHours += paintingHours + primePaintReturnHours;
     helperHours += paintingHours + primePaintReturnHours;
+    welderHours += sprayBaseHours + sprayFinishHours;
 
     function describeCrewSplit(welders, helpers){
       const parts = [];
@@ -4814,7 +4875,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const day2Hours = primePaintReturnHours;
     const helperHoursDay2 = day2Hours;
     const helperHoursDay1 = Math.max(0, helperHours - helperHoursDay2);
-    const baseWelderHours = Math.max(0, welderHours);
+    const finishWelderHours = sprayFinishHours;
+    const baseWelderHours = Math.max(0, welderHours - finishWelderHours);
     const baseHelperHours = Math.max(0, helperHoursDay1);
 
     const baseDays = [];
@@ -4854,14 +4916,39 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const finishDays = [];
-    let remainingFinishHours = helperHoursDay2;
-    while(remainingFinishHours > 0.01){
-      const helperNeeded = Math.ceil(remainingFinishHours / HOURS_PER_PERSON);
-      let crewCount = Math.max(MIN_CREW_PER_DAY, helperNeeded);
-      crewCount = Math.min(MAX_CREW_PER_DAY, crewCount);
-      const helperCount = crewCount;
-      finishDays.push({ crew: crewCount, welderCount: 0, helperCount });
-      remainingFinishHours = Math.max(0, remainingFinishHours - helperCount * HOURS_PER_PERSON);
+    let remainingFinishWelderHours = finishWelderHours;
+    let remainingFinishHelperHours = helperHoursDay2;
+    while(remainingFinishWelderHours > 0.01 || remainingFinishHelperHours > 0.01){
+      let welderCount = 0;
+      if(remainingFinishWelderHours > 0.01){
+        const welderNeeded = Math.ceil(remainingFinishWelderHours / HOURS_PER_PERSON);
+        welderCount = Math.max(1, Math.min(welderNeeded, MAX_WELDERS, MAX_CREW_PER_DAY));
+      }
+      let helperCount = 0;
+      if(remainingFinishHelperHours > 0.01){
+        const helperNeeded = Math.ceil(remainingFinishHelperHours / HOURS_PER_PERSON);
+        helperCount = Math.min(helperNeeded, Math.max(0, MAX_CREW_PER_DAY - welderCount));
+      }
+      let crewCount = welderCount + helperCount;
+      if(crewCount < MIN_CREW_PER_DAY){
+        crewCount = Math.min(MAX_CREW_PER_DAY, Math.max(MIN_CREW_PER_DAY, welderCount));
+      }
+      if(crewCount <= 0){
+        crewCount = Math.min(MAX_CREW_PER_DAY, MIN_CREW_PER_DAY);
+      }
+      if(crewCount > MAX_CREW_PER_DAY){
+        crewCount = MAX_CREW_PER_DAY;
+      }
+      helperCount = Math.min(helperCount, Math.max(0, crewCount - welderCount));
+      if(welderCount + helperCount < crewCount){
+        helperCount = crewCount - welderCount;
+      }
+      finishDays.push({ crew: crewCount, welderCount, helperCount });
+      remainingFinishWelderHours = Math.max(0, remainingFinishWelderHours - welderCount * HOURS_PER_PERSON);
+      remainingFinishHelperHours = Math.max(0, remainingFinishHelperHours - helperCount * HOURS_PER_PERSON);
+      if(welderCount === 0 && helperCount === 0){
+        break;
+      }
     }
 
     const crewSchedule = [];
