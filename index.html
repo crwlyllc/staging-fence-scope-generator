@@ -782,6 +782,10 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function createSectionBase(data={}){
+    const scope = data.scopeType || 'repair';
+    const defaultPainting = (scope === 'install' || scope === 'replace')
+      ? 'Spot Paint Welds'
+      : 'Paint Section';
     const base = {
       id: uid(),
       collapsed:false,
@@ -824,6 +828,7 @@ document.addEventListener('DOMContentLoaded', function(){
       mapSegmentId: '',
       mapGeneratedLabel: '',
       notes: '',
+      painting: defaultPainting,
     };
     return { ...base, ...data };
   }
@@ -1722,7 +1727,11 @@ document.addEventListener('DOMContentLoaded', function(){
     set('picketSize', data.picketSize||SEED.picketSize[0]);
     set('picketHeight', data.picketHeight||'');
     set('puppy', data.puppy||SEED.puppy[0]);
-    set('painting', data.painting||'Paint Section');
+    const scopeForPaint = data.scopeType || 'repair';
+    const defaultPainting = (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
+      ? 'Spot Paint Welds'
+      : (data.painting || 'Paint Section');
+    set('painting', defaultPainting);
     set('length', data.length||'');
     set('hardscape', data.hardscape||'');
     set('trim', data.trim||'');
@@ -2019,6 +2028,13 @@ document.addEventListener('DOMContentLoaded', function(){
     '3x3': 'posts3x3',
     '4x4': 'posts4x4'
   };
+  const POST_KEY_LABEL = {
+    posts1p5: '1 1/2" x 1 1/2"',
+    posts2x2: '2x2',
+    posts3x3: '3x3',
+    posts4x4: '4x4'
+  };
+  const CAP_LABEL_RE = /^caps - (.+?) - (.+?) \((.+?)\)$/; // material, style, postSize
 
   function postSizeKey(size){
     const raw = String(size||'').trim();
@@ -2047,6 +2063,10 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
     return counts;
+  }
+
+  function postKeyToLabel(key){
+    return POST_KEY_LABEL[key] || '';
   }
 
   function countRealignCutWeld(arr){
@@ -2852,6 +2872,20 @@ document.addEventListener('DOMContentLoaded', function(){
         if(input){ input.value = '0'; }
       }
     });
+
+    const paintingSel = card.querySelector('[data-field="painting"]');
+    if(paintingSel){
+      const currentVal = paintingSel.value;
+      if(isInstall){
+        const desired = 'Spot Paint Welds';
+        if(!currentVal || currentVal === 'Paint Section'){
+          if(paintingSel.value !== desired){
+            paintingSel.value = desired;
+            paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      }
+    }
   }
 
   function updateWalkGateConditional(card){
@@ -3467,6 +3501,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postsReplace: zeroPostCounts()
     };
     const materials = {};
+    const installCapsByLabel = new Map();
     const picketStickTotals = {};
     const railStickTotals = {};
     const steelStickTotals = { raw1p5:0, raw3x3:0, raw4x4:0 };
@@ -3601,6 +3636,22 @@ document.addEventListener('DOMContentLoaded', function(){
           totals.removalLf += lengthFt;
           totals.removalCost += removalCost;
         }
+
+        const autoCaps = [];
+        const defaultCapStyle = (SEED.capStyles && SEED.capStyles[0]) || 'Pyramid';
+        const defaultCapMaterial = (SEED.capMaterials && SEED.capMaterials[0]) || 'Cast Iron';
+        Object.entries(installInfo.postCounts || {}).forEach(([postKey, count])=>{
+          const qty = parseInt(count,10) || 0;
+          if(qty <= 0) return;
+          const postSizeLabel = postKeyToLabel(postKey) || (s.postSize || '2x2');
+          const capLabel = `caps - ${defaultCapMaterial} - ${defaultCapStyle} (${postSizeLabel})`;
+          addMat(materials, capLabel, qty);
+          installCapsByLabel.set(capLabel, (installCapsByLabel.get(capLabel)||0) + qty);
+          autoCaps.push({ count: qty, postSize: postSizeLabel, style: defaultCapStyle, material: defaultCapMaterial });
+        });
+        if(autoCaps.length){
+          installInfo.autoCaps = autoCaps;
+        }
       }
 
       let sectionPatchTotal = 0;
@@ -3665,6 +3716,10 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`- Posts to set: ${installInfo.postsTotal} (${s.postSize})`);
         if(installInfo.finialStyle){
           lines.push(`- Finials: ${installInfo.finialStyle}`);
+        }
+        if(Array.isArray(installInfo.autoCaps) && installInfo.autoCaps.length){
+          const capParts = installInfo.autoCaps.map(cap=>`${cap.count} × ${cap.material} ${cap.style} (${cap.postSize})`);
+          lines.push(`- Post caps: ${capParts.join('; ')}`);
         }
         if(scopeType === 'replace' && installInfo.lengthFt > 0){
           lines.push(`- Remove existing section (${installInfo.lengthFt} lf) and haul away (sub paid $${money(installInfo.removalCost)})`);
@@ -4680,9 +4735,8 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     // NEW: Caps cost by size/style
-    const capLabelRe = /^caps - (.+?) - (.+?) \((.+?)\)$/; // material, style, postSize
     Object.entries(materials).forEach(([label, qty])=>{
-      const m = label.match(capLabelRe);
+      const m = label.match(CAP_LABEL_RE);
       if(!m) return;
       const style = m[2];
       const postSize = m[3];
@@ -4957,6 +5011,19 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
     if (totals.puppyInserts > 0)    sub.push('- Puppy picket inserts: '+totals.puppyInserts);
     if (totals.caps > 0)            sub.push('- Post caps to replace: '+totals.caps);
+    if (installCapsByLabel.size > 0){
+      installCapsByLabel.forEach((qty, label)=>{
+        const m = label.match(CAP_LABEL_RE);
+        if(m){
+          const material = m[1];
+          const style = m[2];
+          const postSize = m[3];
+          sub.push(`- Post caps to install: ${qty} × ${material} ${style} (${postSize})`);
+        }else{
+          sub.push(`- Post caps to install: ${qty}`);
+        }
+      });
+    }
     if (totals.diagonalBraces > 0)  sub.push('- Diagonal braces to add: '+totals.diagonalBraces);
     if (totals.digOut > 0)          sub.push('- Dig out: '+totals.digOut+' lf');
     if (totals.panelsPrefab > 0)    sub.push('- Prefab panels to install: '+totals.panelsPrefab);
