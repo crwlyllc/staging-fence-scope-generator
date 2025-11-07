@@ -4239,16 +4239,17 @@ document.addEventListener('DOMContentLoaded', function(){
     let primerGallons = 0;
     let primerCans = 0;
 
+    const replacePostCounts = totals.postsReplace || zeroPostCounts();
     const weldRepairHours = (
       totals.wiPickets*12 +
       totals.diagonalBraces*12 +
       totals.wiPatches*20 +
       totals.wiRails*30 +
       totals.wiRailGaps*20 +
-      totals.posts1p5*60 +
-      totals.posts2x2*60 +
-      totals.posts3x3*90 +
-      totals.posts4x4*120 +
+      replacePostCounts.posts1p5*60 +
+      replacePostCounts.posts2x2*60 +
+      replacePostCounts.posts3x3*90 +
+      replacePostCounts.posts4x4*120 +
       (totals.postsRealign2x2 + totals.postsRealign3x3)*30
     )/60;
     manHours += weldRepairHours;
