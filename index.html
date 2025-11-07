@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function(){
       crewSelectEl.value = crewDef.id;
     }
     if(crewDetailsEl){
-      crewDetailsEl.textContent = crewSummary(crewDef);
+      crewDetailsEl.textContent = crewDetailSummary(crewDef);
     }
   }
   updateCrewUI();
@@ -3186,6 +3186,11 @@ document.addEventListener('DOMContentLoaded', function(){
     return crewDef.dailyCost(count);
   }
   function crewSummary(crewDef){
+    if(!crewDef) return 'TBD';
+    return `${crewDef.label}`;
+  }
+
+  function crewDetailSummary(crewDef){
     if(!crewDef) return 'TBD';
     return `${crewDef.label} – ${crewDef.description}`;
   }
