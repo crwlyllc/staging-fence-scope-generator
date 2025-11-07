@@ -3705,7 +3705,12 @@ document.addEventListener('DOMContentLoaded', function(){
       lines.push(`- Rails: ${railsDesc}`);
       lines.push(`- Picket: ${picket}`);
       lines.push(`- Puppy Pickets: ${s.puppy}`);
-      lines.push(`- Painting: ${s.painting || 'Paint Section'}`);
+      const attachmentMethod = s.panelAttachment || (installInfo && installInfo.attachment) || 'Welding';
+      const paintingDefault = s.painting || 'Paint Section';
+      const paintingLabel = (scopeType === 'install' && attachmentMethod === 'Brackets')
+        ? 'None'
+        : paintingDefault;
+      lines.push(`- Painting: ${paintingLabel}`);
       const braceLine = braceLineParts.length ? `- Diagonal brace additions: ${braceLineParts.join('; ')} (4 ft each)` : '';
       if(braceLine && !isRepair){
         lines.push(braceLine);
