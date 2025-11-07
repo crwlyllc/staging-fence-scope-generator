@@ -36,6 +36,7 @@
   .sp-sections{display:grid;gap:16px}
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
   #sp-map-card{margin-bottom:16px}
+  #sp-crew-card{margin-top:18px}
   .sp-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .sp-card-title{font-size:16px;font-weight:800}
   .sp-card.is-collapsed .sp-grid{display:none}
@@ -59,6 +60,7 @@
     .sp-sections{gap:12px}
     .sp-card{padding:14px}
     #sp-map-card{margin-bottom:12px}
+    #sp-crew-card{margin-top:16px}
     .sp-card-header{flex-direction:column;align-items:flex-start;gap:10px}
     .sp-card-header .sp-row{width:100%;justify-content:flex-start}
     .sp-card-title{font-size:18px}
@@ -201,23 +203,6 @@
       </div>
     </div>
 
-    <div class="sp-card" id="sp-crew-card">
-      <div class="sp-card-header">
-        <div class="sp-card-title">Crew &amp; Labor</div>
-      </div>
-      <div class="sp-grid">
-        <div class="sp-field col-6">
-          <label class="sp-label" for="sp-crew-select">Crew Lead</label>
-          <select class="sp-select" id="sp-crew-select">
-            <option value="robert">Robert</option>
-            <option value="jesus">Jesus</option>
-            <option value="rodney">Rodney</option>
-          </select>
-          <div class="sp-hint" id="sp-crew-details"></div>
-        </div>
-      </div>
-    </div>
-
     <div class="sp-card" id="sp-map-card">
       <div class="sp-card-header">
         <div class="sp-card-title">Map Measurements</div>
@@ -238,6 +223,23 @@
     </div>
 
     <div id="sp-sections" class="sp-sections"></div>
+
+    <div class="sp-card" id="sp-crew-card">
+      <div class="sp-card-header">
+        <div class="sp-card-title">Crew &amp; Labor</div>
+      </div>
+      <div class="sp-grid">
+        <div class="sp-field col-6">
+          <label class="sp-label" for="sp-crew-select">Crew Lead</label>
+          <select class="sp-select" id="sp-crew-select">
+            <option value="robert">Robert</option>
+            <option value="jesus">Jesus</option>
+            <option value="rodney">Rodney</option>
+          </select>
+          <div class="sp-hint" id="sp-crew-details"></div>
+        </div>
+      </div>
+    </div>
 
     <div class="sp-output" id="sp-output" style="display:none">
       <div class="sp-card">
