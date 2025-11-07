@@ -337,6 +337,7 @@ document.addEventListener('DOMContentLoaded', function(){
     geocoder: null,
     autocomplete: null,
     marker: null,
+    maxZoomService: null,
     nextPolylineId: 1,
     pendingAddress: '',
   };
@@ -498,6 +499,26 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  function zoomMapToMax(location){
+    if(!mapState.map || !location){
+      return;
+    }
+    const fallbackZoom = 21;
+    const hasGoogle = typeof google !== 'undefined' && google && google.maps;
+    const service = mapState.maxZoomService;
+    if(hasGoogle && service && typeof service.getMaxZoomAtLatLng === 'function' && google.maps.MaxZoomStatus){
+      service.getMaxZoomAtLatLng(location, result=>{
+        if(result && result.status === google.maps.MaxZoomStatus.OK && typeof result.zoom === 'number'){
+          mapState.map.setZoom(result.zoom);
+        }else{
+          mapState.map.setZoom(fallbackZoom);
+        }
+      });
+    }else{
+      mapState.map.setZoom(fallbackZoom);
+    }
+  }
+
   function focusMapOnAddress(address){
     const value = (address || '').trim();
     if(!value){
@@ -519,9 +540,10 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         if(viewport){
           mapState.map.fitBounds(viewport);
-        }else if(loc){
+        }
+        if(loc){
           mapState.map.setCenter(loc);
-          mapState.map.setZoom(19);
+          zoomMapToMax(loc);
         }
         if(loc){
           updateMapAddressMarker(loc);
@@ -912,6 +934,7 @@ document.addEventListener('DOMContentLoaded', function(){
       streetViewControl: false,
       mapTypeControl: false,
     });
+    mapState.maxZoomService = (typeof google.maps.MaxZoomService === 'function') ? new google.maps.MaxZoomService() : null;
     mapState.drawingManager = new google.maps.drawing.DrawingManager({
       drawingMode: null,
       drawingControl: true,
@@ -948,11 +971,10 @@ document.addEventListener('DOMContentLoaded', function(){
           }
           if(viewport){
             mapState.map.fitBounds(viewport);
-          }else if(loc){
-            mapState.map.setCenter(loc);
-            mapState.map.setZoom(19);
           }
           if(loc){
+            mapState.map.setCenter(loc);
+            zoomMapToMax(loc);
             updateMapAddressMarker(loc);
           }
         }
@@ -975,11 +997,16 @@ document.addEventListener('DOMContentLoaded', function(){
               }
               if(viewport){
                 mapState.map.fitBounds(viewport);
-              }else{
-                mapState.map.setZoom(19);
               }
               if(loc){
+                zoomMapToMax(loc);
                 updateMapAddressMarker(loc);
+              }else if(viewport && typeof viewport.getCenter === 'function'){
+                const center = viewport.getCenter();
+                if(center){
+                  zoomMapToMax(center);
+                  updateMapAddressMarker(center);
+                }
               }
             }
           });
