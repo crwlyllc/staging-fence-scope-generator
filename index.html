@@ -1728,8 +1728,9 @@ document.addEventListener('DOMContentLoaded', function(){
     set('picketHeight', data.picketHeight||'');
     set('puppy', data.puppy||SEED.puppy[0]);
     const scopeForPaint = data.scopeType || 'repair';
+    const attachmentMethod = data.panelAttachment || 'Welding';
     const defaultPainting = (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
-      ? 'Spot Paint Welds'
+      ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
       : (data.painting || 'Paint Section');
     set('painting', defaultPainting);
     set('length', data.length||'');
@@ -2877,12 +2878,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if(paintingSel){
       const currentVal = paintingSel.value;
       if(isInstall){
-        const desired = 'Spot Paint Welds';
-        if(!currentVal || currentVal === 'Paint Section'){
-          if(paintingSel.value !== desired){
-            paintingSel.value = desired;
-            paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
-          }
+        const attachmentSel = card.querySelector('[data-field="panelAttachment"]');
+        const usesBrackets = attachmentSel ? attachmentSel.value === 'Brackets' : false;
+        const desired = usesBrackets ? 'None' : 'Spot Paint Welds';
+        const autoValues = new Set(['', 'Paint Section', 'Spot Paint Welds', 'None']);
+        if(autoValues.has(currentVal) && currentVal !== desired){
+          paintingSel.value = desired;
+          paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }
     }
