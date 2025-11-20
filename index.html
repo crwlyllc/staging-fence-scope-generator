@@ -232,6 +232,8 @@
         <div class="sp-field col-6">
           <label class="sp-label" for="sp-crew-select">Crew Lead</label>
           <select class="sp-select" id="sp-crew-select">
+            <option value="in-house-4">In-House 4</option>
+            <option value="in-house-3">In-House 3</option>
             <option value="robert">Robert</option>
             <option value="jesus">Jesus</option>
             <option value="rodney">Rodney</option>
@@ -361,6 +363,30 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 
   const CREWS = {
+    'in-house-4': {
+      id: 'in-house-4',
+      label: 'In-House 4',
+      maxCrew: 4,
+      maxWelders: 2,
+      minCrew: 4,
+      description: '4-man in-house crew. $800/day (fixed).',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        return 800;
+      }
+    },
+    'in-house-3': {
+      id: 'in-house-3',
+      label: 'In-House 3',
+      maxCrew: 3,
+      maxWelders: 1,
+      minCrew: 3,
+      description: '3-man in-house crew. $600/day (fixed).',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        return 600;
+      }
+    },
     robert: {
       id: 'robert',
       label: 'Robert',
@@ -396,13 +422,13 @@ document.addEventListener('DOMContentLoaded', function(){
     rodney: {
       id: 'rodney',
       label: 'Rodney',
-      maxCrew: 3,
+      maxCrew: 2,
       maxWelders: 1,
       minCrew: 1,
-      description: 'Up to 3 guys (max 1 welder). $300 for the first, $200 second & third.',
+      description: 'Up to 2 guys (max 1 welder). $300 for the first, $200 second.',
       dailyCost(count){
         if(!count || count <= 0) return 0;
-        const tiers = [0, 300, 200, 200];
+        const tiers = [0, 300, 200];
         let total = 0;
         for(let i=1;i<=count;i++){
           const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
