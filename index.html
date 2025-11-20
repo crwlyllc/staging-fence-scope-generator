@@ -234,6 +234,7 @@
           <select class="sp-select" id="sp-crew-select">
             <option value="in-house-4">In-House 4</option>
             <option value="in-house-3">In-House 3</option>
+            <option value="in-house-3-4">In-House 3 &amp; 4</option>
             <option value="robert">Robert</option>
             <option value="jesus">Jesus</option>
             <option value="rodney">Rodney</option>
@@ -369,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function(){
       maxCrew: 4,
       maxWelders: 2,
       minCrew: 4,
-      description: '4-man in-house crew. $640/day (fixed).',
+      description: '4-man in-house crew (2 welders + 2 helpers). $640/day (fixed).',
       dailyCost(count){
         if(!count || count <= 0) return 0;
         return 640;
@@ -379,12 +380,24 @@ document.addEventListener('DOMContentLoaded', function(){
       id: 'in-house-3',
       label: 'In-House 3',
       maxCrew: 3,
-      maxWelders: 1,
+      maxWelders: 2,
       minCrew: 3,
-      description: '3-man in-house crew. $480/day (fixed).',
+      description: '3-man in-house crew (2 welders + 1 helper). $480/day (fixed).',
       dailyCost(count){
         if(!count || count <= 0) return 0;
         return 480;
+      }
+    },
+    'in-house-3-4': {
+      id: 'in-house-3-4',
+      label: 'In-House 3 & 4',
+      maxCrew: 7,
+      maxWelders: 4,
+      minCrew: 7,
+      description: 'Combined in-house crews (4 welders + 3 helpers). $1,120/day (fixed).',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        return 1120;
       }
     },
     robert: {
