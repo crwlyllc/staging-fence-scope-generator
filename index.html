@@ -3197,11 +3197,11 @@ document.addEventListener('DOMContentLoaded', function(){
   function money(n){ return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
 
   const RATES = {
-    netTarget:  0.20,
-    overhead:   0.08,
+    netTarget:  0.25,
+    overhead:   0.0590,
     commission: 0.25,
-    cac:        500,
-    mcor:       0.20
+    cac:        417.34,
+    mcor:       0.1067
   };
 
   function computeChargeRevenue(B1_directCosts){
