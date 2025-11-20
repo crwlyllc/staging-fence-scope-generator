@@ -5149,8 +5149,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const directCosts = crewCost + costMaterials + removalCost;
     const revenueRes = computeChargeRevenue(directCosts);
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
+    const revenueExcludingMcor = revenue * (1 - RATES.mcor);
     const commissionFormula$ = isFinite(revenue)
-      ? (RATES.commission * (((1 - RATES.overhead) * revenue) - directCosts))
+      ? (RATES.commission * (((1 - RATES.overhead) * revenueExcludingMcor) - directCosts))
       : NaN;
 
     const cost = [];
