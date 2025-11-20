@@ -5225,7 +5225,23 @@ document.addEventListener('DOMContentLoaded', function(){
       ? [...lines.slice(idxTotals), '', ...lines.slice(0, idxTotals)]
       : lines;
     const fullNotes = [...outLines, '', ...cost];
-    notesEl.value = fullNotes.join('\n');
+
+    const inHouseCrewIds = ['in-house-4', 'in-house-3', 'in-house-3-4'];
+    const inHouseScenarioLines = [];
+    inHouseScenarioLines.push('IN-HOUSE CREW SCENARIOS (if selected for this scope)');
+    inHouseCrewIds.forEach(id => {
+      const def = CREWS[id];
+      if (!def) return;
+      const altCrewCost = crewSchedule.reduce((acc, day) => acc + crewCostForCount(def, day.crew), 0);
+      const altDirectCosts = altCrewCost + costMaterials + removalCost;
+      const altRevenueRes = computeChargeRevenue(altDirectCosts);
+      const altRevenue = altRevenueRes && isFinite(altRevenueRes.revenue) ? altRevenueRes.revenue : NaN;
+      const revenueLabel = isFinite(altRevenue) ? `$${money(altRevenue)}` : 'Invalid pricing inputs';
+      inHouseScenarioLines.push(`- ${def.label}: total cost $${money(altDirectCosts)}; total revenue ${revenueLabel}`);
+    });
+
+    const fullNotesWithScenarios = [...fullNotes, '', ...inHouseScenarioLines];
+    notesEl.value = fullNotesWithScenarios.join('\n');
     outputEl.style.display = 'grid';
     if (window.parentIFrame && typeof window.parentIFrame.size === 'function') {
       try { window.parentIFrame.size(); } catch(e){}
