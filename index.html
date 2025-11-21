@@ -828,6 +828,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const base = {
       id: uid(),
       collapsed:false,
+      fenceType: 'Wrought Iron',
       railsCount:2,
       rails:[
         {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
@@ -1198,6 +1199,15 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="sp-field col-6">
           <label class="sp-label">Section Label (e.g., Front Right, Right Side, Back Right, etc)</label>
           <input class="sp-input" data-field="label" placeholder="Enter a label" />
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Fence Type</label>
+          <select class="sp-select" data-field="fenceType">
+            <option value="Wrought Iron">Wrought Iron</option>
+            <option value="Wood">Wood</option>
+            <option value="Chain Link">Chain Link</option>
+            <option value="Vinyl">Vinyl</option>
+          </select>
         </div>
         <div class="sp-field col-2">
           <label class="sp-label">Section Scope</label>
@@ -1652,6 +1662,7 @@ document.addEventListener('DOMContentLoaded', function(){
     return {
       id,
       label: val('label').trim(),
+      fenceType: val('fenceType') || 'Wrought Iron',
       scopeType: val('scopeType') || 'repair',
       style: val('style'),
       height: val('height'),
@@ -1759,6 +1770,7 @@ document.addEventListener('DOMContentLoaded', function(){
       delete card.dataset.mapGeneratedLabel;
     }
     set('label', data.label||'');
+    set('fenceType', data.fenceType || 'Wrought Iron');
     set('scopeType', data.scopeType||'repair');
     set('style', data.style||SEED.style[0]);
     set('height', data.height||'4ft');
