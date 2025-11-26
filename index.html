@@ -167,6 +167,9 @@
     opacity:0.55;
     cursor:not-allowed;
   }
+  /* Fence type visibility */
+  .sp-card.is-wood [data-wrought-only]{ display:none !important; }
+  .sp-card:not(.is-wood) [data-wood-only]{ display:none !important; }
   </style>
 </head>
 <body>
@@ -870,6 +873,14 @@ document.addEventListener('DOMContentLoaded', function(){
       notes: '',
       painting: defaultPainting,
       paintingApplication: 'By Hand',
+      woodHeight: '6ft',
+      woodStyle: 'Board on Board',
+      woodPost: 'Wood 4x4',
+      woodType: 'Cedar',
+      woodFinish: 'Oil Based Stain',
+      woodAddKickBoard: false,
+      woodAddTopCap: false,
+      woodAddTrim: false,
     };
     return { ...base, ...data };
   }
@@ -1217,107 +1228,154 @@ document.addEventListener('DOMContentLoaded', function(){
             <option value="install">Install New Section</option>
           </select>
         </div>
-        <div class="sp-field col-2">
-          <label class="sp-label">Style</label>
-          <select class="sp-select" data-field="style">${createSelect(SEED.style)}</select>
-        </div>
-        <div class="sp-field col-2">
-          <label class="sp-label">Height</label>
-          <select class="sp-select" data-field="height">${createSelect(SEED.height)}</select>
-        </div>
-        <div class="sp-field col-2">
-          <label class="sp-label">Post Size</label>
-          <select class="sp-select" data-field="postSize">${createSelect(SEED.postSize)}</select>
-        </div>
-        <div class="sp-field col-2" data-install-only>
-          <label class="sp-label">Post Spacing (ft)</label>
-          <select class="sp-select" data-field="postSpacing">
-            <option value="4">4 ft</option>
-            <option value="5">5 ft</option>
-            <option value="6">6 ft</option>
-            <option value="8">8 ft</option>
-            <option value="10">10 ft</option>
+        <div class="sp-field col-2" data-wood-only>
+          <label class="sp-label">Fence Height</label>
+          <select class="sp-select" data-field="woodHeight">
+            <option value="6ft">6ft</option>
+            <option value="8ft">8ft</option>
           </select>
         </div>
-        <div class="sp-field col-2" data-install-only>
-          <label class="sp-label">Panel Attachment</label>
-          <select class="sp-select" data-field="panelAttachment">
-            <option value="Welding">Welding</option>
-            <option value="Brackets">Brackets</option>
+        <div class="sp-field col-2" data-wood-only>
+          <label class="sp-label">Construction</label>
+          <select class="sp-select" data-field="woodStyle">
+            <option value="Board on Board">Board on Board</option>
+            <option value="Side by Side">Side by Side</option>
           </select>
         </div>
-        <div class="sp-field col-2" data-install-finials style="display:none">
-          <label class="sp-label">Finial Style</label>
-          <select class="sp-select" data-field="installFinialStyle">${createSelect(SEED.finialStyles)}</select>
+        <div class="sp-field col-3" data-wood-only>
+          <label class="sp-label">Posts</label>
+          <select class="sp-select" data-field="woodPost">
+            <option value="Wood 4x4">Wood 4x4</option>
+            <option value="Round Steel">Round Steel</option>
+            <option value="Postmaster">Postmaster</option>
+          </select>
+        </div>
+        <div class="sp-field col-3" data-wood-only>
+          <label class="sp-label">Wood Type</label>
+          <select class="sp-select" data-field="woodType">
+            <option value="Cedar">Cedar</option>
+            <option value="Pressure Treated">Pressure Treated</option>
+          </select>
+        </div>
+        <div class="sp-field col-2" data-wood-only>
+          <label class="sp-label">Finish Type</label>
+          <select class="sp-select" data-field="woodFinish">
+            <option value="Oil Based Stain">Oil Based Stain</option>
+            <option value="Water Based Stain">Water Based Stain</option>
+            <option value="Painted">Painted</option>
+          </select>
+        </div>
+        <div class="sp-field col-12" data-wood-only>
+          <label class="sp-label">Add-ons</label>
+          <div class="sp-row">
+            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddKickBoard" /> Kick Board</label>
+            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddTopCap" /> Top Cap</label>
+            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddTrim" /> Trim</label>
+          </div>
         </div>
 
-        <!-- Move these up directly after Post Size -->
         <div class="sp-field col-3">
           <label class="sp-label">Section Length (ft)</label>
           ${numberControl('length','e.g., 48')}
         </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">LF Over Hardscape</label>
-          ${numberControl('hardscape','e.g., 12')}
-        </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">LF to Trim</label>
-          ${numberControl('trim','e.g., 6')}
-        </div>
-        <div class="sp-field col-3" data-repair-only>
-          <label class="sp-label">LF to Dig Out</label>
-          ${numberControl('digOut','e.g., 10')}
-        </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">Painting</label>
-          <select class="sp-select" data-field="painting">
-            <option value="Paint Section">Paint Section</option>
-            <option value="Prime and Paint">Prime and Paint</option>
-            <option value="Spot Paint Welds">Spot Paint Welds</option>
-            <option value="None">None</option>
-          </select>
-        </div>
-        <div class="sp-field col-3" data-painting-application style="display:none">
-          <label class="sp-label">Paint Application</label>
-          <select class="sp-select" data-field="paintingApplication">
-            <option value="By Hand">By Hand</option>
-            <option value="Spray">Spray</option>
-          </select>
-        </div>
 
-        <div class="col-12 sp-divider"></div>
+        <div class="sp-grid col-12" data-wrought-only>
+          <div class="sp-field col-2">
+            <label class="sp-label">Style</label>
+            <select class="sp-select" data-field="style">${createSelect(SEED.style)}</select>
+          </div>
+          <div class="sp-field col-2">
+            <label class="sp-label">Height</label>
+            <select class="sp-select" data-field="height">${createSelect(SEED.height)}</select>
+          </div>
+          <div class="sp-field col-2">
+            <label class="sp-label">Post Size</label>
+            <select class="sp-select" data-field="postSize">${createSelect(SEED.postSize)}</select>
+          </div>
+          <div class="sp-field col-2" data-install-only>
+            <label class="sp-label">Post Spacing (ft)</label>
+            <select class="sp-select" data-field="postSpacing">
+              <option value="4">4 ft</option>
+              <option value="5">5 ft</option>
+              <option value="6">6 ft</option>
+              <option value="8">8 ft</option>
+              <option value="10">10 ft</option>
+            </select>
+          </div>
+          <div class="sp-field col-2" data-install-only>
+            <label class="sp-label">Panel Attachment</label>
+            <select class="sp-select" data-field="panelAttachment">
+              <option value="Welding">Welding</option>
+              <option value="Brackets">Brackets</option>
+            </select>
+          </div>
+          <div class="sp-field col-2" data-install-finials style="display:none">
+            <label class="sp-label">Finial Style</label>
+            <select class="sp-select" data-field="installFinialStyle">${createSelect(SEED.finialStyles)}</select>
+          </div>
 
-        <!-- ========== GROUP: Rails ========== -->
-        <div class="sp-field col-12" data-rails-wrap>
-          <div class="sp-rail-row" data-rails-row>
-            <div class="sp-field" data-rail-count>
-              <label class="sp-label">Rails</label>
-              <select class="sp-select" data-field="railsCount">
-                <option value="2">2 Rail</option>
-                <option value="3">3 Rail</option>
-                <option value="4">4 Rail</option>
-              </select>
+          <div class="sp-field col-3">
+            <label class="sp-label">LF Over Hardscape</label>
+            ${numberControl('hardscape','e.g., 12')}
+          </div>
+          <div class="sp-field col-3">
+            <label class="sp-label">LF to Trim</label>
+            ${numberControl('trim','e.g., 6')}
+          </div>
+          <div class="sp-field col-3" data-repair-only>
+            <label class="sp-label">LF to Dig Out</label>
+            ${numberControl('digOut','e.g., 10')}
+          </div>
+          <div class="sp-field col-3">
+            <label class="sp-label">Painting</label>
+            <select class="sp-select" data-field="painting">
+              <option value="Paint Section">Paint Section</option>
+              <option value="Prime and Paint">Prime and Paint</option>
+              <option value="Spot Paint Welds">Spot Paint Welds</option>
+              <option value="None">None</option>
+            </select>
+          </div>
+          <div class="sp-field col-3" data-painting-application style="display:none">
+            <label class="sp-label">Paint Application</label>
+            <select class="sp-select" data-field="paintingApplication">
+              <option value="By Hand">By Hand</option>
+              <option value="Spray">Spray</option>
+            </select>
+          </div>
+
+          <div class="col-12 sp-divider"></div>
+
+          <!-- ========== GROUP: Rails ========== -->
+          <div class="sp-field col-12" data-rails-wrap>
+            <div class="sp-rail-row" data-rails-row>
+              <div class="sp-field" data-rail-count>
+                <label class="sp-label">Rails</label>
+                <select class="sp-select" data-field="railsCount">
+                  <option value="2">2 Rail</option>
+                  <option value="3">3 Rail</option>
+                  <option value="4">4 Rail</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- ========== GROUP: Pickets & Finials ========== -->
-        <div class="sp-field col-3">
-          <label class="sp-label">Picket Size</label>
-          <select class="sp-select" data-field="picketSize">${createSelect(SEED.picketSize)}</select>
-        </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">Picket Height (inches) — leave blank to auto-use fence height</label>
-          ${numberControl('picketHeight','e.g., 54')}
-        </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">Puppy Pickets</label>
-          <select class="sp-select" data-field="puppy">${createSelect(SEED.puppy)}</select>
-        </div>
-        <div class="sp-field col-3" data-repair-only>
-          <label class="sp-label"># Pickets to Replace</label>
-          ${numberControl('wiPickets','0')}
-        </div>
+          <!-- ========== GROUP: Pickets & Finials ========== -->
+          <div class="sp-field col-3">
+            <label class="sp-label">Picket Size</label>
+            <select class="sp-select" data-field="picketSize">${createSelect(SEED.picketSize)}</select>
+          </div>
+          <div class="sp-field col-3">
+            <label class="sp-label">Picket Height (inches) — leave blank to auto-use fence height</label>
+            ${numberControl('picketHeight','e.g., 54')}
+          </div>
+          <div class="sp-field col-3">
+            <label class="sp-label">Puppy Pickets</label>
+            <select class="sp-select" data-field="puppy">${createSelect(SEED.puppy)}</select>
+          </div>
+          <div class="sp-field col-3" data-repair-only>
+            <label class="sp-label"># Pickets to Replace</label>
+            ${numberControl('wiPickets','0')}
+          </div>
 
         <!-- Finial replacements (kept as a block) -->
         <div class="sp-field col-12" data-repair-only>
@@ -1489,6 +1547,8 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
           </div>
           <div class="sp-hint">Single swing: adds 2 labor hours, 1 post, 1 bag concrete, and 2× 12ft rails per rail size. Double swing: adds 3 labor hours, 1 post, 1 bag concrete, and 4× 12ft rails per rail size.</div>
+        </div>
+
         </div>
 
         <!-- Notes (section-specific) - LAST -->
@@ -1687,6 +1747,14 @@ document.addEventListener('DOMContentLoaded', function(){
       puppy: val('puppy'),
       painting: val('painting'),
       paintingApplication: val('paintingApplication'),
+      woodHeight: val('woodHeight'),
+      woodStyle: val('woodStyle'),
+      woodPost: val('woodPost'),
+      woodType: val('woodType'),
+      woodFinish: val('woodFinish'),
+      woodAddKickBoard: val('woodAddKickBoard'),
+      woodAddTopCap: val('woodAddTopCap'),
+      woodAddTrim: val('woodAddTrim'),
       length: val('length'),
       hardscape: val('hardscape'),
       trim: val('trim'),
@@ -1794,6 +1862,14 @@ document.addEventListener('DOMContentLoaded', function(){
       : (data.painting || 'Paint Section');
     set('painting', defaultPainting);
     set('paintingApplication', data.paintingApplication || 'By Hand');
+    set('woodHeight', data.woodHeight || '6ft');
+    set('woodStyle', data.woodStyle || 'Board on Board');
+    set('woodPost', data.woodPost || 'Wood 4x4');
+    set('woodType', data.woodType || 'Cedar');
+    set('woodFinish', data.woodFinish || 'Oil Based Stain');
+    set('woodAddKickBoard', Boolean(data.woodAddKickBoard));
+    set('woodAddTopCap', Boolean(data.woodAddTopCap));
+    set('woodAddTrim', Boolean(data.woodAddTrim));
     set('length', data.length||'');
     set('hardscape', data.hardscape||'');
     set('trim', data.trim||'');
@@ -2970,6 +3046,30 @@ document.addEventListener('DOMContentLoaded', function(){
     updatePaintingApplicationUI(card);
   }
 
+  function updateFenceTypeConditional(card){
+    const typeSel = card.querySelector('[data-field="fenceType"]');
+    const fenceType = (typeSel?.value || 'Wrought Iron').toLowerCase();
+    const isWood = fenceType === 'wood';
+    card.classList.toggle('is-wood', isWood);
+    card.classList.toggle('is-wrought', !isWood);
+    if(isWood){
+      const defaults = {
+        woodHeight: '6ft',
+        woodStyle: 'Board on Board',
+        woodPost: 'Wood 4x4',
+        woodType: 'Cedar',
+        woodFinish: 'Oil Based Stain',
+      };
+      Object.entries(defaults).forEach(([field, val])=>{
+        const el = card.querySelector(`[data-field="${field}"]`);
+        if(!el) return;
+        if((el.tagName === 'SELECT' || el.tagName === 'INPUT') && !el.value){
+          el.value = val;
+        }
+      });
+    }
+  }
+
   function updateWalkGateConditional(card){
     const getN = (f)=>{
       const box = card.querySelector(`.sp-number[data-field="${f}"] input`);
@@ -3071,6 +3171,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const card = wrapper.firstElementChild;
       sectionsEl.appendChild(card);
       writeSectionToDOM(card, s);
+      updateFenceTypeConditional(card);
       attachNumberHandlers(card);
       attachRailsHandlers(card);
       updateWalkGateConditional(card);
@@ -3132,6 +3233,7 @@ document.addEventListener('DOMContentLoaded', function(){
       $$('input, select, textarea', card).forEach(el=>{
         el.addEventListener('input', ()=>{ persist(); });
         el.addEventListener('change', ()=>{
+          updateFenceTypeConditional(card);
           updateWalkGateConditional(card);
           updateInstallConditional(card);
           persist();
