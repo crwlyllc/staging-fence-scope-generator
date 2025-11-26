@@ -5391,8 +5391,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const totalCrewCount = crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0);
     const crewCost = crewSchedule.reduce((acc, day) => acc + crewCostForCount(crewDef, day.crew), 0);
+    const consumablesCost = scheduleEntries.length * 50;
     const removalCost = totals.removalCost || 0;
-    const directCosts = crewCost + costMaterials + removalCost;
+    const directCosts = crewCost + costMaterials + removalCost + consumablesCost;
     const revenueRes = computeChargeRevenue(directCosts);
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
@@ -5412,10 +5413,11 @@ document.addEventListener('DOMContentLoaded', function(){
       : 'TBD';
     const laborLabel = crewDef ? `${crewDef.label}` : 'Crew';
     cost.push(`- Labor (${laborLabel}): $${money(crewCost)} (${laborDetailWithDays})`);
+    cost.push('- Consumables: $'+money(consumablesCost));
     cost.push('- Materials: $'+money(costMaterials));
     if(removalCost>0){ cost.push('- Removal & disposal (paid to sub): $'+money(removalCost)); }
     matBreak.forEach(line=> cost.push(line));
-    cost.push('- Total: $'+money(crewCost + costMaterials + removalCost));
+    cost.push('- Total: $'+money(crewCost + costMaterials + removalCost + consumablesCost));
     if (unpriced) cost.push('  - Note: Some sizes have no price mapping and were counted as $0.');
 
     cost.push('');
@@ -5440,7 +5442,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const def = CREWS[id];
       if (!def) return;
       const altCrewCost = crewSchedule.reduce((acc, day) => acc + crewCostForCount(def, day.crew), 0);
-      const altDirectCosts = altCrewCost + costMaterials + removalCost;
+      const altDirectCosts = altCrewCost + costMaterials + removalCost + consumablesCost;
       const altRevenueRes = computeChargeRevenue(altDirectCosts);
       const altRevenue = altRevenueRes && isFinite(altRevenueRes.revenue) ? altRevenueRes.revenue : NaN;
       const revenueLabel = isFinite(altRevenue) ? `$${money(altRevenue)}` : 'Invalid pricing inputs';
