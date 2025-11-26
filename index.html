@@ -5283,58 +5283,6 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     sub.push('');
-    sub.push('GO BAG (bring in addition to above)');
-    const postSizesSet = new Set(state.sections.map(s => (s.postSize||'').trim()).filter(Boolean));
-    const maxHft = Math.max(0, ...state.sections.map(s => feetFromStr(s.height)));
-    const goPostLen = Math.max(8, (maxHft>0 ? maxHft + 3 : 8));
-    if(postSizesSet.size === 0){ postSizesSet.add('2x2'); }
-    postSizesSet.forEach(ps => {
-      if(ps === '2x2'){
-        sub.push(`- 3x 2x2x${goPostLen} posts`);
-      } else if(ps === '3x3'){
-        sub.push(`- 3x 3x3x12 raw steel (for posts)`);
-      } else if(ps === '1 1/2" x 1 1/2"'){
-        sub.push(`- 3x 1.5x1.5x12 raw steel (for posts)`);
-      } else if(ps === '4x4'){
-        sub.push(`- 3x 4x4x12 raw steel (for posts)`);
-      } else {
-        sub.push(`- 3x ${ps} posts`);
-      }
-    });
-    sub.push(`- 3x Maximizer bags of concrete`);
-    sub.push('- 1x gallon of gloss black paint');
-    sub.push('- 1x spray can (gloss black)');
-    if (totalLenPrimePaint > 0) {
-      sub.push('- 1x gallon of red oxide primer');
-      sub.push('- 1x spray can (red oxide primer)');
-    }
-
-      const railSizesSet = new Set();
-    state.sections.forEach(s => {
-      const rCount = s.railsCount || (s.rails||[]).length || 0;
-      for(let i=0;i<rCount;i++){
-        const r = (s.rails||[])[i] || {};
-        if(r && r.size) railSizesSet.add(normalizeSize(r.size));
-        if(r && r.stacked && r.size2) railSizesSet.add(normalizeSize(r.size2));
-      }
-      const gapArr = Array.isArray(s.gapAdditions) ? s.gapAdditions : [];
-      gapArr.forEach(item=>{
-        const normalized = normalizeSize(item?.size);
-        if(normalized) railSizesSet.add(normalized);
-      });
-    });
-    const picketSizesSet = new Set(state.sections.map(s => normalizeSize(s.picketSize)).filter(Boolean));
-    if(totals.diagonalBraceSizes && typeof totals.diagonalBraceSizes.forEach === 'function'){
-      totals.diagonalBraceSizes.forEach((count, size)=>{
-        if((parseInt(count,10)||0) <= 0) return;
-        const clean = normalizeSize(size) || normalizeLabelText(size || '');
-        if(clean) picketSizesSet.add(clean);
-      });
-    }
-    railSizesSet.forEach(size => { if(size) sub.push(`- 3x 12ft rail sticks (${size})`); });
-    picketSizesSet.forEach(size => { if(size) sub.push(`- 3x 12ft picket sticks (${size})`); });
-
-    sub.push('');
     sub.push('SCOPE (Totals)');
     if (totals.replaceSections > 0) sub.push('- Sections to replace: '+totals.replaceSections);
     if (totals.installSections > 0) sub.push('- New sections to install: '+totals.installSections);
