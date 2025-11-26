@@ -344,6 +344,8 @@ document.addEventListener('DOMContentLoaded', function(){
     capPostSizes:["1 1/2\" x 1 1/2\"","2x2","3x3","4x4"],
   };
 
+  const WOOD_PICKET_WIDTHS = ['3.5"','4"','5.5"','6"'];
+
   const POST_REALIGN_METHODS = [
     { value: 'concrete', label: 'Concrete' },
     { value: 'cut-weld', label: 'Cut & Weld' }
@@ -875,6 +877,7 @@ document.addEventListener('DOMContentLoaded', function(){
       paintingApplication: 'By Hand',
       woodHeight: '6ft',
       woodStyle: 'Side by Side',
+      woodPicketWidth: '5.5"',
       woodPost: 'Round Steel',
       woodType: 'Cedar',
       woodFinish: 'Oil Based Stain',
@@ -1241,6 +1244,10 @@ document.addEventListener('DOMContentLoaded', function(){
             <option value="Board on Board">Board on Board</option>
             <option value="Side by Side">Side by Side</option>
           </select>
+        </div>
+        <div class="sp-field col-2" data-wood-only>
+          <label class="sp-label">Picket Width</label>
+          <select class="sp-select" data-field="woodPicketWidth">${createSelect(WOOD_PICKET_WIDTHS)}</select>
         </div>
         <div class="sp-field col-3" data-wood-only>
           <label class="sp-label">Posts</label>
@@ -1749,6 +1756,7 @@ document.addEventListener('DOMContentLoaded', function(){
       paintingApplication: val('paintingApplication'),
       woodHeight: val('woodHeight'),
       woodStyle: val('woodStyle'),
+      woodPicketWidth: val('woodPicketWidth'),
       woodPost: val('woodPost'),
       woodType: val('woodType'),
       woodFinish: val('woodFinish'),
@@ -1864,6 +1872,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('paintingApplication', data.paintingApplication || 'By Hand');
     set('woodHeight', data.woodHeight || '6ft');
     set('woodStyle', data.woodStyle || 'Side by Side');
+    set('woodPicketWidth', data.woodPicketWidth || '5.5"');
     set('woodPost', data.woodPost || 'Round Steel');
     set('woodType', data.woodType || 'Cedar');
     set('woodFinish', data.woodFinish || 'Oil Based Stain');
@@ -3056,6 +3065,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const defaults = {
         woodHeight: '6ft',
         woodStyle: 'Side by Side',
+        woodPicketWidth: '5.5"',
         woodPost: 'Round Steel',
         woodType: 'Cedar',
         woodFinish: 'Oil Based Stain',
