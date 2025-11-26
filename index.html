@@ -881,6 +881,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodPost: 'Round Steel',
       woodType: 'Cedar',
       woodFinish: 'Oil Based Stain',
+      woodKickBoardSize: '2x6',
+      woodKickBoardStack: '1',
       woodAddKickBoard: false,
       woodAddTopCap: false,
       woodAddTrim: false,
@@ -1278,6 +1280,27 @@ document.addEventListener('DOMContentLoaded', function(){
             <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddKickBoard" /> Kick Board</label>
             <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddTopCap" /> Top Cap</label>
             <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddTrim" /> Trim</label>
+          </div>
+        </div>
+
+        <div class="sp-grid col-12" data-wood-only data-kickboard-settings style="display:none">
+          <div class="sp-field col-2">
+            <label class="sp-label">Kick Board Size</label>
+            <select class="sp-select" data-field="woodKickBoardSize">
+              <option value="2x6">2x6</option>
+              <option value="2x8">2x8</option>
+              <option value="2x10">2x10</option>
+              <option value="2x12">2x12</option>
+            </select>
+          </div>
+          <div class="sp-field col-2">
+            <label class="sp-label">Kick Board Stack Height</label>
+            <select class="sp-select" data-field="woodKickBoardStack">
+              <option value="1">1 Board</option>
+              <option value="2">2 Board Stack</option>
+              <option value="3">3 Board Stack</option>
+              <option value="4">4 Board Stack</option>
+            </select>
           </div>
         </div>
 
@@ -1760,6 +1783,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodPost: val('woodPost'),
       woodType: val('woodType'),
       woodFinish: val('woodFinish'),
+      woodKickBoardSize: val('woodKickBoardSize'),
+      woodKickBoardStack: val('woodKickBoardStack'),
       woodAddKickBoard: val('woodAddKickBoard'),
       woodAddTopCap: val('woodAddTopCap'),
       woodAddTrim: val('woodAddTrim'),
@@ -1876,9 +1901,12 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodPost', data.woodPost || 'Round Steel');
     set('woodType', data.woodType || 'Cedar');
     set('woodFinish', data.woodFinish || 'Oil Based Stain');
+    set('woodKickBoardSize', data.woodKickBoardSize || '2x6');
+    set('woodKickBoardStack', data.woodKickBoardStack || '1');
     set('woodAddKickBoard', Boolean(data.woodAddKickBoard));
     set('woodAddTopCap', Boolean(data.woodAddTopCap));
     set('woodAddTrim', Boolean(data.woodAddTrim));
+    updateKickBoardConditional(card);
     set('length', data.length||'');
     set('hardscape', data.hardscape||'');
     set('trim', data.trim||'');
@@ -2954,6 +2982,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(cond) cond.style.display = t.checked ? 'block' : 'none';
       }
       updateWalkGateConditional(card);
+      updateKickBoardConditional(card);
       updateInstallConditional(card);
       persist();
     });
@@ -3069,6 +3098,8 @@ document.addEventListener('DOMContentLoaded', function(){
         woodPost: 'Round Steel',
         woodType: 'Cedar',
         woodFinish: 'Oil Based Stain',
+        woodKickBoardSize: '2x6',
+        woodKickBoardStack: '1',
       };
       Object.entries(defaults).forEach(([field, val])=>{
         const el = card.querySelector(`[data-field="${field}"]`);
@@ -3077,6 +3108,16 @@ document.addEventListener('DOMContentLoaded', function(){
           el.value = val;
         }
       });
+    }
+    updateKickBoardConditional(card);
+  }
+
+  function updateKickBoardConditional(card){
+    const checkbox = card.querySelector('[data-field="woodAddKickBoard"]');
+    const details = card.querySelector('[data-kickboard-settings]');
+    const show = checkbox && checkbox.checked;
+    if(details){
+      details.style.display = show ? '' : 'none';
     }
   }
 
