@@ -883,6 +883,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodFinish: 'Oil Based Stain',
       woodKickBoardSize: '2x6',
       woodKickBoardStack: '1',
+      woodTopCapSize: '2x6',
+      woodTrimType: '1x4',
       woodAddKickBoard: false,
       woodAddTopCap: false,
       woodAddTrim: false,
@@ -1300,6 +1302,27 @@ document.addEventListener('DOMContentLoaded', function(){
               <option value="2">2 Board Stack</option>
               <option value="3">3 Board Stack</option>
               <option value="4">4 Board Stack</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sp-grid col-12" data-wood-only data-topcap-settings style="display:none">
+          <div class="sp-field col-2">
+            <label class="sp-label">Top Cap Size</label>
+            <select class="sp-select" data-field="woodTopCapSize">
+              <option value="2x6">2x6</option>
+              <option value="2x8">2x8</option>
+              <option value="2x10">2x10</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sp-grid col-12" data-wood-only data-trim-settings style="display:none">
+          <div class="sp-field col-3">
+            <label class="sp-label">Trim Type</label>
+            <select class="sp-select" data-field="woodTrimType">
+              <option value="1x4">1x4</option>
+              <option value="1x4 &amp; 1x2">1x4 &amp; 1x2</option>
             </select>
           </div>
         </div>
@@ -1785,6 +1808,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodFinish: val('woodFinish'),
       woodKickBoardSize: val('woodKickBoardSize'),
       woodKickBoardStack: val('woodKickBoardStack'),
+      woodTopCapSize: val('woodTopCapSize'),
+      woodTrimType: val('woodTrimType'),
       woodAddKickBoard: val('woodAddKickBoard'),
       woodAddTopCap: val('woodAddTopCap'),
       woodAddTrim: val('woodAddTrim'),
@@ -1903,10 +1928,12 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodFinish', data.woodFinish || 'Oil Based Stain');
     set('woodKickBoardSize', data.woodKickBoardSize || '2x6');
     set('woodKickBoardStack', data.woodKickBoardStack || '1');
+    set('woodTopCapSize', data.woodTopCapSize || '2x6');
+    set('woodTrimType', data.woodTrimType || '1x4');
     set('woodAddKickBoard', Boolean(data.woodAddKickBoard));
     set('woodAddTopCap', Boolean(data.woodAddTopCap));
     set('woodAddTrim', Boolean(data.woodAddTrim));
-    updateKickBoardConditional(card);
+    updateWoodAddonsConditional(card);
     set('length', data.length||'');
     set('hardscape', data.hardscape||'');
     set('trim', data.trim||'');
@@ -2982,7 +3009,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(cond) cond.style.display = t.checked ? 'block' : 'none';
       }
       updateWalkGateConditional(card);
-      updateKickBoardConditional(card);
+      updateWoodAddonsConditional(card);
       updateInstallConditional(card);
       persist();
     });
@@ -3100,6 +3127,8 @@ document.addEventListener('DOMContentLoaded', function(){
         woodFinish: 'Oil Based Stain',
         woodKickBoardSize: '2x6',
         woodKickBoardStack: '1',
+        woodTopCapSize: '2x6',
+        woodTrimType: '1x4',
       };
       Object.entries(defaults).forEach(([field, val])=>{
         const el = card.querySelector(`[data-field="${field}"]`);
@@ -3109,15 +3138,28 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       });
     }
-    updateKickBoardConditional(card);
+    updateWoodAddonsConditional(card);
   }
 
-  function updateKickBoardConditional(card){
+  function updateWoodAddonsConditional(card){
     const checkbox = card.querySelector('[data-field="woodAddKickBoard"]');
-    const details = card.querySelector('[data-kickboard-settings]');
-    const show = checkbox && checkbox.checked;
-    if(details){
-      details.style.display = show ? '' : 'none';
+    const kickboardDetails = card.querySelector('[data-kickboard-settings]');
+    const topCapCheckbox = card.querySelector('[data-field="woodAddTopCap"]');
+    const topCapDetails = card.querySelector('[data-topcap-settings]');
+    const trimCheckbox = card.querySelector('[data-field="woodAddTrim"]');
+    const trimDetails = card.querySelector('[data-trim-settings]');
+    const showKickboard = checkbox && checkbox.checked;
+    const showTopCap = topCapCheckbox && topCapCheckbox.checked;
+    const showTrim = trimCheckbox && trimCheckbox.checked;
+
+    if(kickboardDetails){
+      kickboardDetails.style.display = showKickboard ? '' : 'none';
+    }
+    if(topCapDetails){
+      topCapDetails.style.display = showTopCap ? '' : 'none';
+    }
+    if(trimDetails){
+      trimDetails.style.display = showTrim ? '' : 'none';
     }
   }
 
