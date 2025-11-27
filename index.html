@@ -345,6 +345,17 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 
   const WOOD_PICKET_WIDTHS = ['3.5"','4"','5.5"','6"'];
+  const WOOD_RAIL_SIZES = ['2x3','2x4'];
+  const WOOD_TRIM_TYPES = ['1x2','1x4','1x4 & 1x2'];
+  const SIMPSON_TIE_OPTIONS = ['1 piece','2 piece'];
+  const WOOD_POST_METHODS = [
+    { value: 'cut-weld', label: 'Cut & Weld' },
+    { value: 'dig-straighten', label: 'Dig, straighten, add concrete' }
+  ];
+  const WOOD_POST_INSTALL_METHODS = [
+    { value: 'drive', label: 'Drive posts' },
+    { value: 'auger', label: 'Auger + set in concrete' }
+  ];
 
   const POST_REALIGN_METHODS = [
     { value: 'concrete', label: 'Concrete' },
@@ -878,6 +889,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodHeight: '6ft',
       woodStyle: 'Side by Side',
       woodPicketWidth: '5.5"',
+      woodRailSize: '2x4',
       woodPost: 'Round Steel',
       woodType: 'Cedar',
       woodFinish: 'Oil Based Stain',
@@ -885,6 +897,35 @@ document.addEventListener('DOMContentLoaded', function(){
       woodKickBoardStack: '1',
       woodTopCapSize: '2x6',
       woodTrimType: '1x4',
+      woodRepairPicketReplace: 0,
+      woodRepairPicketInstall: 0,
+      woodRepairRailReplace: 0,
+      woodRepairRailInstall: 0,
+      woodRepairPostReplace: 0,
+      woodRepairPostReplaceTie: SIMPSON_TIE_OPTIONS[0],
+      woodRepairPostReplaceCap: '',
+      woodRepairPostRealign: 0,
+      woodRepairPostRealignMethod: WOOD_POST_METHODS[1].value,
+      woodRepairPostInstall: 0,
+      woodRepairPostInstallMethod: WOOD_POST_INSTALL_METHODS[1].value,
+      woodRepairPostInstallTie: SIMPSON_TIE_OPTIONS[0],
+      woodRepairPanelReplace: 0,
+      woodRepairPanelWidth: 8,
+      woodRepairWalkGateCount: 0,
+      woodRepairWalkGateHinges: false,
+      woodRepairWalkGateLatch: false,
+      woodRepairWalkGateWood: false,
+      woodRepairGateStrengthen: 0,
+      woodRepairGateReplace: 0,
+      woodRepairTopCapReplaceLf: 0,
+      woodRepairTopCapReplaceSize: '2x6',
+      woodRepairTrimReplaceLf: 0,
+      woodRepairTrimReplaceSize: '1x4',
+      woodRepairKickReplaceLf: 0,
+      woodRepairKickReplaceSize: '2x6',
+      woodRepairKickReplaceStack: '1',
+      woodRepairStain: 'none',
+      woodRepairStainSides: 'one',
       woodAddKickBoard: false,
       woodAddTopCap: false,
       woodAddTrim: false,
@@ -1253,6 +1294,10 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label">Picket Width</label>
           <select class="sp-select" data-field="woodPicketWidth">${createSelect(WOOD_PICKET_WIDTHS)}</select>
         </div>
+        <div class="sp-field col-2" data-wood-only>
+          <label class="sp-label">Rail Size</label>
+          <select class="sp-select" data-field="woodRailSize">${createSelect(WOOD_RAIL_SIZES)}</select>
+        </div>
         <div class="sp-field col-3" data-wood-only>
           <label class="sp-label">Posts</label>
           <select class="sp-select" data-field="woodPost">
@@ -1320,11 +1365,131 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="sp-grid col-12" data-wood-only data-trim-settings style="display:none">
           <div class="sp-field col-3">
             <label class="sp-label">Trim Type</label>
-            <select class="sp-select" data-field="woodTrimType">
-              <option value="1x4">1x4</option>
-              <option value="1x4 &amp; 1x2">1x4 &amp; 1x2</option>
+            <select class="sp-select" data-field="woodTrimType">${createSelect(WOOD_TRIM_TYPES)}</select>
+          </div>
+        </div>
+
+        <div class="sp-divider" data-wood-only data-repair-only></div>
+        <div class="sp-field col-12" data-wood-only data-repair-only>
+          <div class="sp-label">Wood Repair Options</div>
+        </div>
+
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Picket Replacement</label>
+          ${numberControl('woodRepairPicketReplace','0')}
+          <div class="sp-hint">Remove damaged pickets and install new ones.</div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Picket Installation</label>
+          ${numberControl('woodRepairPicketInstall','0')}
+          <div class="sp-hint">Install missing pickets to close gaps.</div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Rail Replacement</label>
+          ${numberControl('woodRepairRailReplace','0')}
+          <div class="sp-hint">Replace broken rails (${WOOD_RAIL_SIZES.join(' / ')}).</div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Rail Installation</label>
+          ${numberControl('woodRepairRailInstall','0')}
+          <div class="sp-hint">Add rails where missing (${WOOD_RAIL_SIZES.join(' / ')}).</div>
+        </div>
+
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Post Replacement</label>
+          ${numberControl('woodRepairPostReplace','0')}
+          <div class="sp-row">
+            <select class="sp-select" data-field="woodRepairPostReplaceTie">${createSelect(SIMPSON_TIE_OPTIONS)}</select>
+            <input class="sp-input" data-field="woodRepairPostReplaceCap" placeholder="Post cap type (round steel)" />
+          </div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Post Realignment</label>
+          ${numberControl('woodRepairPostRealign','0')}
+          <select class="sp-select" data-field="woodRepairPostRealignMethod">
+            ${WOOD_POST_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
+          </select>
+          <div class="sp-hint">Cut &amp; weld only for round steel or Postmaster posts.</div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Post Installation</label>
+          ${numberControl('woodRepairPostInstall','0')}
+          <div class="sp-row">
+            <select class="sp-select" data-field="woodRepairPostInstallMethod">
+              ${WOOD_POST_INSTALL_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
+            </select>
+            <select class="sp-select" data-field="woodRepairPostInstallTie">${createSelect(SIMPSON_TIE_OPTIONS)}</select>
+          </div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Panel Replacement</label>
+          ${numberControl('woodRepairPanelReplace','0')}
+          <input class="sp-input" data-field="woodRepairPanelWidth" type="number" min="1" step="0.1" placeholder="Panel width (ft)" />
+          <div class="sp-hint">Most panels are 8 ft wide.</div>
+        </div>
+
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Walk Gate Repair</label>
+          ${numberControl('woodRepairWalkGateCount','0')}
+          <div class="sp-row" style="gap:10px; margin-top:6px">
+            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateHinges" /> Replace hinges</label>
+            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateLatch" /> Replace latch</label>
+            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateWood" /> Replace wood</label>
+          </div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Walk Gate Strengthen</label>
+          ${numberControl('woodRepairGateStrengthen','0')}
+          <div class="sp-hint">Add framing (2x4) to beef up the gate.</div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Walk Gate Replace</label>
+          ${numberControl('woodRepairGateReplace','0')}
+          <div class="sp-hint">Remove and rebuild with new hardware.</div>
+        </div>
+
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Top Cap Replacement (lf)</label>
+          ${numberControl('woodRepairTopCapReplaceLf','0')}
+          <select class="sp-select" data-field="woodRepairTopCapReplaceSize">
+            <option value="2x6">2x6</option>
+            <option value="2x8">2x8</option>
+            <option value="2x10">2x10</option>
+          </select>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Trim Replacement (lf)</label>
+          ${numberControl('woodRepairTrimReplaceLf','0')}
+          <select class="sp-select" data-field="woodRepairTrimReplaceSize">${createSelect(WOOD_TRIM_TYPES)}</select>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Kick Board Replacement (lf)</label>
+          ${numberControl('woodRepairKickReplaceLf','0')}
+          <div class="sp-row">
+            <select class="sp-select" data-field="woodRepairKickReplaceSize">
+              <option value="2x6">2x6</option>
+              <option value="2x8">2x8</option>
+              <option value="2x10">2x10</option>
+              <option value="2x12">2x12</option>
+            </select>
+            <select class="sp-select" data-field="woodRepairKickReplaceStack">
+              <option value="1">1 Board</option>
+              <option value="2">2 Board Stack</option>
+              <option value="3">3 Board Stack</option>
+              <option value="4">4 Board Stack</option>
             </select>
           </div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-repair-only>
+          <label class="sp-label">Staining</label>
+          <select class="sp-select" data-field="woodRepairStain">
+            <option value="none">No staining</option>
+            <option value="stain">Stain section</option>
+          </select>
+          <select class="sp-select" data-field="woodRepairStainSides" style="margin-top:6px">
+            <option value="one">Stain 1 side</option>
+            <option value="both">Stain both sides</option>
+          </select>
         </div>
 
         <div class="sp-field col-3">
@@ -1803,6 +1968,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodHeight: val('woodHeight'),
       woodStyle: val('woodStyle'),
       woodPicketWidth: val('woodPicketWidth'),
+      woodRailSize: val('woodRailSize'),
       woodPost: val('woodPost'),
       woodType: val('woodType'),
       woodFinish: val('woodFinish'),
@@ -1810,6 +1976,35 @@ document.addEventListener('DOMContentLoaded', function(){
       woodKickBoardStack: val('woodKickBoardStack'),
       woodTopCapSize: val('woodTopCapSize'),
       woodTrimType: val('woodTrimType'),
+      woodRepairPicketReplace: val('woodRepairPicketReplace'),
+      woodRepairPicketInstall: val('woodRepairPicketInstall'),
+      woodRepairRailReplace: val('woodRepairRailReplace'),
+      woodRepairRailInstall: val('woodRepairRailInstall'),
+      woodRepairPostReplace: val('woodRepairPostReplace'),
+      woodRepairPostReplaceTie: val('woodRepairPostReplaceTie'),
+      woodRepairPostReplaceCap: val('woodRepairPostReplaceCap'),
+      woodRepairPostRealign: val('woodRepairPostRealign'),
+      woodRepairPostRealignMethod: val('woodRepairPostRealignMethod'),
+      woodRepairPostInstall: val('woodRepairPostInstall'),
+      woodRepairPostInstallMethod: val('woodRepairPostInstallMethod'),
+      woodRepairPostInstallTie: val('woodRepairPostInstallTie'),
+      woodRepairPanelReplace: val('woodRepairPanelReplace'),
+      woodRepairPanelWidth: val('woodRepairPanelWidth'),
+      woodRepairWalkGateCount: val('woodRepairWalkGateCount'),
+      woodRepairWalkGateHinges: val('woodRepairWalkGateHinges'),
+      woodRepairWalkGateLatch: val('woodRepairWalkGateLatch'),
+      woodRepairWalkGateWood: val('woodRepairWalkGateWood'),
+      woodRepairGateStrengthen: val('woodRepairGateStrengthen'),
+      woodRepairGateReplace: val('woodRepairGateReplace'),
+      woodRepairTopCapReplaceLf: val('woodRepairTopCapReplaceLf'),
+      woodRepairTopCapReplaceSize: val('woodRepairTopCapReplaceSize'),
+      woodRepairTrimReplaceLf: val('woodRepairTrimReplaceLf'),
+      woodRepairTrimReplaceSize: val('woodRepairTrimReplaceSize'),
+      woodRepairKickReplaceLf: val('woodRepairKickReplaceLf'),
+      woodRepairKickReplaceSize: val('woodRepairKickReplaceSize'),
+      woodRepairKickReplaceStack: val('woodRepairKickReplaceStack'),
+      woodRepairStain: val('woodRepairStain'),
+      woodRepairStainSides: val('woodRepairStainSides'),
       woodAddKickBoard: val('woodAddKickBoard'),
       woodAddTopCap: val('woodAddTopCap'),
       woodAddTrim: val('woodAddTrim'),
@@ -1923,6 +2118,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodHeight', data.woodHeight || '6ft');
     set('woodStyle', data.woodStyle || 'Side by Side');
     set('woodPicketWidth', data.woodPicketWidth || '5.5"');
+    set('woodRailSize', data.woodRailSize || '2x4');
     set('woodPost', data.woodPost || 'Round Steel');
     set('woodType', data.woodType || 'Cedar');
     set('woodFinish', data.woodFinish || 'Oil Based Stain');
@@ -1930,6 +2126,35 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodKickBoardStack', data.woodKickBoardStack || '1');
     set('woodTopCapSize', data.woodTopCapSize || '2x6');
     set('woodTrimType', data.woodTrimType || '1x4');
+    set('woodRepairPicketReplace', data.woodRepairPicketReplace || '');
+    set('woodRepairPicketInstall', data.woodRepairPicketInstall || '');
+    set('woodRepairRailReplace', data.woodRepairRailReplace || '');
+    set('woodRepairRailInstall', data.woodRepairRailInstall || '');
+    set('woodRepairPostReplace', data.woodRepairPostReplace || '');
+    set('woodRepairPostReplaceTie', data.woodRepairPostReplaceTie || SIMPSON_TIE_OPTIONS[0]);
+    set('woodRepairPostReplaceCap', data.woodRepairPostReplaceCap || '');
+    set('woodRepairPostRealign', data.woodRepairPostRealign || '');
+    set('woodRepairPostRealignMethod', data.woodRepairPostRealignMethod || WOOD_POST_METHODS[1].value);
+    set('woodRepairPostInstall', data.woodRepairPostInstall || '');
+    set('woodRepairPostInstallMethod', data.woodRepairPostInstallMethod || WOOD_POST_INSTALL_METHODS[1].value);
+    set('woodRepairPostInstallTie', data.woodRepairPostInstallTie || SIMPSON_TIE_OPTIONS[0]);
+    set('woodRepairPanelReplace', data.woodRepairPanelReplace || '');
+    set('woodRepairPanelWidth', data.woodRepairPanelWidth || '');
+    set('woodRepairWalkGateCount', data.woodRepairWalkGateCount || '');
+    set('woodRepairWalkGateHinges', Boolean(data.woodRepairWalkGateHinges));
+    set('woodRepairWalkGateLatch', Boolean(data.woodRepairWalkGateLatch));
+    set('woodRepairWalkGateWood', Boolean(data.woodRepairWalkGateWood));
+    set('woodRepairGateStrengthen', data.woodRepairGateStrengthen || '');
+    set('woodRepairGateReplace', data.woodRepairGateReplace || '');
+    set('woodRepairTopCapReplaceLf', data.woodRepairTopCapReplaceLf || '');
+    set('woodRepairTopCapReplaceSize', data.woodRepairTopCapReplaceSize || data.woodTopCapSize || '2x6');
+    set('woodRepairTrimReplaceLf', data.woodRepairTrimReplaceLf || '');
+    set('woodRepairTrimReplaceSize', data.woodRepairTrimReplaceSize || data.woodTrimType || WOOD_TRIM_TYPES[1]);
+    set('woodRepairKickReplaceLf', data.woodRepairKickReplaceLf || '');
+    set('woodRepairKickReplaceSize', data.woodRepairKickReplaceSize || data.woodKickBoardSize || '2x6');
+    set('woodRepairKickReplaceStack', data.woodRepairKickReplaceStack || data.woodKickBoardStack || '1');
+    set('woodRepairStain', data.woodRepairStain || 'none');
+    set('woodRepairStainSides', data.woodRepairStainSides || 'one');
     set('woodAddKickBoard', Boolean(data.woodAddKickBoard));
     set('woodAddTopCap', Boolean(data.woodAddTopCap));
     set('woodAddTrim', Boolean(data.woodAddTrim));
@@ -3010,6 +3235,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       updateWalkGateConditional(card);
       updateWoodAddonsConditional(card);
+      updateWoodRepairControls(card);
       updateInstallConditional(card);
       persist();
     });
@@ -3122,6 +3348,7 @@ document.addEventListener('DOMContentLoaded', function(){
         woodHeight: '6ft',
         woodStyle: 'Side by Side',
         woodPicketWidth: '5.5"',
+        woodRailSize: '2x4',
         woodPost: 'Round Steel',
         woodType: 'Cedar',
         woodFinish: 'Oil Based Stain',
@@ -3129,6 +3356,16 @@ document.addEventListener('DOMContentLoaded', function(){
         woodKickBoardStack: '1',
         woodTopCapSize: '2x6',
         woodTrimType: '1x4',
+        woodRepairPostRealignMethod: WOOD_POST_METHODS[1].value,
+        woodRepairPostInstallMethod: WOOD_POST_INSTALL_METHODS[1].value,
+        woodRepairPostReplaceTie: SIMPSON_TIE_OPTIONS[0],
+        woodRepairPostInstallTie: SIMPSON_TIE_OPTIONS[0],
+        woodRepairTopCapReplaceSize: '2x6',
+        woodRepairTrimReplaceSize: '1x4',
+        woodRepairKickReplaceSize: '2x6',
+        woodRepairKickReplaceStack: '1',
+        woodRepairStain: 'none',
+        woodRepairStainSides: 'one'
       };
       Object.entries(defaults).forEach(([field, val])=>{
         const el = card.querySelector(`[data-field="${field}"]`);
@@ -3139,6 +3376,7 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
     updateWoodAddonsConditional(card);
+    updateWoodRepairControls(card);
   }
 
   function updateWoodAddonsConditional(card){
@@ -3160,6 +3398,31 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if(trimDetails){
       trimDetails.style.display = showTrim ? '' : 'none';
+    }
+  }
+
+  function updateWoodRepairControls(card){
+    const postType = (card.querySelector('[data-field="woodPost"]')?.value || '').toLowerCase();
+    const allowCutWeld = postType === 'round steel' || postType === 'postmaster';
+    const realignSel = card.querySelector('[data-field="woodRepairPostRealignMethod"]');
+    if(realignSel){
+      realignSel.querySelectorAll('option').forEach(opt=>{
+        if(opt.value === 'cut-weld'){
+          opt.disabled = !allowCutWeld;
+        }
+      });
+      if(!allowCutWeld && realignSel.value === 'cut-weld'){
+        realignSel.value = 'dig-straighten';
+      }
+    }
+    const stainSel = card.querySelector('[data-field="woodRepairStain"]');
+    const stainSidesSel = card.querySelector('[data-field="woodRepairStainSides"]');
+    if(stainSel && stainSidesSel){
+      const showSides = stainSel.value === 'stain';
+      stainSidesSel.style.display = showSides ? '' : 'none';
+      if(!showSides){
+        stainSidesSel.value = 'one';
+      }
     }
   }
 
@@ -3547,7 +3810,9 @@ document.addEventListener('DOMContentLoaded', function(){
       installation: 'Wrought Iron Installation',
       replacement: 'Wrought Iron Replacement',
       repairs: 'Wrought Iron Repairs',
-      painting: 'Wrought Iron Painting'
+      painting: 'Wrought Iron Painting',
+      woodRepairs: 'Wood Fence Repairs',
+      woodStain: 'Wood Fence Staining'
     };
     const serviceBuckets = Object.keys(SERVICE_BUCKET_LABELS).reduce((acc, key)=>{
       acc[key] = [];
@@ -3576,7 +3841,9 @@ document.addEventListener('DOMContentLoaded', function(){
       'Replace Walk Gate Hardware': 'repairs',
       'Rebuild Walk Gates': 'repairs',
       'Add Diagonal Braces': 'repairs',
-      'Install Puppy Picket Inserts': 'repairs'
+      'Install Puppy Picket Inserts': 'repairs',
+      'Wood Fence Repairs': 'woodRepairs',
+      'Wood Fence Staining': 'woodStain'
     };
     function ensureSentence(text){
       const trimmed = (text || '').trim();
@@ -4384,6 +4651,103 @@ document.addEventListener('DOMContentLoaded', function(){
         segments.push(`Spot prep and apply gloss black oil-based paint to weld areas along ${paintingSummary.spot} linear feet`);
       }
       addServiceLine('Surface Preparation & Painting', segments.join('; ') + '.');
+    }
+
+    const woodRepairSections = state.sections.filter(s=> ((s.fenceType||'').toLowerCase() === 'wood') && ((s.scopeType||'repair') === 'repair'));
+    if(woodRepairSections.length){
+      const methodLabel = (list, val)=>{
+        const match = list.find(item=>item.value === val);
+        return match ? match.label : (val || '');
+      };
+      woodRepairSections.forEach(s=>{
+        const parts = [];
+        const labelPrefix = s.label ? `${s.label}: ` : '';
+        const railSize = s.woodRailSize || '';
+        const picketWidth = s.woodPicketWidth || '';
+        const addCount = (count, singular, plural)=>{
+          const n = parseInt(count||0,10) || 0;
+          if(!n) return '';
+          const label = n === 1 ? singular : (plural || `${singular}s`);
+          return `${n} ${label}`;
+        };
+        const picketReplace = picketWidth
+          ? addCount(s.woodRepairPicketReplace, `${picketWidth} picket`, `${picketWidth} pickets`)
+          : addCount(s.woodRepairPicketReplace, 'picket', 'pickets');
+        if(picketReplace){ parts.push(`Replace ${picketReplace}`); }
+        const picketInstall = picketWidth
+          ? addCount(s.woodRepairPicketInstall, `${picketWidth} picket`, `${picketWidth} pickets`)
+          : addCount(s.woodRepairPicketInstall, 'picket', 'pickets');
+        if(picketInstall){ parts.push(`Install ${picketInstall}`); }
+        const railReplace = addCount(s.woodRepairRailReplace, railSize ? `${railSize} rail` : 'rail', railSize ? `${railSize} rails` : 'rails');
+        if(railReplace){ parts.push(`Replace ${railReplace}`); }
+        const railInstall = addCount(s.woodRepairRailInstall, railSize ? `${railSize} rail` : 'rail', railSize ? `${railSize} rails` : 'rails');
+        if(railInstall){ parts.push(`Install ${railInstall}`); }
+        const postReplace = addCount(s.woodRepairPostReplace, 'post', 'posts');
+        if(postReplace){
+          const tie = (s.woodRepairPostReplaceTie || '').trim();
+          const cap = (s.woodRepairPostReplaceCap || '').trim();
+          const extras = [tie ? `Simpson tie ${tie}` : '', cap ? `cap: ${cap}` : ''].filter(Boolean).join(', ');
+          parts.push(`Replace ${postReplace}${extras ? ` (${extras})` : ''}`);
+        }
+        const realign = addCount(s.woodRepairPostRealign, 'post realignment', 'post realignments');
+        if(realign){
+          const method = methodLabel(WOOD_POST_METHODS, s.woodRepairPostRealignMethod);
+          parts.push(`${realign}${method ? ` via ${method}` : ''}`);
+        }
+        const postInstall = addCount(s.woodRepairPostInstall, 'post installation', 'post installations');
+        if(postInstall){
+          const method = methodLabel(WOOD_POST_INSTALL_METHODS, s.woodRepairPostInstallMethod);
+          const tie = (s.woodRepairPostInstallTie || '').trim();
+          const extras = [method, tie ? `Simpson tie ${tie}` : ''].filter(Boolean).join('; ');
+          parts.push(`${postInstall}${extras ? ` (${extras})` : ''}`);
+        }
+        const panels = parseInt(s.woodRepairPanelReplace||0,10) || 0;
+        if(panels>0){
+          const width = parseFloat(s.woodRepairPanelWidth||0) || 0;
+          const widthLabel = width ? `${width} ft` : 'approx. 8 ft';
+          parts.push(`Replace ${panels} panel${panels===1?'':'s'} (~${widthLabel} each)`);
+        }
+        const walkGates = parseInt(s.woodRepairWalkGateCount||0,10) || 0;
+        if(walkGates>0){
+          const tasks = [];
+          if(s.woodRepairWalkGateHinges) tasks.push('replace hinges');
+          if(s.woodRepairWalkGateLatch) tasks.push('replace latch');
+          if(s.woodRepairWalkGateWood) tasks.push('repair wood around gate');
+          const taskLabel = tasks.length ? ` (${tasks.join(', ')})` : '';
+          parts.push(`Repair ${walkGates} walk gate${walkGates===1?'':'s'}${taskLabel}`);
+        }
+        const strengthen = parseInt(s.woodRepairGateStrengthen||0,10) || 0;
+        if(strengthen>0){
+          parts.push(`Strengthen ${strengthen} walk gate${strengthen===1?'':'s'} with additional 2x4 framing`);
+        }
+        const replaceGate = parseInt(s.woodRepairGateReplace||0,10) || 0;
+        if(replaceGate>0){
+          parts.push(`Replace ${replaceGate} walk gate${replaceGate===1?'':'s'} with new build and hardware`);
+        }
+        const topCapLf = parseInt(s.woodRepairTopCapReplaceLf||0,10) || 0;
+        if(topCapLf>0){
+          const size = s.woodRepairTopCapReplaceSize || s.woodTopCapSize || '2x6';
+          parts.push(`Replace ${topCapLf} lf of top cap (${size})`);
+        }
+        const trimLf = parseInt(s.woodRepairTrimReplaceLf||0,10) || 0;
+        if(trimLf>0){
+          const size = s.woodRepairTrimReplaceSize || s.woodTrimType || '';
+          parts.push(`Replace ${trimLf} lf of trim${size ? ` (${size})` : ''}`);
+        }
+        const kickLf = parseInt(s.woodRepairKickReplaceLf||0,10) || 0;
+        if(kickLf>0){
+          const size = s.woodRepairKickReplaceSize || s.woodKickBoardSize || '';
+          const stack = s.woodRepairKickReplaceStack || '1';
+          parts.push(`Replace ${kickLf} lf of kick board (${size}, ${stack} board stack)`);
+        }
+        if(parts.length){
+          addServiceLine('Wood Fence Repairs', `${labelPrefix}${parts.join('; ')}.`);
+        }
+        if(s.woodRepairStain === 'stain'){
+          const sideLabel = s.woodRepairStainSides === 'both' ? 'both sides' : '1 side';
+          addServiceLine('Wood Fence Staining', `${labelPrefix}Stain ${sideLabel} of the section.`);
+        }
+      });
     }
 
     if (totals.digOut > 0){
