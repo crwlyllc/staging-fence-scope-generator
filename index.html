@@ -930,6 +930,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodAddKickBoard: false,
       woodAddTopCap: false,
       woodAddTrim: false,
+      retainingWallLength: 0,
+      retainingWallHeight: 0,
     };
     return { ...base, ...data };
   }
@@ -1501,6 +1503,18 @@ document.addEventListener('DOMContentLoaded', function(){
           ${numberControl('length','e.g., 48')}
         </div>
 
+        <div class="sp-grid col-12" data-retaining-wall data-install-only style="display:none">
+          <div class="sp-field col-3">
+            <label class="sp-label">Retaining Wall Length (ft)</label>
+            ${numberControl('retainingWallLength','0')}
+          </div>
+          <div class="sp-field col-3">
+            <label class="sp-label">Retaining Wall Height (ft)</label>
+            <input class="sp-input" data-field="retainingWallHeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 2.5" />
+            <div class="sp-hint">Billed at $35/sq ft, $1,500 minimum (materials & labor).</div>
+          </div>
+        </div>
+
         <div class="sp-grid col-12" data-wrought-only>
           <div class="sp-field col-2">
             <label class="sp-label">Style</label>
@@ -2012,6 +2026,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodAddKickBoard: val('woodAddKickBoard'),
       woodAddTopCap: val('woodAddTopCap'),
       woodAddTrim: val('woodAddTrim'),
+      retainingWallLength: val('retainingWallLength'),
+      retainingWallHeight: val('retainingWallHeight'),
       length: val('length'),
       hardscape: val('hardscape'),
       trim: val('trim'),
@@ -2162,6 +2178,8 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodAddKickBoard', Boolean(data.woodAddKickBoard));
     set('woodAddTopCap', Boolean(data.woodAddTopCap));
     set('woodAddTrim', Boolean(data.woodAddTrim));
+    set('retainingWallLength', data.retainingWallLength || '');
+    set('retainingWallHeight', data.retainingWallHeight || '');
     updateWoodAddonsConditional(card);
     set('length', data.length||'');
     set('hardscape', data.hardscape||'');
@@ -3324,6 +3342,13 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
 
+    const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
+    const showRetainingWall = isInstall && (fenceType === 'wrought iron' || fenceType === 'wood');
+    const retainingWrap = card.querySelector('[data-retaining-wall]');
+    if(retainingWrap){
+      retainingWrap.style.display = showRetainingWall ? '' : 'none';
+    }
+
     const paintingSel = card.querySelector('[data-field="painting"]');
     if(paintingSel){
       const currentVal = paintingSel.value;
@@ -4051,6 +4076,8 @@ document.addEventListener('DOMContentLoaded', function(){
       walkGateAddsDouble:0,
       walkGateAddsRepair:0,
       walkGateAddsInstall:0,
+      retainingWallSqft:0,
+      retainingWallCost:0,
       panelsPrefab:0, panelsCustom:0,
       panelsInstallPrefab:0, panelsInstallCustom:0,
       installSections:0, replaceSections:0,
@@ -4132,6 +4159,7 @@ document.addEventListener('DOMContentLoaded', function(){
         : (s.railStacked ? `${s.railSize} + ${s.railSize2} (stacked)` : `${s.railSize}`);
 
       const scopeType = (s.scopeType || 'repair');
+      const fenceType = (s.fenceType || '').toLowerCase();
       const isInstall = scopeType === 'install' || scopeType === 'replace';
       const isRepair = !isInstall;
       if(scopeType === 'install'){ totals.installSections += 1; }
@@ -4213,6 +4241,17 @@ document.addEventListener('DOMContentLoaded', function(){
         });
         if(autoCaps.length){
           installInfo.autoCaps = autoCaps;
+        }
+      }
+
+      if(isInstall && (fenceType === 'wrought iron' || fenceType === 'wood')){
+        const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
+        const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
+        if(wallLength > 0 && wallHeight > 0){
+          const wallSqft = wallLength * wallHeight;
+          const wallCost = Math.max(wallSqft * 35, 1500);
+          totals.retainingWallSqft += wallSqft;
+          totals.retainingWallCost += wallCost;
         }
       }
 
@@ -4497,6 +4536,14 @@ document.addEventListener('DOMContentLoaded', function(){
         const gateTypeLabel = s.walkAddType || 'Single Swing Walk Gate';
         lines.push(`- Add walk gate(s): ${wga} — ${gateTypeLabel}`);
         lines.push(`  - Post: ${s.walkAddPostSize}; Frame: ${s.walkAddFrameSize}; Pickets: ${s.walkAddPicketSize}; Latch: ${s.walkAddLatch}; Hinges: ${s.walkAddHinges}`);
+      }
+
+      if(isInstall && (fenceType === 'wrought iron' || fenceType === 'wood')){
+        const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
+        const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
+        if(wallLength > 0 && wallHeight > 0){
+          lines.push(`- Retaining wall: ${wallLength}ft long × ${wallHeight}ft tall ($35/sq ft, $1,500 minimum).`);
+        }
       }
 
       if (s.notes) lines.push(`- Notes: ${s.notes}`);
@@ -5398,6 +5445,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const matBreak = [];
     let costMaterials = 0;
 
+    if(totals.retainingWallCost > 0){
+      costMaterials += totals.retainingWallCost;
+      matBreak.push('  - Retaining wall installation: $'+money(totals.retainingWallCost)+' ($35/sq ft, $1,500 minimum)');
+    }
+
     // PRICE_MISC line-items
     Object.entries(materials).forEach(([label, qty])=>{
       if(Object.prototype.hasOwnProperty.call(PRICE_MISC, label)){
@@ -5813,6 +5865,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
     if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
     if (totals.panelsInstallCustom > 0) sub.push('- New custom panels: '+totals.panelsInstallCustom);
+    if (totals.retainingWallSqft > 0) sub.push(`- Retaining wall: ${totals.retainingWallSqft.toFixed(2)} sq ft ($${money(totals.retainingWallCost)})`);
     if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then hand paint '+paintLenTotal+' ft of fence');
     if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
 
