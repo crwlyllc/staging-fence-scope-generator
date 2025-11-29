@@ -1511,7 +1511,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-field col-3">
             <label class="sp-label">Retaining Wall Height (ft)</label>
             <input class="sp-input" data-field="retainingWallHeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 2.5" />
-            <div class="sp-hint">Billed at $35/sq ft, $1,500 minimum (materials & labor).</div>
+            <div class="sp-hint">Retaining walls are Robert-only: $35/sq ft, $1,500 minimum (includes materials & labor; buy the fence posts—set them in the pour, no bags needed; fence install scheduled with Jesus).</div>
           </div>
         </div>
 
@@ -4083,6 +4083,7 @@ document.addEventListener('DOMContentLoaded', function(){
       installSections:0, replaceSections:0,
       removalLf:0, removalCost:0,
       postsInstall: zeroPostCounts(),
+      postsOnWall: zeroPostCounts(),
       postsReplace: zeroPostCounts()
     };
     const materials = {};
@@ -4166,6 +4167,8 @@ document.addEventListener('DOMContentLoaded', function(){
       if(scopeType === 'replace'){ totals.replaceSections += 1; }
 
       let installInfo = null;
+      const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
+      const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
       if(isInstall){
         const lengthFt = parseInt(s.length||0,10) || 0;
         const spacingRaw = parseFloat(s.postSpacing||'8');
@@ -4178,6 +4181,13 @@ document.addEventListener('DOMContentLoaded', function(){
         if(pKey){ installCounts[pKey] = postsTotal; }
         addPostCounts(totals.postsInstall, installCounts);
         addPostCounts(totals, installCounts);
+
+        if(wallLength > 0 && wallHeight > 0 && spacingFt > 0 && postsTotal > 0 && pKey){
+          const wallSpanFt = Math.min(lengthFt, wallLength);
+          const wallSpanCount = Math.max(1, Math.ceil(wallSpanFt / spacingFt));
+          const wallPosts = Math.min(postsTotal, wallSpanCount + 1);
+          totals.postsOnWall[pKey] = (totals.postsOnWall[pKey] || 0) + wallPosts;
+        }
 
         const panelWidths = [];
         if(spanCount > 0){
@@ -4245,8 +4255,6 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       if(isInstall && (fenceType === 'wrought iron' || fenceType === 'wood')){
-        const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
-        const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
         if(wallLength > 0 && wallHeight > 0){
           const wallSqft = wallLength * wallHeight;
           const wallCost = Math.max(wallSqft * 35, 1500);
@@ -5214,7 +5222,10 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     // Concrete
-    const concreteBagsCalc = totals.posts2x2 + totals.posts3x3 + totals.posts1p5 + totals.posts4x4 + Math.ceil((totals.postsRealign2x2 + totals.postsRealign3x3) * 0.5) + totals.walkRealign + totals.walkGateAddsRepair;
+    const postsOnWallTotal = (totals.postsOnWall.posts2x2 || 0) + (totals.postsOnWall.posts3x3 || 0) + (totals.postsOnWall.posts1p5 || 0) + (totals.postsOnWall.posts4x4 || 0);
+    const postsSetTotal = totals.posts2x2 + totals.posts3x3 + totals.posts1p5 + totals.posts4x4;
+    const postsNeedingConcrete = Math.max(0, postsSetTotal - postsOnWallTotal);
+    const concreteBagsCalc = postsNeedingConcrete + Math.ceil((totals.postsRealign2x2 + totals.postsRealign3x3) * 0.5) + totals.walkRealign + totals.walkGateAddsRepair;
 
     // Gate bits + gate materials
     const latchCounts = {};
@@ -5447,7 +5458,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     if(totals.retainingWallCost > 0){
       costMaterials += totals.retainingWallCost;
-      matBreak.push('  - Retaining wall installation: $'+money(totals.retainingWallCost)+' ($35/sq ft, $1,500 minimum)');
+      matBreak.push('  - Retaining wall installation (Robert; includes wall materials & labor; buy fence posts separately—set in pour, no bags needed): $'+money(totals.retainingWallCost)+' ($35/sq ft, $1,500 minimum)');
     }
 
     // PRICE_MISC line-items
@@ -5865,7 +5876,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
     if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
     if (totals.panelsInstallCustom > 0) sub.push('- New custom panels: '+totals.panelsInstallCustom);
-    if (totals.retainingWallSqft > 0) sub.push(`- Retaining wall: ${totals.retainingWallSqft.toFixed(2)} sq ft ($${money(totals.retainingWallCost)})`);
+    if (totals.retainingWallSqft > 0) {
+      sub.push(`- Retaining wall: ${totals.retainingWallSqft.toFixed(2)} sq ft ($${money(totals.retainingWallCost)})`);
+      sub.push('- Retaining wall install is Robert-only; schedule fence install with Jesus after the wall is poured.');
+      sub.push('- Posts on the wall are set into the pour—buy those posts but no extra concrete bags are needed.');
+    }
     if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then hand paint '+paintLenTotal+' ft of fence');
     if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
 
