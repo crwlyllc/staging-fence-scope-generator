@@ -4578,15 +4578,22 @@ document.addEventListener('DOMContentLoaded', function(){
       const woodFinish = s.woodFinish || 'None';
       const woodStyle = s.woodStyle || '';
       const woodHeight = s.woodHeight || s.height;
+      const woodPostLabel = (post)=>{
+        if(!post) return '-';
+        if(/round steel/i.test(post)) return 'Round Steel (2 3/8\")';
+        return post;
+      };
+
       lines.push(`- Style: ${isWood ? woodStyle : s.style}`);
       lines.push(`- Height: ${isWood ? woodHeight : s.height}`);
       lines.push(`- Rails: ${railsDesc}`);
       lines.push(`- Picket: ${isWood ? (s.woodPicketWidth || '-') : picket}`);
       lines.push(`- Puppy Pickets: ${isWood ? 'N/A' : s.puppy}`);
       if(isWood){
+        const woodPosts = woodPostLabel(s.woodPost);
         lines.push(`- Wood type: ${s.woodType || 'Cedar'}`);
         lines.push(`- Finish: ${woodFinish}`);
-        lines.push(`- Posts: ${s.woodPost || '-'}`);
+        lines.push(`- Posts: ${woodPosts}`);
         const woodAddOns = [];
         if(s.woodAddKickBoard){
           const stackLabel = s.woodKickBoardStack ? `${s.woodKickBoardStack}×` : '';
@@ -4611,7 +4618,7 @@ document.addEventListener('DOMContentLoaded', function(){
           `Rails: ${railsDesc}`,
           `Wood type: ${s.woodType || 'Cedar'}`,
           `Finish: ${woodFinish}`,
-          `Posts: ${s.woodPost || '-'}`,
+          `Posts: ${woodPosts}`,
           woodAddOns.length ? `Add-ons: ${woodAddOns.join('; ')}` : ''
         ].filter(Boolean);
         woodSectionSummaries.push(`- ${title}: ${woodSummaryParts.join('; ')}`);
@@ -4951,6 +4958,11 @@ document.addEventListener('DOMContentLoaded', function(){
         totals.walkGateAddsSingle += wga;
       }
     });
+
+    if (woodSectionSummaries.length){
+      lines.push('WOOD SECTION DETAILS');
+      woodSectionSummaries.forEach(line=> lines.push(line));
+    }
 
     if (state.sections.length){
       const t = totals;
