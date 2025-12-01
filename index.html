@@ -2075,10 +2075,15 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
 
+    const currentFenceType = val('fenceType') || 'Wrought Iron';
+    const normalizedFence = currentFenceType.toLowerCase();
+    const paintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
+    const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
+
     return {
       id,
       label: val('label').trim(),
-      fenceType: val('fenceType') || 'Wrought Iron',
+      fenceType: currentFenceType,
       scopeType: val('scopeType') || 'repair',
       style: val('style'),
       height: val('height'),
@@ -2101,8 +2106,8 @@ document.addEventListener('DOMContentLoaded', function(){
       picketSize: val('picketSize'),
       picketHeight: val('picketHeight'),
       puppy: val('puppy'),
-      painting: val('painting'),
-      paintingApplication: val('paintingApplication'),
+      painting: paintingSelection,
+      paintingApplication: paintingMethod,
       woodHeight: val('woodHeight'),
       woodStyle: val('woodStyle'),
       woodPicketWidth: val('woodPicketWidth'),
@@ -2248,11 +2253,14 @@ document.addEventListener('DOMContentLoaded', function(){
     set('picketSize', data.picketSize||SEED.picketSize[0]);
     set('picketHeight', data.picketHeight||'');
     set('puppy', data.puppy||SEED.puppy[0]);
+    const normalizedFenceType = (data.fenceType || 'Wrought Iron').toLowerCase();
     const scopeForPaint = data.scopeType || 'repair';
     const attachmentMethod = data.panelAttachment || 'Welding';
-    const defaultPainting = (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
-      ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
-      : (data.painting || 'Paint Section');
+    const defaultPainting = normalizedFenceType === 'wood'
+      ? 'None'
+      : (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
+        ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
+        : (data.painting || 'Paint Section');
     set('painting', defaultPainting);
     set('paintingApplication', data.paintingApplication || 'By Hand');
     set('woodHeight', data.woodHeight || '6ft');
