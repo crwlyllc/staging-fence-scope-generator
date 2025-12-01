@@ -4407,19 +4407,21 @@ document.addEventListener('DOMContentLoaded', function(){
       const braceLineParts = [];
       braceCountByLabel.forEach((qty,label)=>{ braceLineParts.push(`${qty} × ${label}`); });
 
-      const railsDesc = (Array.isArray(s.rails) && s.rails.length)
-        ? (()=>{
-            const labels = railLabels(s.railsCount || s.rails.length);
-            return s.rails.slice(0, s.railsCount || s.rails.length).map((r,i)=>
-              r && r.stacked
-                ? `${labels[i]}: ${r.size} + ${r.size2} (stacked)`
-                : `${labels[i]}: ${r.size}`
-            ).join('; ');
-          })()
-        : (s.railStacked ? `${s.railSize} + ${s.railSize2} (stacked)` : `${s.railSize}`);
-
       const scopeType = (s.scopeType || 'repair');
       const fenceType = (s.fenceType || '').toLowerCase();
+      const isWood = fenceType === 'wood';
+      const railsDesc = isWood
+        ? (s.woodRailSize || '-')
+        : (Array.isArray(s.rails) && s.rails.length)
+          ? (()=>{
+              const labels = railLabels(s.railsCount || s.rails.length);
+              return s.rails.slice(0, s.railsCount || s.rails.length).map((r,i)=>
+                r && r.stacked
+                  ? `${labels[i]}: ${r.size} + ${r.size2} (stacked)`
+                  : `${labels[i]}: ${r.size}`
+              ).join('; ');
+            })()
+          : (s.railStacked ? `${s.railSize} + ${s.railSize2} (stacked)` : `${s.railSize}`);
       const isInstall = scopeType === 'install' || scopeType === 'replace';
       const isRepair = !isInstall;
       if(scopeType === 'install'){ totals.installSections += 1; }
@@ -4572,20 +4574,28 @@ document.addEventListener('DOMContentLoaded', function(){
           ? 'Remove & replace section'
           : 'Repair existing section';
       lines.push(`- Scope: ${scopeLabel}`);
-      lines.push(`- Style: ${s.style}`);
-      lines.push(`- Height: ${s.height}`);
+      const woodFinish = s.woodFinish || 'None';
+      const woodStyle = s.woodStyle || '';
+      const woodHeight = s.woodHeight || s.height;
+      lines.push(`- Style: ${isWood ? woodStyle : s.style}`);
+      lines.push(`- Height: ${isWood ? woodHeight : s.height}`);
       lines.push(`- Rails: ${railsDesc}`);
-      lines.push(`- Picket: ${picket}`);
-      lines.push(`- Puppy Pickets: ${s.puppy}`);
-      const attachmentMethod = s.panelAttachment || (installInfo && installInfo.attachment) || 'Welding';
-      const paintingDefault = s.painting || 'Paint Section';
-      const paintingLabel = (scopeType === 'install' && attachmentMethod === 'Brackets')
-        ? 'None'
-        : paintingDefault;
-      lines.push(`- Painting: ${paintingLabel}`);
-      if(paintingLabel === 'Paint Section' || paintingLabel === 'Prime and Paint'){
-        const application = s.paintingApplication || 'By Hand';
-        lines.push(`- Paint application: ${application}`);
+      lines.push(`- Picket: ${isWood ? (s.woodPicketWidth || '-') : picket}`);
+      lines.push(`- Puppy Pickets: ${isWood ? 'N/A' : s.puppy}`);
+      if(isWood){
+        lines.push(`- Wood type: ${s.woodType || 'Cedar'}`);
+        lines.push(`- Finish: ${woodFinish}`);
+      } else {
+        const attachmentMethod = s.panelAttachment || (installInfo && installInfo.attachment) || 'Welding';
+        const paintingDefault = s.painting || 'Paint Section';
+        const paintingLabel = (scopeType === 'install' && attachmentMethod === 'Brackets')
+          ? 'None'
+          : paintingDefault;
+        lines.push(`- Painting: ${paintingLabel}`);
+        if(paintingLabel === 'Paint Section' || paintingLabel === 'Prime and Paint'){
+          const application = s.paintingApplication || 'By Hand';
+          lines.push(`- Paint application: ${application}`);
+        }
       }
       const braceLine = braceLineParts.length ? `- Diagonal brace additions: ${braceLineParts.join('; ')} (4 ft each)` : '';
       if(braceLine && !isRepair){
@@ -4614,33 +4624,60 @@ document.addEventListener('DOMContentLoaded', function(){
       if (!isInstall && s.digOut > 0)    lines.push(`- Dig out: ${s.digOut} lf`);
 
       const i = (v)=> (parseInt(v||0,10) || 0);
-      const picketReplaceCount = isRepair ? i(s.wiPickets) : 0;
-      const replaceCounts = isRepair ? countPostGroups(s.postReplacements) : zeroPostCounts();
-      const realignCounts = isRepair ? countPostGroups(s.postRealignments) : zeroPostCounts();
-      const realignCutWeld = isRepair ? countRealignCutWeld(s.postRealignments) : 0;
       if(isRepair){
         lines.push(`- Repairs:`);
-        lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
-        lines.push(`  - Rail patches: ${sectionPatchTotal}`);
-        lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
-        const gapLineParts = [];
-        gapCountByLabel.forEach((qty,label)=>{ gapLineParts.push(`${qty} × ${label}`); });
-        const gapSummary = (sectionGapTotal > 0 && gapLineParts.length)
-          ? ` (${gapLineParts.join('; ')})`
-          : '';
-        lines.push(`  - Full rail gap fillers: ${sectionGapTotal}${gapSummary}`);
-        lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
-        lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
-        lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
-        lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
-        lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
-        lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
-        if(realignCutWeld > 0){
-          lines.push(`  - Posts to realign (cut & weld): ${realignCutWeld}`);
-        }
-        if(braceTotalQty > 0){
-          const braceSummary = braceLineParts.length ? ` (${braceLineParts.join('; ')})` : '';
-          lines.push(`  - Diagonal brace additions: ${braceTotalQty}${braceSummary}`);
+        if(isWood){
+          const picketReplaceCount = i(s.woodRepairPicketReplace);
+          const picketInstallCount = i(s.woodRepairPicketInstall);
+          const railReplaceCount = i(s.woodRepairRailReplace);
+          const railInstallCount = i(s.woodRepairRailInstall);
+          const postReplaceCount = i(s.woodRepairPostReplace);
+          const postRealignCount = i(s.woodRepairPostRealign);
+          const postInstallCount = i(s.woodRepairPostInstall);
+          const panelReplaceCount = i(s.woodRepairPanelReplace);
+          const gateCount = i(s.woodRepairWalkGateCount);
+          const topCapLf = i(s.woodRepairTopCapReplaceLf);
+          const trimLf = i(s.woodRepairTrimReplaceLf);
+          const kickLf = i(s.woodRepairKickReplaceLf);
+          lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
+          lines.push(`  - Pickets to install: ${picketInstallCount}`);
+          lines.push(`  - Rails to replace: ${railReplaceCount}`);
+          lines.push(`  - Rails to install: ${railInstallCount}`);
+          lines.push(`  - Posts to replace: ${postReplaceCount}`);
+          lines.push(`  - Posts to realign: ${postRealignCount}`);
+          lines.push(`  - Posts to install: ${postInstallCount}`);
+          lines.push(`  - Panels to replace: ${panelReplaceCount}`);
+          lines.push(`  - Walk gates to repair: ${gateCount}`);
+          lines.push(`  - Top cap to replace: ${topCapLf} lf`);
+          lines.push(`  - Trim to replace: ${trimLf} lf`);
+          lines.push(`  - Kick board to replace: ${kickLf} lf`);
+        } else {
+          const picketReplaceCount = i(s.wiPickets);
+          const replaceCounts = countPostGroups(s.postReplacements);
+          const realignCounts = countPostGroups(s.postRealignments);
+          const realignCutWeld = countRealignCutWeld(s.postRealignments);
+          lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
+          lines.push(`  - Rail patches: ${sectionPatchTotal}`);
+          lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
+          const gapLineParts = [];
+          gapCountByLabel.forEach((qty,label)=>{ gapLineParts.push(`${qty} × ${label}`); });
+          const gapSummary = (sectionGapTotal > 0 && gapLineParts.length)
+            ? ` (${gapLineParts.join('; ')})`
+            : '';
+          lines.push(`  - Full rail gap fillers: ${sectionGapTotal}${gapSummary}`);
+          lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
+          lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
+          lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
+          lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
+          lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
+          lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
+          if(realignCutWeld > 0){
+            lines.push(`  - Posts to realign (cut & weld): ${realignCutWeld}`);
+          }
+          if(braceTotalQty > 0){
+            const braceSummary = braceLineParts.length ? ` (${braceLineParts.join('; ')})` : '';
+            lines.push(`  - Diagonal brace additions: ${braceTotalQty}${braceSummary}`);
+          }
         }
       }
 
