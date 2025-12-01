@@ -5844,9 +5844,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const welderNeeded = Math.ceil(remainingWelderHours / HOURS_PER_PERSON);
         welderCount = Math.max(1, Math.min(welderNeeded, MAX_WELDERS, MAX_CREW_PER_DAY));
       }
+      const welderCapacity = welderCount * HOURS_PER_PERSON;
+      const helperHoursWelderCanCover = Math.max(0, welderCapacity - remainingWelderHours);
       let helperCount = 0;
-      if(remainingHelperHours > 0.01){
-        const helperNeeded = Math.ceil(remainingHelperHours / HOURS_PER_PERSON);
+      const helperHoursAfterWelder = Math.max(0, remainingHelperHours - helperHoursWelderCanCover);
+      if(helperHoursAfterWelder > 0.01){
+        const helperNeeded = Math.ceil(helperHoursAfterWelder / HOURS_PER_PERSON);
         helperCount = Math.min(helperNeeded, Math.max(0, MAX_CREW_PER_DAY - welderCount));
       }
       let crewCount = welderCount + helperCount;
@@ -5865,7 +5868,8 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       baseDays.push({ crew: crewCount, welderCount, helperCount });
       remainingWelderHours = Math.max(0, remainingWelderHours - welderCount * HOURS_PER_PERSON);
-      remainingHelperHours = Math.max(0, remainingHelperHours - helperCount * HOURS_PER_PERSON);
+      const helperHoursHandledByWelders = Math.min(remainingHelperHours, helperHoursWelderCanCover);
+      remainingHelperHours = Math.max(0, remainingHelperHours - helperHoursHandledByWelders - helperCount * HOURS_PER_PERSON);
       if(welderCount === 0 && helperCount === 0){
         break;
       }
@@ -5880,9 +5884,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const welderNeeded = Math.ceil(remainingFinishWelderHours / HOURS_PER_PERSON);
         welderCount = Math.max(1, Math.min(welderNeeded, MAX_WELDERS, MAX_CREW_PER_DAY));
       }
+      const welderCapacity = welderCount * HOURS_PER_PERSON;
+      const helperHoursWelderCanCover = Math.max(0, welderCapacity - remainingFinishWelderHours);
       let helperCount = 0;
-      if(remainingFinishHelperHours > 0.01){
-        const helperNeeded = Math.ceil(remainingFinishHelperHours / HOURS_PER_PERSON);
+      const helperHoursAfterWelder = Math.max(0, remainingFinishHelperHours - helperHoursWelderCanCover);
+      if(helperHoursAfterWelder > 0.01){
+        const helperNeeded = Math.ceil(helperHoursAfterWelder / HOURS_PER_PERSON);
         helperCount = Math.min(helperNeeded, Math.max(0, MAX_CREW_PER_DAY - welderCount));
       }
       let crewCount = welderCount + helperCount;
@@ -5901,7 +5908,8 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       finishDays.push({ crew: crewCount, welderCount, helperCount });
       remainingFinishWelderHours = Math.max(0, remainingFinishWelderHours - welderCount * HOURS_PER_PERSON);
-      remainingFinishHelperHours = Math.max(0, remainingFinishHelperHours - helperCount * HOURS_PER_PERSON);
+      const helperHoursHandledByWelders = Math.min(remainingFinishHelperHours, helperHoursWelderCanCover);
+      remainingFinishHelperHours = Math.max(0, remainingFinishHelperHours - helperHoursHandledByWelders - helperCount * HOURS_PER_PERSON);
       if(welderCount === 0 && helperCount === 0){
         break;
       }
