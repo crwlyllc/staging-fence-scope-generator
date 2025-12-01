@@ -4345,6 +4345,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postsInstall: zeroPostCounts(),
       postsReplace: zeroPostCounts()
     };
+    let hasWoodStaining = false;
     const materials = {};
     const installCapsByLabel = new Map();
     const picketStickTotals = {};
@@ -5266,6 +5267,7 @@ document.addEventListener('DOMContentLoaded', function(){
             woodManHours += hours;
             woodRequiresTwoPerson = true;
           }
+          hasWoodStaining = true;
           addServiceLine('Wood Fence Staining', `${labelPrefix}Stain ${sideLabel} of the section.`);
         }
       });
@@ -6263,6 +6265,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodTrimLf > 0) sub.push('- Wood trim to replace: '+totals.woodTrimLf+' lf');
     if (totals.woodKickLf > 0) sub.push('- Wood kick board to replace: '+totals.woodKickLf+' lf');
     if (totals.woodStainSqft > 0) sub.push('- Wood stain area: '+totals.woodStainSqft.toFixed(1)+' sq ft');
+    else if (hasWoodStaining) sub.push('- Wood fence staining included in scope.');
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
     const totalCrewCount = crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0);
