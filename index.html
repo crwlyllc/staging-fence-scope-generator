@@ -4917,28 +4917,30 @@ document.addEventListener('DOMContentLoaded', function(){
             addMat(materials, `picket plugs (${sizeLabel})`, qty * 25);
           });
         }
-        totals.wiPickets    += picketReplaceCount;
-        if(picketReplaceCount > 0){
-          const picketSizeNormalized = normalizeSize(s.picketSize);
-          if(picketSizeNormalized) totals.wiPicketSizes.add(picketSizeNormalized);
+        if(!isWood){
+          totals.wiPickets    += picketReplaceCount;
+          if(picketReplaceCount > 0){
+            const picketSizeNormalized = normalizeSize(s.picketSize);
+            if(picketSizeNormalized) totals.wiPicketSizes.add(picketSizeNormalized);
+          }
+          totals.wiPatches    += sectionPatchTotal;
+          if(sectionPatchTotal > 0){
+            sectionPatchSizes.forEach(size=> totals.wiPatchSizes.add(size));
+          }
+          totals.wiRails      += sectionReplTotal;
+          if(sectionReplTotal > 0){
+            sectionReplSizes.forEach(size=> totals.wiRailReplaceSizes.add(size));
+          }
+          totals.wiRailGaps   += sectionGapTotal;
+          if(sectionGapTotal > 0){
+            sectionGapSizes.forEach(size=> totals.wiRailGapSizes.add(size));
+          }
+          addPostCounts(totals.postsReplace, replaceCounts);
+          addPostCounts(totals, replaceCounts);
+          totals.postsRealign2x2 += realignCounts.posts2x2;
+          totals.postsRealign3x3 += realignCounts.posts3x3;
+          totals.postsRealignCutWeld += realignCutWeld;
         }
-        totals.wiPatches    += sectionPatchTotal;
-        if(sectionPatchTotal > 0){
-          sectionPatchSizes.forEach(size=> totals.wiPatchSizes.add(size));
-        }
-        totals.wiRails      += sectionReplTotal;
-        if(sectionReplTotal > 0){
-          sectionReplSizes.forEach(size=> totals.wiRailReplaceSizes.add(size));
-        }
-        totals.wiRailGaps   += sectionGapTotal;
-        if(sectionGapTotal > 0){
-          sectionGapSizes.forEach(size=> totals.wiRailGapSizes.add(size));
-        }
-        addPostCounts(totals.postsReplace, replaceCounts);
-        addPostCounts(totals, replaceCounts);
-        totals.postsRealign2x2 += realignCounts.posts2x2;
-        totals.postsRealign3x3 += realignCounts.posts3x3;
-        totals.postsRealignCutWeld += realignCutWeld;
         totals.walkGates   += wg;
         totals.walkRealign += wgr;
         totals.walkHardware+= wgh;
