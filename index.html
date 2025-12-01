@@ -906,13 +906,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function createSectionBase(data={}){
     const scope = data.scopeType || 'repair';
-    const defaultPainting = (scope === 'install' || scope === 'replace')
-      ? 'Spot Paint Welds'
-      : 'Paint Section';
+    const initialFenceType = data.fenceType || 'Wrought Iron';
+    const normalizedType = initialFenceType.toLowerCase();
+    const defaultPainting = normalizedType === 'wood'
+      ? 'None'
+      : ((scope === 'install' || scope === 'replace') ? 'Spot Paint Welds' : 'Paint Section');
     const base = {
       id: uid(),
       collapsed:false,
-      fenceType: 'Wrought Iron',
+      fenceType: initialFenceType,
       railsCount:2,
       rails:[
         {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
@@ -1334,8 +1336,6 @@ document.addEventListener('DOMContentLoaded', function(){
           <select class="sp-select" data-field="fenceType">
             <option value="Wrought Iron">Wrought Iron</option>
             <option value="Wood">Wood</option>
-            <option value="Chain Link">Chain Link</option>
-            <option value="Vinyl">Vinyl</option>
           </select>
         </div>
         <div class="sp-field col-2">
@@ -2075,10 +2075,15 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
 
+    const currentFenceType = val('fenceType') || 'Wrought Iron';
+    const normalizedFence = currentFenceType.toLowerCase();
+    const paintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
+    const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
+
     return {
       id,
       label: val('label').trim(),
-      fenceType: val('fenceType') || 'Wrought Iron',
+      fenceType: currentFenceType,
       scopeType: val('scopeType') || 'repair',
       style: val('style'),
       height: val('height'),
@@ -2101,8 +2106,8 @@ document.addEventListener('DOMContentLoaded', function(){
       picketSize: val('picketSize'),
       picketHeight: val('picketHeight'),
       puppy: val('puppy'),
-      painting: val('painting'),
-      paintingApplication: val('paintingApplication'),
+      painting: paintingSelection,
+      paintingApplication: paintingMethod,
       woodHeight: val('woodHeight'),
       woodStyle: val('woodStyle'),
       woodPicketWidth: val('woodPicketWidth'),
@@ -2248,11 +2253,14 @@ document.addEventListener('DOMContentLoaded', function(){
     set('picketSize', data.picketSize||SEED.picketSize[0]);
     set('picketHeight', data.picketHeight||'');
     set('puppy', data.puppy||SEED.puppy[0]);
+    const normalizedFenceType = (data.fenceType || 'Wrought Iron').toLowerCase();
     const scopeForPaint = data.scopeType || 'repair';
     const attachmentMethod = data.panelAttachment || 'Welding';
-    const defaultPainting = (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
-      ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
-      : (data.painting || 'Paint Section');
+    const defaultPainting = normalizedFenceType === 'wood'
+      ? 'None'
+      : (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
+        ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
+        : (data.painting || 'Paint Section');
     set('painting', defaultPainting);
     set('paintingApplication', data.paintingApplication || 'By Hand');
     set('woodHeight', data.woodHeight || '6ft');
@@ -3470,7 +3478,9 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
-    const showRetainingWall = isInstall && (fenceType === 'wrought iron' || fenceType === 'wood');
+    const isWrought = fenceType === 'wrought iron';
+    const isWood = fenceType === 'wood';
+    const showRetainingWall = isInstall && (isWrought || isWood);
     const retainingWrap = card.querySelector('[data-retaining-wall]');
     if(retainingWrap){
       retainingWrap.style.display = showRetainingWall ? '' : 'none';
@@ -3479,7 +3489,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSel = card.querySelector('[data-field="painting"]');
     if(paintingSel){
       const currentVal = paintingSel.value;
-      if(isInstall){
+      if(isWood && currentVal !== 'None'){
+        paintingSel.value = 'None';
+        paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if(isInstall && isWrought){
         const attachmentSel = card.querySelector('[data-field="panelAttachment"]');
         const usesBrackets = attachmentSel ? attachmentSel.value === 'Brackets' : false;
         const desired = usesBrackets ? 'None' : 'Spot Paint Welds';
@@ -3499,6 +3512,20 @@ document.addEventListener('DOMContentLoaded', function(){
     const isWood = fenceType === 'wood';
     card.classList.toggle('is-wood', isWood);
     card.classList.toggle('is-wrought', !isWood);
+    const paintingField = card.querySelector('[data-field="painting"]');
+    const paintingWrap = paintingField?.closest('.sp-field');
+    const paintingAppWrap = card.querySelector('[data-painting-application]');
+    if(isWood){
+      if(paintingField && paintingField.value !== 'None'){
+        paintingField.value = 'None';
+        paintingField.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if(paintingWrap){ paintingWrap.style.display = 'none'; }
+      if(paintingAppWrap){ paintingAppWrap.style.display = 'none'; }
+    }else{
+      if(paintingWrap){ paintingWrap.style.display = ''; }
+      updatePaintingApplicationUI(card);
+    }
     if(isWood){
       const defaults = {
         woodHeight: '6ft',
@@ -4915,6 +4942,8 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     const paintingSummary = state.sections.reduce((acc, s)=>{
+      const fenceType = (s.fenceType || '').toLowerCase();
+      if(fenceType && fenceType !== 'wrought iron') return acc;
       const len = parseInt(s.length||0,10) || 0;
       if(len > 0){
         const hardscape = parseInt(s.hardscape||0,10) || 0;
