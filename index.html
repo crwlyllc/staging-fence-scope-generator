@@ -4103,6 +4103,27 @@ document.addEventListener('DOMContentLoaded', function(){
       const label = n === 1 ? singular : (plural || singular + 's');
       return `${n} ${label}`;
     }
+    function fenceTypeLabel(type){
+      const normalized = String(type||'').toLowerCase();
+      if(normalized === 'wood') return 'Wood';
+      if(normalized === 'chain link') return 'Chain Link';
+      if(normalized === 'vinyl') return 'Vinyl';
+      return 'Wrought Iron';
+    }
+    function fenceTypeDefaultDetail(type, includeRemoval){
+      const actionPrefix = includeRemoval ? 'Remove existing fence and install new' : 'Install';
+      const label = fenceTypeLabel(type);
+      return `${actionPrefix} ${label.toLowerCase()} fence. Posts will be set in concrete 36\" deep.`;
+    }
+    function groupSectionsByFenceType(sections){
+      const map = new Map();
+      sections.forEach(sec=>{
+        const type = (sec?.fenceType || 'Wrought Iron').toLowerCase();
+        if(!map.has(type)) map.set(type, []);
+        map.get(type).push(sec);
+      });
+      return map;
+    }
     function joinParts(parts){
       const clean = parts.filter(Boolean);
       if(clean.length === 0) return '';
@@ -4120,6 +4141,8 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     function buildInstallServiceDescription(sections, includeRemoval){
       if(!Array.isArray(sections) || !sections.length) return '';
+      const fenceType = (sections[0]?.fenceType || 'Wrought Iron').toLowerCase();
+      const isWood = fenceType === 'wood';
       let totalLength = 0;
       const heights = new Set();
       const styles = new Set();
@@ -4132,18 +4155,20 @@ document.addEventListener('DOMContentLoaded', function(){
       sections.forEach(section=>{
         const len = parseInt(section.length,10) || 0;
         totalLength += len;
-        if(section.height){ heights.add(String(section.height).trim()); }
-        if(section.style){ styles.add(String(section.style).trim()); }
+        const sectionHeight = isWood ? section.woodHeight : section.height;
+        const sectionStyle = isWood ? section.woodStyle : section.style;
+        if(sectionHeight){ heights.add(String(sectionHeight).trim()); }
+        if(sectionStyle){ styles.add(String(sectionStyle).trim()); }
         const groupKey = (()=>{
-          const height = section.height ? String(section.height).trim() : '';
-          const style = section.style ? String(section.style).trim() : '';
+          const height = sectionHeight ? String(sectionHeight).trim() : '';
+          const style = sectionStyle ? String(sectionStyle).trim() : '';
           return JSON.stringify({ height, style });
         })();
         if(!styleGroups.has(groupKey)){
           styleGroups.set(groupKey, {
             length: 0,
-            height: section.height ? String(section.height).trim() : '',
-            style: section.style ? String(section.style).trim() : '',
+            height: sectionHeight ? String(sectionHeight).trim() : '',
+            style: sectionStyle ? String(sectionStyle).trim() : '',
             postSizes: new Set(),
             picketSizes: new Set(),
             railSizes: new Set()
@@ -4177,13 +4202,22 @@ document.addEventListener('DOMContentLoaded', function(){
             railSizes.add(normalizedStack);
             group.railSizes.add(normalizedStack);
           }
+        } else if(isWood && section.woodRailSize){
+          const normalized = normalizeSize(section.woodRailSize);
+          railSizes.add(normalized);
+          group.railSizes.add(normalized);
         }
-        if(section.postSize){
-          const normalized = normalizeSize(section.postSize);
+        const postSizeVal = isWood ? section.woodPost : section.postSize;
+        if(postSizeVal){
+          const normalized = normalizeSize(postSizeVal);
           postSizes.add(normalized);
           group.postSizes.add(normalized);
         }
-        if(section.picketSize){
+        if(isWood){
+          if(section.woodPicketWidth){
+            group.picketSizes.add(normalizeSize(section.woodPicketWidth));
+          }
+        } else if(section.picketSize){
           group.picketSizes.add(normalizeSize(section.picketSize));
         }
         const spacingCandidate = (section._installCalc && section._installCalc.spacingFt) || parseFloat(section.postSpacing||'');
@@ -4196,7 +4230,8 @@ document.addEventListener('DOMContentLoaded', function(){
         const heightLabel = joinParts(Array.from(heights).map(h=> `${h} tall`));
         descriptorParts.push(heightLabel);
       }
-      const styleLabel = styles.size ? `${joinParts(Array.from(styles))} fence` : 'wrought iron fence';
+      const fenceLabel = isWood ? 'wood fence' : 'wrought iron fence';
+      const styleLabel = styles.size ? `${joinParts(Array.from(styles))} fence` : fenceLabel;
       descriptorParts.push(styleLabel);
       const descriptor = descriptorParts.filter(Boolean).join(' ').trim();
 
@@ -4208,7 +4243,7 @@ document.addEventListener('DOMContentLoaded', function(){
         .filter(item=>item.length > 0)
         .map(item=>{
           const heightLabel = item.height ? `${item.height} tall` : '';
-          const styleLabel = item.style || 'wrought iron';
+          const styleLabel = item.style || (isWood ? 'wood' : 'wrought iron');
           const phraseParts = [heightLabel, `${styleLabel}${/fence/i.test(styleLabel)?'':' fence'}`].filter(Boolean);
           const postDetail = item.postSizes.size ? `posts: ${joinParts(Array.from(item.postSizes))}` : '';
           const picketDetail = item.picketSizes.size ? `pickets: ${joinParts(Array.from(item.picketSizes))}` : '';
@@ -4867,15 +4902,17 @@ document.addEventListener('DOMContentLoaded', function(){
     const installSectionsOnly = state.sections.filter(s=> (s?.scopeType || 'repair') === 'install');
     const replacementSectionsOnly = state.sections.filter(s=> (s?.scopeType || 'repair') === 'replace');
 
-    if(replacementSectionsOnly.length){
-      const detail = buildInstallServiceDescription(replacementSectionsOnly, true);
-      addServiceLine('Wrought Iron Fence Replacement', detail || 'Remove existing fence and install new wrought iron fence. Posts will be set in concrete 36" deep.');
-    }
+    const replacementGroups = groupSectionsByFenceType(replacementSectionsOnly);
+    replacementGroups.forEach((sections, type)=>{
+      const detail = buildInstallServiceDescription(sections, true);
+      addServiceLine(`${fenceTypeLabel(type)} Fence Replacement`, detail || fenceTypeDefaultDetail(type, true));
+    });
 
-    if(installSectionsOnly.length){
-      const detail = buildInstallServiceDescription(installSectionsOnly, false);
-      addServiceLine('Wrought Iron Fence Installation', detail || 'Install wrought iron fence. Posts will be set in concrete 36" deep.');
-    }
+    const installGroups = groupSectionsByFenceType(installSectionsOnly);
+    installGroups.forEach((sections, type)=>{
+      const detail = buildInstallServiceDescription(sections, false);
+      addServiceLine(`${fenceTypeLabel(type)} Fence Installation`, detail || fenceTypeDefaultDetail(type, false));
+    });
 
     const paintingSummary = state.sections.reduce((acc, s)=>{
       const len = parseInt(s.length||0,10) || 0;
