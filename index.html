@@ -123,9 +123,9 @@
   .sp-chip.is-warn{background:#fffbeb;color:#b45309;border-color:#fde68a}
   .sp-floating-actions{
     position:fixed;
-    left:50%;
+    left:0;
+    right:0;
     bottom:0;
-    transform:translateX(-50%);
     z-index:9998;
     display:flex;
     gap:8px;
@@ -137,8 +137,8 @@
     align-items:center;
     flex-direction:row;
     flex-wrap:nowrap;
-    max-width:calc(100% - 24px);
-    width:auto;
+    max-width:none;
+    width:100%;
     overflow-x:auto;
     -webkit-overflow-scrolling:touch;
   }
@@ -183,16 +183,16 @@
   .sp-floating-actions .sp-fab[disabled]{ opacity:0.5; cursor:not-allowed; }
   @media(max-width:719px){
     .sp-floating-actions{
-      inset-inline:12px;
+      inset-inline:0;
       transform:none;
-      left:auto;
-      right:auto;
+      left:0;
+      right:0;
       justify-content:center;
       bottom:0;
       flex-direction:row;
       align-items:center;
-      width:auto;
-      max-width:calc(100% - 24px);
+      width:100%;
+      max-width:none;
     }
     .sp-floating-actions .sp-fab{ flex:0 0 auto; justify-content:center; }
   }
@@ -234,10 +234,6 @@
   <div class="sp-container">
     <div class="sp-header">
       <div class="sp-title">Wrought Iron Restoration – Scope Generator</div>
-    </div>
-
-    <div class="sp-small" style="margin-bottom:10px">
-      Tip: Use the big + / – buttons on number fields to bump by 1. Add as many sections as you need (front, left side, pool run, etc.).
     </div>
 
     <div class="sp-card" id="sp-hcp-card" style="margin-bottom:16px">
