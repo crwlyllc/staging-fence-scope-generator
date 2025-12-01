@@ -3535,6 +3535,40 @@ document.addEventListener('DOMContentLoaded', function(){
     updateWoodRepairControls(card);
   }
 
+  function resetSectionForFenceType(card, nextType){
+    if(!card) return;
+    const normalizedType = String(nextType || '').toLowerCase();
+    const secId = card.getAttribute('data-id');
+    const existingIdx = state.sections.findIndex(s=>s.id===secId);
+    const existing = existingIdx >= 0 ? state.sections[existingIdx] : null;
+    const preserved = existing ? {
+      id: existing.id,
+      label: existing.label,
+      scopeType: existing.scopeType,
+      length: existing.length,
+      hardscape: existing.hardscape,
+      trim: existing.trim,
+      digOut: existing.digOut,
+      mapGenerated: existing.mapGenerated,
+      mapSegmentId: existing.mapSegmentId,
+      mapGeneratedLabel: existing.mapGeneratedLabel,
+      collapsed: existing.collapsed
+    } : { id: secId, scopeType: 'repair' };
+    const fenceType = normalizedType === 'wood' ? 'Wood' : 'Wrought Iron';
+    const fresh = createSectionBase({ ...preserved, fenceType });
+    if(existingIdx >= 0){
+      state.sections.splice(existingIdx, 1, fresh);
+    } else {
+      state.sections.push(fresh);
+    }
+    writeSectionToDOM(card, fresh);
+    card.dataset.lastFenceType = normalizedType;
+    updateFenceTypeConditional(card);
+    updateInstallConditional(card);
+    updateWalkGateConditional(card);
+    persist();
+  }
+
   function updateWoodAddonsConditional(card){
     const checkbox = card.querySelector('[data-field="woodAddKickBoard"]');
     const kickboardDetails = card.querySelector('[data-kickboard-settings]');
@@ -3709,6 +3743,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const card = wrapper.firstElementChild;
       sectionsEl.appendChild(card);
       writeSectionToDOM(card, s);
+      card.dataset.lastFenceType = (s.fenceType || 'Wrought Iron').toLowerCase();
       updateFenceTypeConditional(card);
       attachNumberHandlers(card);
       attachRailsHandlers(card);
@@ -3771,6 +3806,14 @@ document.addEventListener('DOMContentLoaded', function(){
       $$('input, select, textarea', card).forEach(el=>{
         el.addEventListener('input', ()=>{ persist(); });
         el.addEventListener('change', ()=>{
+          if(el.matches('[data-field="fenceType"]')){
+            const nextType = (el.value || '').toLowerCase();
+            const prevType = card.dataset.lastFenceType || '';
+            if(nextType !== prevType){
+              resetSectionForFenceType(card, nextType);
+              return;
+            }
+          }
           updateFenceTypeConditional(card);
           updateWalkGateConditional(card);
           updateInstallConditional(card);
