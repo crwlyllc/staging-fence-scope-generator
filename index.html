@@ -3384,28 +3384,35 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function attachNumberHandlers(card){
-    $$(".sp-number", card).forEach(box=>{
+    if(card.dataset.numberHandlersAttached === 'true') return;
+    card.dataset.numberHandlersAttached = 'true';
+
+    card.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.sp-step');
+      if(!btn || !card.contains(btn)) return;
+      const box = btn.closest('.sp-number');
+      if(!box) return;
       const input = $('input', box);
-      $$(".sp-step", box).forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const dir = parseInt(btn.getAttribute('data-dir'),10);
-          const current = parseInt(input.value||'0',10) || 0;
-          const min = parseInt(input.getAttribute('min')||'0',10) || 0;
-          const next = Math.max(min, current + dir);
-          input.value = next;
-          updateWalkGateConditional(card);
-          updateInstallConditional(card);
-          persist();
-        });
-      });
-      input.addEventListener('change', ()=>{
-        const val = parseInt(input.value||'0',10) || 0;
-        const min = parseInt(input.getAttribute('min')||'0',10)||0;
-        input.value = Math.max(min, val);
-        updateWalkGateConditional(card);
-        updateInstallConditional(card);
-        persist();
-      });
+      if(!input) return;
+      const dir = parseInt(btn.getAttribute('data-dir')||'0',10) || 0;
+      const current = parseInt(input.value||'0',10) || 0;
+      const min = parseInt(input.getAttribute('min')||'0',10) || 0;
+      const next = Math.max(min, current + dir);
+      input.value = next;
+      updateWalkGateConditional(card);
+      updateInstallConditional(card);
+      persist();
+    });
+
+    card.addEventListener('change', (e)=>{
+      const input = e.target.closest('.sp-number input');
+      if(!input || !card.contains(input)) return;
+      const val = parseInt(input.value||'0',10) || 0;
+      const min = parseInt(input.getAttribute('min')||'0',10)||0;
+      input.value = Math.max(min, val);
+      updateWalkGateConditional(card);
+      updateInstallConditional(card);
+      persist();
     });
   }
 
