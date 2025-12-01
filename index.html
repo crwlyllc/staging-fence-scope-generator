@@ -995,7 +995,6 @@ document.addEventListener('DOMContentLoaded', function(){
       woodRepairKickReplaceSize: '2x6',
       woodRepairKickReplaceStack: '1',
       woodRepairStain: 'none',
-      woodRepairStainSides: 'one',
       woodAddKickBoard: false,
       woodAddTopCap: false,
       woodAddTrim: false,
@@ -1557,10 +1556,8 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label">Staining</label>
           <select class="sp-select" data-field="woodRepairStain">
             <option value="none">No staining</option>
-            <option value="stain">Stain section</option>
-          </select>
-          <select class="sp-select" data-field="woodRepairStainSides" style="margin-top:6px">
-            <option value="one">Stain 1 side</option>
+            <option value="outside">Stain outside</option>
+            <option value="inside">Stain inside</option>
             <option value="both">Stain both sides</option>
           </select>
         </div>
@@ -1886,7 +1883,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','installFinialStyle','railsCount','rails',
     'picketSize','picketHeight','puppy','painting','paintingApplication','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
-    'woodAddTopCap','woodAddTrim','woodRepairStain','woodRepairStainSides','walkLatch','walkHinges','walkRebuildFrame',
+    'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
     'walkAddPicketSize','walkAddLatch','walkAddHinges','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
     'woodRepairPostRealignMethod','woodRepairPostInstallMethod','woodRepairPostInstallTie'
@@ -2147,7 +2144,6 @@ document.addEventListener('DOMContentLoaded', function(){
       woodRepairKickReplaceSize: val('woodRepairKickReplaceSize'),
       woodRepairKickReplaceStack: val('woodRepairKickReplaceStack'),
       woodRepairStain: val('woodRepairStain'),
-      woodRepairStainSides: val('woodRepairStainSides'),
       woodAddKickBoard: val('woodAddKickBoard'),
       woodAddTopCap: val('woodAddTopCap'),
       woodAddTrim: val('woodAddTrim'),
@@ -2302,7 +2298,6 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodRepairKickReplaceSize', data.woodRepairKickReplaceSize || data.woodKickBoardSize || '2x6');
     set('woodRepairKickReplaceStack', data.woodRepairKickReplaceStack || data.woodKickBoardStack || '1');
     set('woodRepairStain', data.woodRepairStain || 'none');
-    set('woodRepairStainSides', data.woodRepairStainSides || 'one');
     set('woodAddKickBoard', Boolean(data.woodAddKickBoard));
     set('woodAddTopCap', Boolean(data.woodAddTopCap));
     set('woodAddTrim', Boolean(data.woodAddTrim));
@@ -3547,8 +3542,7 @@ document.addEventListener('DOMContentLoaded', function(){
         woodRepairTrimReplaceSize: '1x4',
         woodRepairKickReplaceSize: '2x6',
         woodRepairKickReplaceStack: '1',
-        woodRepairStain: 'none',
-        woodRepairStainSides: 'one'
+        woodRepairStain: 'none'
       };
       Object.entries(defaults).forEach(([field, val])=>{
         const el = card.querySelector(`[data-field="${field}"]`);
@@ -3630,15 +3624,6 @@ document.addEventListener('DOMContentLoaded', function(){
       });
       if(!allowCutWeld && realignSel.value === 'cut-weld'){
         realignSel.value = 'dig-straighten';
-      }
-    }
-    const stainSel = card.querySelector('[data-field="woodRepairStain"]');
-    const stainSidesSel = card.querySelector('[data-field="woodRepairStainSides"]');
-    if(stainSel && stainSidesSel){
-      const showSides = stainSel.value === 'stain';
-      stainSidesSel.style.display = showSides ? '' : 'none';
-      if(!showSides){
-        stainSidesSel.value = 'one';
       }
     }
   }
@@ -4346,6 +4331,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postsReplace: zeroPostCounts()
     };
     let hasWoodStaining = false;
+    const woodStainDetails = [];
     const materials = {};
     const installCapsByLabel = new Map();
     const picketStickTotals = {};
@@ -5080,7 +5066,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const match = list.find(item=>item.value === val);
         return match ? match.label : (val || '');
       };
-      woodRepairSections.forEach(s=>{
+      woodRepairSections.forEach((s, idx)=>{
         const parts = [];
         const labelPrefix = s.label ? `${s.label}: ` : '';
         const railSize = s.woodRailSize || '';
@@ -5256,10 +5242,13 @@ document.addEventListener('DOMContentLoaded', function(){
         if(parts.length){
           addServiceLine('Wood Fence Repairs', `${labelPrefix}${parts.join('; ')}.`);
         }
-        if(s.woodRepairStain === 'stain'){
-          const sideLabel = s.woodRepairStainSides === 'both' ? 'both sides' : '1 side';
-          const heightFt = woodHeightFt || feetFromStr(s.height);
-          const stainSqft = Math.max(0, sectionLengthFt) * Math.max(0, heightFt) * (sideLabel === 'both sides' ? 2 : 1);
+        if(s.woodRepairStain && s.woodRepairStain !== 'none'){
+          const sideLabelMap = { outside: 'outside', inside: 'inside', both: 'both sides' };
+          const sideLabel = sideLabelMap[s.woodRepairStain] || s.woodRepairStain;
+          const heightFt = Math.max(0, woodHeightFt || feetFromStr(s.height));
+          const sidesMultiplier = s.woodRepairStain === 'both' ? 2 : 1;
+          const normalizedLengthFt = Math.max(0, sectionLengthFt);
+          const stainSqft = normalizedLengthFt * heightFt * sidesMultiplier;
           if(stainSqft > 0){
             totals.woodStainSqft += stainSqft;
             const hours = stainSqft * (14/3000); // two-person production rate
@@ -5268,6 +5257,8 @@ document.addEventListener('DOMContentLoaded', function(){
             woodRequiresTwoPerson = true;
           }
           hasWoodStaining = true;
+          const sectionLabel = s.label || `Section ${idx + 1}`;
+          woodStainDetails.push({ sectionLabel, sideLabel, lengthFt: normalizedLengthFt, sqft: stainSqft });
           addServiceLine('Wood Fence Staining', `${labelPrefix}Stain ${sideLabel} of the section.`);
         }
       });
@@ -6264,8 +6255,16 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodTopCapLf > 0) sub.push('- Wood top cap to replace: '+totals.woodTopCapLf+' lf');
     if (totals.woodTrimLf > 0) sub.push('- Wood trim to replace: '+totals.woodTrimLf+' lf');
     if (totals.woodKickLf > 0) sub.push('- Wood kick board to replace: '+totals.woodKickLf+' lf');
-    if (totals.woodStainSqft > 0) sub.push('- Wood stain area: '+totals.woodStainSqft.toFixed(1)+' sq ft');
-    else if (hasWoodStaining) sub.push('- Wood fence staining included in scope.');
+    if (woodStainDetails.length){
+      if (totals.woodStainSqft > 0) sub.push('- Wood stain area (est.): '+totals.woodStainSqft.toFixed(1)+' sq ft total');
+      woodStainDetails.forEach(detail=>{
+        const lengthLabel = isFinite(detail.lengthFt) ? `${detail.lengthFt.toFixed(1)} lf` : 'Length N/A';
+        const sqftLabel = isFinite(detail.sqft) ? `${detail.sqft.toFixed(1)} sq ft` : 'Area N/A';
+        sub.push(`- Wood staining: ${detail.sectionLabel} (${detail.sideLabel}; ${lengthLabel}; est. ${sqftLabel})`);
+      });
+    } else if (hasWoodStaining) {
+      sub.push('- Wood staining selected; add section length and height to estimate area.');
+    }
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
     const totalCrewCount = crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0);
