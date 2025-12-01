@@ -4624,10 +4624,14 @@ document.addEventListener('DOMContentLoaded', function(){
       if (!isInstall && s.digOut > 0)    lines.push(`- Dig out: ${s.digOut} lf`);
 
       const i = (v)=> (parseInt(v||0,10) || 0);
+      let picketReplaceCount = 0;
+      let replaceCounts = zeroPostCounts();
+      let realignCounts = zeroPostCounts();
+      let realignCutWeld = 0;
       if(isRepair){
         lines.push(`- Repairs:`);
         if(isWood){
-          const picketReplaceCount = i(s.woodRepairPicketReplace);
+          picketReplaceCount = i(s.woodRepairPicketReplace);
           const picketInstallCount = i(s.woodRepairPicketInstall);
           const railReplaceCount = i(s.woodRepairRailReplace);
           const railInstallCount = i(s.woodRepairRailInstall);
@@ -4652,10 +4656,10 @@ document.addEventListener('DOMContentLoaded', function(){
           lines.push(`  - Trim to replace: ${trimLf} lf`);
           lines.push(`  - Kick board to replace: ${kickLf} lf`);
         } else {
-          const picketReplaceCount = i(s.wiPickets);
-          const replaceCounts = countPostGroups(s.postReplacements);
-          const realignCounts = countPostGroups(s.postRealignments);
-          const realignCutWeld = countRealignCutWeld(s.postRealignments);
+          picketReplaceCount = i(s.wiPickets);
+          replaceCounts = countPostGroups(s.postReplacements);
+          realignCounts = countPostGroups(s.postRealignments);
+          realignCutWeld = countRealignCutWeld(s.postRealignments);
           lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
           lines.push(`  - Rail patches: ${sectionPatchTotal}`);
           lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
