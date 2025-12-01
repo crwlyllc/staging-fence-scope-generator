@@ -6263,11 +6263,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodTrimLf > 0) sub.push('- Wood trim to replace: '+totals.woodTrimLf+' lf');
     if (totals.woodKickLf > 0) sub.push('- Wood kick board to replace: '+totals.woodKickLf+' lf');
     if (totals.woodStainSqft > 0) sub.push('- Wood stain area: '+totals.woodStainSqft.toFixed(1)+' sq ft');
-    if (woodSectionSummaries.length){
-      sub.push('- Wood section options:');
-      woodSectionSummaries.forEach(line=> sub.push(`  ${line}`));
-    }
-
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
     const totalCrewCount = crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0);
