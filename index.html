@@ -4378,6 +4378,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let woodWelderHours = 0;
     let woodManHours = 0;
     let woodRequiresTwoPerson = false;
+    const woodSectionSummaries = [];
 
     state.sections.forEach((s, idx)=>{
       const title  = s.label ? `Section ${idx+1} - ${s.label}` : `Section ${idx+1}`;
@@ -4585,6 +4586,35 @@ document.addEventListener('DOMContentLoaded', function(){
       if(isWood){
         lines.push(`- Wood type: ${s.woodType || 'Cedar'}`);
         lines.push(`- Finish: ${woodFinish}`);
+        lines.push(`- Posts: ${s.woodPost || '-'}`);
+        const woodAddOns = [];
+        if(s.woodAddKickBoard){
+          const stackLabel = s.woodKickBoardStack ? `${s.woodKickBoardStack}×` : '';
+          const sizeLabel = s.woodKickBoardSize || '2x6';
+          woodAddOns.push(`Kick board (${stackLabel}${sizeLabel})`);
+        }
+        if(s.woodAddTopCap){
+          const sizeLabel = s.woodTopCapSize || '2x6';
+          woodAddOns.push(`Top cap (${sizeLabel})`);
+        }
+        if(s.woodAddTrim){
+          const trimLabel = s.woodTrimType || 'Trim';
+          woodAddOns.push(`Trim (${trimLabel})`);
+        }
+        if(woodAddOns.length){
+          lines.push(`- Wood add-ons: ${woodAddOns.join('; ')}`);
+        }
+        const woodSummaryParts = [
+          `Style: ${woodStyle || '-'}`,
+          `Height: ${woodHeight || '-'}`,
+          `Picket: ${s.woodPicketWidth || '-'}`,
+          `Rails: ${railsDesc}`,
+          `Wood type: ${s.woodType || 'Cedar'}`,
+          `Finish: ${woodFinish}`,
+          `Posts: ${s.woodPost || '-'}`,
+          woodAddOns.length ? `Add-ons: ${woodAddOns.join('; ')}` : ''
+        ].filter(Boolean);
+        woodSectionSummaries.push(`- ${title}: ${woodSummaryParts.join('; ')}`);
       } else {
         const attachmentMethod = s.panelAttachment || (installInfo && installInfo.attachment) || 'Welding';
         const paintingDefault = s.painting || 'Paint Section';
@@ -6198,6 +6228,31 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.retainingWallSqft > 0) sub.push(`- Retaining wall: ${totals.retainingWallSqft.toFixed(2)} sq ft ($${money(totals.retainingWallCost)}). Robert's crew pours the wall (wall materials & labor included; post materials separate) and Jesus' crew installs the fence. Posts on the wall set in the pour—no extra concrete bags.`);
     if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then hand paint '+paintLenTotal+' ft of fence');
     if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
+    if (totals.woodPicketReplace > 0) sub.push('- Wood pickets to replace: '+totals.woodPicketReplace);
+    if (totals.woodPicketInstall > 0) sub.push('- Wood pickets to install: '+totals.woodPicketInstall);
+    if (totals.woodRailReplace > 0) sub.push('- Wood rails to replace: '+totals.woodRailReplace);
+    if (totals.woodRailInstall > 0) sub.push('- Wood rails to install: '+totals.woodRailInstall);
+    if (totals.woodPostReplace6 > 0 || totals.woodPostReplace8 > 0){
+      const parts = [];
+      if(totals.woodPostReplace6 > 0) parts.push(`${totals.woodPostReplace6} at 6ft`);
+      if(totals.woodPostReplace8 > 0) parts.push(`${totals.woodPostReplace8} at 8ft`);
+      sub.push(`- Wood posts to replace: ${parts.join(', ')}`);
+    }
+    if (totals.woodPostRealignCutWeld > 0) sub.push('- Wood posts to realign (cut & weld): '+totals.woodPostRealignCutWeld);
+    if (totals.woodPostRealignDig > 0) sub.push('- Wood posts to realign (dig): '+totals.woodPostRealignDig);
+    if (totals.woodPostInstall > 0) sub.push('- Wood posts to install: '+totals.woodPostInstall);
+    if (totals.woodPanels > 0) sub.push('- Wood panels to replace: '+totals.woodPanels);
+    if (totals.woodGateRepair > 0) sub.push('- Wood walk gates to repair: '+totals.woodGateRepair);
+    if (totals.woodGateStrengthen > 0) sub.push('- Wood gates to strengthen: '+totals.woodGateStrengthen);
+    if (totals.woodGateReplace > 0) sub.push('- Wood gates to replace: '+totals.woodGateReplace);
+    if (totals.woodTopCapLf > 0) sub.push('- Wood top cap to replace: '+totals.woodTopCapLf+' lf');
+    if (totals.woodTrimLf > 0) sub.push('- Wood trim to replace: '+totals.woodTrimLf+' lf');
+    if (totals.woodKickLf > 0) sub.push('- Wood kick board to replace: '+totals.woodKickLf+' lf');
+    if (totals.woodStainSqft > 0) sub.push('- Wood stain area: '+totals.woodStainSqft.toFixed(1)+' sq ft');
+    if (woodSectionSummaries.length){
+      sub.push('- Wood section options:');
+      woodSectionSummaries.forEach(line=> sub.push(`  ${line}`));
+    }
 
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
