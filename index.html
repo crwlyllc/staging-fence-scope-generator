@@ -160,6 +160,11 @@
     flex:0 0 auto;
     white-space:nowrap;
   }
+  .sp-floating-actions .sp-fab.danger{
+    background:#ef4444;
+    border-color:#b91c1c;
+    color:#fff;
+  }
   .sp-floating-actions .sp-fab:active{ transform:translateY(1px); }
   .sp-floating-actions .sp-fab-icon{
     display:grid;
@@ -171,6 +176,9 @@
     color:#fff;
     font-size:12px;
     font-weight:900;
+  }
+  .sp-floating-actions .sp-fab.danger .sp-fab-icon{
+    background:#b91c1c;
   }
   .sp-floating-actions .sp-fab[disabled]{ opacity:0.5; cursor:not-allowed; }
   @media(max-width:719px){
@@ -226,11 +234,6 @@
   <div class="sp-container">
     <div class="sp-header">
       <div class="sp-title">Wrought Iron Restoration – Scope Generator</div>
-      <div class="sp-actions">
-        <button class="sp-btn ghost" id="sp-reset" type="button">Reset</button>
-        <button class="sp-btn" id="sp-add" type="button">+ Add Section</button>
-        <button class="sp-btn primary" id="sp-complete" type="button">Complete → Generate Notes</button>
-      </div>
     </div>
 
     <div class="sp-small" style="margin-bottom:10px">
@@ -346,6 +349,10 @@
   <button class="sp-fab" id="sp-quick-dup-last" type="button" aria-label="Copy Latest Style">
     <span class="sp-fab-icon">⧉</span>
     <span>Latest</span>
+  </button>
+  <button class="sp-fab danger" id="sp-reset" type="button">
+    <span class="sp-fab-icon">⟳</span>
+    <span>Reset</span>
   </button>
   <button class="sp-fab" id="sp-top-btn" type="button" aria-label="Back to top">
     <span class="sp-fab-icon">↑</span>
@@ -6418,14 +6425,12 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
-  document.getElementById('sp-add').addEventListener('click', ()=>{ addSection(); persist(); });
   const quickAddBtn = document.getElementById('sp-quick-add');
   if(quickAddBtn){ quickAddBtn.addEventListener('click', ()=>{ addSection(); persist(); }); }
   const quickDupFirstBtn = document.getElementById('sp-quick-dup-first');
   if(quickDupFirstBtn){ quickDupFirstBtn.addEventListener('click', ()=>{ duplicateFirstSectionStyle(); persist(); }); }
   const quickDupLastBtn = document.getElementById('sp-quick-dup-last');
   if(quickDupLastBtn){ quickDupLastBtn.addEventListener('click', ()=>{ duplicateLatestSectionStyle(); persist(); }); }
-  document.getElementById('sp-complete').addEventListener('click', generateNotes);
   document.getElementById('sp-copy').addEventListener('click', copyNotes);
   document.getElementById('sp-copy-sub').addEventListener('click', copySubNotes);
   if(estimateNumberInput){
