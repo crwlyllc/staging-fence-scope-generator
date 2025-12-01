@@ -141,6 +141,61 @@
     .sp-top{ right:12px; bottom:12px; }
   }
 
+  .sp-floating-actions{
+    position:fixed;
+    left:50%;
+    bottom:16px;
+    transform:translateX(-50%);
+    z-index:9998;
+    display:flex;
+    gap:10px;
+    padding:10px 12px;
+    background:var(--sp-card);
+    border:1px solid var(--sp-border);
+    border-radius:999px;
+    box-shadow:0 4px 12px rgba(0,0,0,.1);
+    align-items:center;
+  }
+  .sp-floating-actions .sp-fab{
+    appearance:none;
+    border:1px solid var(--sp-border);
+    background:var(--sp-bg);
+    color:var(--sp-ink);
+    border-radius:12px;
+    padding:10px 12px;
+    font-weight:800;
+    min-width:48px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    cursor:pointer;
+    transition:transform .02s ease, border-color .2s ease, background .2s ease;
+  }
+  .sp-floating-actions .sp-fab:active{ transform:translateY(1px); }
+  .sp-floating-actions .sp-fab-icon{
+    display:grid;
+    place-items:center;
+    width:22px;
+    height:22px;
+    border-radius:8px;
+    background:var(--sp-green);
+    color:#fff;
+    font-size:12px;
+    font-weight:900;
+  }
+  .sp-floating-actions .sp-fab[disabled]{ opacity:0.5; cursor:not-allowed; }
+  @media(max-width:719px){
+    .sp-floating-actions{
+      inset-inline:12px;
+      transform:none;
+      left:auto;
+      right:auto;
+      justify-content:space-between;
+      bottom:12px;
+    }
+    .sp-floating-actions .sp-fab{ flex:1; justify-content:center; }
+  }
+
   #sp-map{
     width:100%;
     height:580px;
@@ -284,6 +339,21 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="sp-floating-actions" id="sp-quick-actions" aria-label="Quick actions">
+  <button class="sp-fab" id="sp-quick-add" type="button">
+    <span class="sp-fab-icon">＋</span>
+    <span>Add Section</span>
+  </button>
+  <button class="sp-fab" id="sp-quick-dup-first" type="button">
+    <span class="sp-fab-icon">①</span>
+    <span>Copy 1st Style</span>
+  </button>
+  <button class="sp-fab" id="sp-quick-dup-last" type="button">
+    <span class="sp-fab-icon">↻</span>
+    <span>Copy Latest Style</span>
+  </button>
 </div>
 
 <button class="sp-top" id="sp-top-btn" type="button" aria-label="Back to top">↑ Top</button>
@@ -1813,6 +1883,59 @@ document.addEventListener('DOMContentLoaded', function(){
     delete copy.mapGeneratedLabel;
     state.sections.push(copy);
     render();
+  }
+
+  const STYLE_FIELDS = [
+    'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','installFinialStyle','railsCount','rails',
+    'picketSize','picketHeight','puppy','painting','paintingApplication','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
+    'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
+    'woodAddTopCap','woodAddTrim','woodRepairStain','woodRepairStainSides','walkLatch','walkHinges','walkRebuildFrame',
+    'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
+    'walkAddPicketSize','walkAddLatch','walkAddHinges','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
+    'woodRepairPostRealignMethod','woodRepairPostInstallMethod','woodRepairPostInstallTie'
+  ];
+
+  function createSectionFromStyle(source){
+    if(!source) return null;
+    const base = createSectionBase({
+      fenceType: source.fenceType,
+      scopeType: source.scopeType,
+      painting: source.painting
+    });
+    STYLE_FIELDS.forEach(key=>{
+      if(typeof source[key] === 'undefined') return;
+      const value = source[key];
+      if(key === 'rails' && Array.isArray(value)){
+        base.rails = value.map(rail=>({
+          size: rail.size,
+          stacked: !!rail.stacked,
+          size2: rail.size2 || rail.size,
+          patches: 0,
+          replacements: 0,
+        }));
+        return;
+      }
+      const shouldClone = Array.isArray(value) || (value && typeof value === 'object');
+      base[key] = shouldClone ? JSON.parse(JSON.stringify(value)) : value;
+    });
+    return base;
+  }
+
+  function duplicateSectionStyleFrom(source){
+    const nextSection = createSectionFromStyle(source);
+    if(!nextSection) return;
+    state.sections.push(nextSection);
+    render();
+  }
+  function duplicateFirstSectionStyle(){
+    syncStateFromDOM();
+    if(!state.sections.length) return;
+    duplicateSectionStyleFrom(state.sections[0]);
+  }
+  function duplicateLatestSectionStyle(){
+    syncStateFromDOM();
+    if(!state.sections.length) return;
+    duplicateSectionStyleFrom(state.sections[state.sections.length-1]);
   }
   function removeSection(id){
     syncStateFromDOM();
@@ -3546,6 +3669,32 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function updateQuickActions(){
+    const hasSections = state.sections.length > 0;
+    const firstBtn = document.getElementById('sp-quick-dup-first');
+    const lastBtn = document.getElementById('sp-quick-dup-last');
+    const addBtn = document.getElementById('sp-quick-add');
+
+    if(addBtn){ addBtn.disabled = false; }
+
+    if(firstBtn){
+      firstBtn.disabled = !hasSections;
+      const firstLabel = state.sections[0]?.label?.trim();
+      firstBtn.title = hasSections
+        ? `Copy style from Section 1${firstLabel ? ` – ${firstLabel}` : ''}`
+        : 'Add a section to copy its style';
+    }
+
+    if(lastBtn){
+      lastBtn.disabled = !hasSections;
+      const latest = state.sections[state.sections.length-1];
+      const lastLabel = latest?.label?.trim();
+      lastBtn.title = hasSections
+        ? `Copy style from Section ${state.sections.length}${lastLabel ? ` – ${lastLabel}` : ''}`
+        : 'Add a section to copy its style';
+    }
+  }
+
   function render(){
     updateCrewUI();
     const sectionsEl = document.getElementById('sp-sections');
@@ -3625,6 +3774,7 @@ document.addEventListener('DOMContentLoaded', function(){
         });
       });
     });
+    updateQuickActions();
   }
 
   function feetFromStr(h){
@@ -6274,6 +6424,12 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   document.getElementById('sp-add').addEventListener('click', ()=>{ addSection(); persist(); });
+  const quickAddBtn = document.getElementById('sp-quick-add');
+  if(quickAddBtn){ quickAddBtn.addEventListener('click', ()=>{ addSection(); persist(); }); }
+  const quickDupFirstBtn = document.getElementById('sp-quick-dup-first');
+  if(quickDupFirstBtn){ quickDupFirstBtn.addEventListener('click', ()=>{ duplicateFirstSectionStyle(); persist(); }); }
+  const quickDupLastBtn = document.getElementById('sp-quick-dup-last');
+  if(quickDupLastBtn){ quickDupLastBtn.addEventListener('click', ()=>{ duplicateLatestSectionStyle(); persist(); }); }
   document.getElementById('sp-complete').addEventListener('click', generateNotes);
   document.getElementById('sp-copy').addEventListener('click', copyNotes);
   document.getElementById('sp-copy-sub').addEventListener('click', copySubNotes);
