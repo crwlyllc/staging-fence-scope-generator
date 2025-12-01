@@ -121,26 +121,6 @@
   .sp-chip.is-error{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
   .sp-chip.is-info{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
   .sp-chip.is-warn{background:#fffbeb;color:#b45309;border-color:#fde68a}
-  /* Floating back-to-top button */
-  .sp-top{
-    position:fixed;
-    right:16px;
-    bottom:16px;
-    z-index:9999;
-    border:1px solid var(--sp-border);
-    background:var(--sp-card);
-    color:var(--sp-ink);
-    padding:10px 12px;
-    border-radius:999px;
-    font-weight:800;
-    box-shadow:0 2px 6px rgba(0,0,0,.08);
-    cursor:pointer;
-  }
-  .sp-top:active{ transform:translateY(1px); }
-  @media(max-width:719px){
-    .sp-top{ right:12px; bottom:12px; }
-  }
-
   .sp-floating-actions{
     position:fixed;
     left:50%;
@@ -156,9 +136,11 @@
     box-shadow:0 4px 12px rgba(0,0,0,.1);
     align-items:center;
     flex-direction:row;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     max-width:calc(100% - 24px);
     width:auto;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
   }
   .sp-floating-actions .sp-fab{
     appearance:none;
@@ -175,7 +157,7 @@
     cursor:pointer;
     transition:transform .02s ease, border-color .2s ease, background .2s ease;
     width:auto;
-    flex:0 1 auto;
+    flex:0 0 auto;
     white-space:nowrap;
   }
   .sp-floating-actions .sp-fab:active{ transform:translateY(1px); }
@@ -204,7 +186,7 @@
       width:auto;
       max-width:calc(100% - 24px);
     }
-    .sp-floating-actions .sp-fab{ flex:0 1 auto; justify-content:center; }
+    .sp-floating-actions .sp-fab{ flex:0 0 auto; justify-content:center; }
   }
 
   #sp-map{
@@ -365,9 +347,11 @@
     <span class="sp-fab-icon">↻</span>
     <span>Copy Latest Style</span>
   </button>
+  <button class="sp-fab" id="sp-top-btn" type="button" aria-label="Back to top">
+    <span class="sp-fab-icon">↑</span>
+    <span>Top</span>
+  </button>
 </div>
-
-<button class="sp-top" id="sp-top-btn" type="button" aria-label="Back to top">↑ Top</button>
 <script src="https://cdn.jsdelivr.net/npm/iframe-resizer/js/iframeResizer.contentWindow.min.js"></script>
 <script>
 window._spGoogleMapsReady = window._spGoogleMapsReady || false;
