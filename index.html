@@ -5263,8 +5263,12 @@ document.addEventListener('DOMContentLoaded', function(){
           }
           hasWoodStaining = true;
           const sectionLabel = s.label || `Section ${idx + 1}`;
+          const lengthLabel = normalizedLengthFt > 0 ? `${Math.round(normalizedLengthFt)} linear ft` : '';
+          const heightLabel = heightFt > 0 ? `${formatFtValue(heightFt)} ft tall` : '';
+          const sizeLabel = [lengthLabel, heightLabel].filter(Boolean).join(' and ');
+          const sizeDetail = sizeLabel ? ` which is about ${sizeLabel}` : '';
           woodStainDetails.push({ sectionLabel, sideLabel, lengthFt: normalizedLengthFt, sqft: stainSqft });
-          addServiceLine('Wood Fence Staining', `${labelPrefix}Stain ${sideLabel} of the section.`);
+          addServiceLine('Wood Fence Staining', `${labelPrefix}Stain ${sideLabel} of ${sectionLabel}${sizeDetail}.`);
         }
       });
     }
