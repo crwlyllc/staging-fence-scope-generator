@@ -3914,7 +3914,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'picket plugs (1/2")': 0.10,
     'picket plugs (5/8")': 0.11,
     'prefab gate panel': 0,
-    'panel mount bracket': 1.27
+    'panel mount bracket': 1.27,
+    '5 gal wood stain bucket': 124.49
   };
 
   const PRICE = {
@@ -5248,13 +5249,16 @@ document.addEventListener('DOMContentLoaded', function(){
           const heightFt = Math.max(0, woodHeightFt || feetFromStr(s.height));
           const sidesMultiplier = s.woodRepairStain === 'both' ? 2 : 1;
           const normalizedLengthFt = Math.max(0, sectionLengthFt);
-          const stainSqft = normalizedLengthFt * heightFt * sidesMultiplier;
+          const stainSqft = Math.max(0, Math.round(normalizedLengthFt * heightFt * sidesMultiplier));
           if(stainSqft > 0){
             totals.woodStainSqft += stainSqft;
-            const hours = stainSqft * (14/3000); // two-person production rate
-            woodHelperHours += hours;
+            const lfPerHour = sidesMultiplier === 2 ? 25 : 50;
+            const baseHours = lfPerHour > 0 ? normalizedLengthFt / lfPerHour : 0;
+            const topCapLf = parseFloat(s.woodRepairTopCapReplaceLf||0) || 0;
+            const hasTopCap = !!s.woodAddTopCap || topCapLf > 0;
+            const topCapHours = hasTopCap ? normalizedLengthFt * (0.5/60) : 0;
+            const hours = baseHours + topCapHours;
             woodManHours += hours;
-            woodRequiresTwoPerson = true;
           }
           hasWoodStaining = true;
           const sectionLabel = s.label || `Section ${idx + 1}`;
@@ -5404,6 +5408,13 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const serviceLines = buildServiceLineOutput();
     renderServiceLineNotes(serviceLines);
+
+    const woodStainBuckets = totals.woodStainSqft > 0
+      ? Math.ceil(totals.woodStainSqft / 500)
+      : 0;
+    if(woodStainBuckets > 0){
+      addMat(materials, '5 gal wood stain bucket', woodStainBuckets);
+    }
 
     // ==== Materials aggregation ====
     let paintLenTotal = 0;
@@ -6256,10 +6267,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodTrimLf > 0) sub.push('- Wood trim to replace: '+totals.woodTrimLf+' lf');
     if (totals.woodKickLf > 0) sub.push('- Wood kick board to replace: '+totals.woodKickLf+' lf');
     if (woodStainDetails.length){
-      if (totals.woodStainSqft > 0) sub.push('- Wood stain area (est.): '+totals.woodStainSqft.toFixed(1)+' sq ft total');
+      if (totals.woodStainSqft > 0) sub.push('- Wood stain area (est.): '+Math.round(totals.woodStainSqft)+' sq ft total');
       woodStainDetails.forEach(detail=>{
         const lengthLabel = isFinite(detail.lengthFt) ? `${detail.lengthFt.toFixed(1)} lf` : 'Length N/A';
-        const sqftLabel = isFinite(detail.sqft) ? `${detail.sqft.toFixed(1)} sq ft` : 'Area N/A';
+        const sqftValue = isFinite(detail.sqft) ? Math.round(detail.sqft) : null;
+        const sqftLabel = sqftValue != null ? `${sqftValue} sq ft` : 'Area N/A';
         sub.push(`- Wood staining: ${detail.sectionLabel} (${detail.sideLabel}; ${lengthLabel}; est. ${sqftLabel})`);
       });
     } else if (hasWoodStaining) {
