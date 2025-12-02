@@ -229,34 +229,9 @@
   .sp-card.is-wood [data-wrought-only]{ display:none !important; }
   .sp-card:not(.is-wood) [data-wood-only]{ display:none !important; }
 
-  .sp-guard{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,0.5);} 
-  .sp-guard.is-hidden{display:none;}
-  .sp-guard-card{max-width:480px;width:100%;background:var(--sp-card);border-radius:16px;padding:24px;border:1px solid var(--sp-border);box-shadow:0 12px 28px rgba(0,0,0,0.18);text-align:left;}
-  .sp-guard-title{font-size:20px;font-weight:800;margin:0 0 8px;color:var(--sp-ink);}
-  .sp-guard-subtitle{margin:0 0 18px;color:var(--sp-muted);line-height:1.5;}
-  .sp-guard-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;}
-  .sp-locked #sp-scope,.sp-locked .sp-floating-actions{filter:blur(3px);pointer-events:none;user-select:none;}
   </style>
 </head>
 <body>
-
-<div class="sp-guard" id="sp-guard" role="alertdialog" aria-modal="true" aria-labelledby="sp-guard-title" aria-describedby="sp-guard-subtitle">
-  <div class="sp-guard-card">
-    <h2 class="sp-guard-title" id="sp-guard-title">Restricted access</h2>
-    <p class="sp-guard-subtitle" id="sp-guard-subtitle">This tool is intended only for authorized Strong Perimeter team members. Enter the access code to continue.</p>
-    <form class="sp-guard-form" id="sp-guard-form">
-      <div class="sp-field">
-        <label class="sp-label" for="sp-access-code">Access code</label>
-        <input class="sp-input" id="sp-access-code" type="password" autocomplete="off" required />
-        <div class="sp-guard-actions">
-          <button class="sp-btn primary" id="sp-guard-submit" type="submit">Unlock</button>
-          <span class="sp-hint" id="sp-guard-status">Ask leadership for the current access code.</span>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
 <div id="sp-scope">
   <div class="sp-container">
     <div class="sp-header">
@@ -607,8 +582,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const NOTES_DATA_VERSION = 1;
   const NOTES_DATA_START = '[[SP_SCOPE_DATA_START]]';
   const NOTES_DATA_END = '[[SP_SCOPE_DATA_END]]';
-  const ACCESS_STORAGE_KEY = 'sp_scope_access_token_v1';
-  const ACCESS_CODE_HASH = 'bc227c69027035d5aaca2ad72ac4320803107d86718d0a9cbc88e4b7ed7dba0e';
 
   const state = { sections: [], crew: DEFAULT_CREW_ID };
   const mapState = {
@@ -639,11 +612,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const estimateStatusEl = document.getElementById('sp-estimate-status');
   const defaultEstimateStatus = estimateStatusEl ? estimateStatusEl.textContent : '';
   const pushHcpBtn = document.getElementById('sp-push-hcp');
-  const guardEl = document.getElementById('sp-guard');
-  const guardFormEl = document.getElementById('sp-guard-form');
-  const guardInputEl = document.getElementById('sp-access-code');
-  const guardStatusEl = document.getElementById('sp-guard-status');
-  const guardSubmitEl = document.getElementById('sp-guard-submit');
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
   const serviceCopyAllBtn = $('#sp-copy-service');
@@ -656,7 +624,6 @@ document.addEventListener('DOMContentLoaded', function(){
   let estimateLookupController = null;
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
-  let accessGranted = false;
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
 
@@ -690,114 +657,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const end = text.indexOf(NOTES_DATA_END);
     if(start === -1 || end === -1 || end <= start) return '';
     return text.slice(start + NOTES_DATA_START.length, end).trim();
-  }
-
-  function setGuardStatus(message, state){
-    if(!guardStatusEl) return;
-    guardStatusEl.textContent = message || '';
-    guardStatusEl.dataset.state = state || '';
-  }
-
-  function lockInterface(){
-    document.documentElement.classList.add('sp-locked');
-    if(guardEl){
-      guardEl.classList.remove('is-hidden');
-    }
-    if(estimateLookupBtn){
-      estimateLookupBtn.disabled = true;
-    }
-    if(mapAddressInput){
-      mapAddressInput.disabled = true;
-    }
-  }
-
-  function unlockInterface(){
-    document.documentElement.classList.remove('sp-locked');
-    if(guardEl){
-      guardEl.classList.add('is-hidden');
-    }
-    if(estimateLookupBtn){
-      estimateLookupBtn.disabled = false;
-    }
-    if(mapAddressInput){
-      mapAddressInput.disabled = false;
-    }
-  }
-
-  function focusGuard(){
-    if(guardInputEl){
-      guardInputEl.focus();
-      guardInputEl.select();
-    }
-  }
-
-  async function hashText(value){
-    if(!value) return '';
-    if(window.crypto && window.crypto.subtle && typeof TextEncoder !== 'undefined'){
-      const encoder = new TextEncoder();
-      const data = encoder.encode(value);
-      const digest = await window.crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-    return value;
-  }
-
-  async function isValidAccessCode(value){
-    if(!value) return false;
-    try{
-      const hashed = await hashText(String(value).trim());
-      return hashed === ACCESS_CODE_HASH;
-    }catch(err){
-      console.warn('Unable to validate access code', err);
-      return false;
-    }
-  }
-
-  function promptForAccess(message){
-    setGuardStatus(message || 'Enter the access code to continue.', 'warn');
-    lockInterface();
-    focusGuard();
-  }
-
-  async function handleAccessSuccess(){
-    accessGranted = true;
-    unlockInterface();
-    setGuardStatus('Access granted. Address lookup is enabled.', 'success');
-    if(guardInputEl){
-      guardInputEl.value = '';
-    }
-    try{
-      localStorage.setItem(ACCESS_STORAGE_KEY, ACCESS_CODE_HASH);
-    }catch(err){
-      console.warn('Unable to persist access grant', err);
-    }
-  }
-
-  async function handleAccessSubmit(){
-    const value = guardInputEl ? guardInputEl.value : '';
-    setGuardStatus('Checking access code…', 'loading');
-    const isValid = await isValidAccessCode(value);
-    if(isValid){
-      await handleAccessSuccess();
-    }else{
-      setGuardStatus('Invalid code. Please try again or contact leadership.', 'error');
-      focusGuard();
-    }
-  }
-
-  async function bootstrapAccessGate(){
-    lockInterface();
-    try{
-      const stored = localStorage.getItem(ACCESS_STORAGE_KEY);
-      if(stored && stored === ACCESS_CODE_HASH){
-        await handleAccessSuccess();
-        return;
-      }
-    }catch(err){
-      console.warn('Unable to read stored access token', err);
-    }
-    setGuardStatus('Enter the access code to continue.', 'warn');
-    focusGuard();
   }
 
   function parseLegacyNotesSnapshot(text){
@@ -1268,11 +1127,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function runEstimateLookup(){
     if(!estimateNumberInput){
-      return;
-    }
-    if(!accessGranted){
-      updateEstimateStatus('Access required. Enter the access code to look up addresses.', 'error');
-      promptForAccess('Enter the access code to continue.');
       return;
     }
     const digits = sanitizeEstimateNumber(estimateNumberInput.value || '');
@@ -7231,24 +7085,11 @@ document.addEventListener('DOMContentLoaded', function(){
     outputEl.style.display='none';
     renderServiceLineNotes([]);
   }
-
-  bootstrapAccessGate();
-
   window._spInitializeMap = initializeMap;
   if(window._spGoogleMapsReady){
     initializeMap();
   }
   updateMapControlsUI();
-
-  if(guardFormEl){
-    guardFormEl.addEventListener('submit', evt => {
-      evt.preventDefault();
-      handleAccessSubmit();
-    });
-  }
-  if(guardInputEl){
-    guardInputEl.addEventListener('input', ()=>setGuardStatus('', ''));
-  }
 
   const mapClearBtn = document.getElementById('sp-map-clear');
   if(mapClearBtn){
