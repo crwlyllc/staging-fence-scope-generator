@@ -383,6 +383,28 @@ window.initMap = function(){
 };
 document.addEventListener('DOMContentLoaded', function(){
   document.title = 'Scope Generator';
+  (function refreshMaterials(){
+    if(typeof fetch !== 'function'){
+      return;
+    }
+    fetch('https://api.strongclicks.io/webhook/scopegenerator-get-materials', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    }).then(res => {
+      if(!res.ok){
+        throw new Error(`Material refresh failed with status ${res.status}`);
+      }
+      return res.json();
+    }).then(payload => {
+      if(payload){
+        console.info('Material catalog refreshed from Housecall Pro.');
+      }
+    }).catch(err => {
+      console.warn('Unable to refresh material catalog', err);
+    });
+  })();
   (function setBackground(){
     var root = document.documentElement;
     if(!root) return;
