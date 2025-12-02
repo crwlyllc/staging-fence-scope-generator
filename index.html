@@ -3837,7 +3837,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function feetFromStr(h){
-    const m = String(h||'').match(/(\\d+)/);
+    const m = String(h||'').match(/(\d+)/);
     return m ? parseInt(m[1],10) : 0;
   }
   function styleFactor(v){
