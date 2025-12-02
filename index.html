@@ -135,6 +135,7 @@
     border-radius:0;
     box-shadow:0 4px 12px rgba(0,0,0,.1);
     align-items:center;
+    justify-content:center;
     flex-direction:row;
     flex-wrap:nowrap;
     max-width:none;
@@ -453,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const WOOD_PICKET_WIDTHS = ['3.5"','4"','5.5"','6"'];
   const WOOD_RAIL_SIZES = ['2x3','2x4'];
   const WOOD_TRIM_TYPES = ['1x2','1x4','1x4 & 1x2'];
-  const SIMPSON_TIE_OPTIONS = ['1 piece','2 piece'];
+  const SIMPSON_TIE_OPTIONS = ['1 piece ties','2 piece ties'];
   const WOOD_POST_CAP_TYPES = ['Dome cap','Flat cap'];
   const WOOD_POST_METHODS = [
     { value: 'cut-weld', label: 'Cut & Weld' },
@@ -1702,6 +1703,7 @@ document.addEventListener('DOMContentLoaded', function(){
             <option value="Oil Based Stain">Oil Based Stain</option>
             <option value="Water Based Stain">Water Based Stain</option>
             <option value="Painted">Painted</option>
+            <option value="Unfinished">Unfinished</option>
           </select>
         </div>
         <div class="sp-field col-12" data-wood-only>
@@ -5494,7 +5496,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(postReplace){
           const tie = (s.woodRepairPostReplaceTie || '').trim();
           const cap = (s.woodRepairPostReplaceCap || '').trim();
-          const extras = [tie ? `Simpson tie ${tie}` : '', cap ? `cap: ${cap}` : ''].filter(Boolean).join(', ');
+          const extras = [tie ? `Simpson ${tie}` : '', cap ? `cap: ${cap}` : ''].filter(Boolean).join(', ');
           parts.push(`Replace ${postReplace}${extras ? ` (${extras})` : ''}`);
           const perPostHours = (woodHeightFt >= 8) ? 1.5 : 1;
           const hours = postReplaceCount * perPostHours * 2; // two-person task
@@ -5528,7 +5530,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(postInstall){
           const method = methodLabel(WOOD_POST_INSTALL_METHODS, s.woodRepairPostInstallMethod);
           const tie = (s.woodRepairPostInstallTie || '').trim();
-          const extras = [method, tie ? `Simpson tie ${tie}` : ''].filter(Boolean).join('; ');
+          const extras = [method, tie ? `Simpson ${tie}` : ''].filter(Boolean).join('; ');
           parts.push(`${postInstall}${extras ? ` (${extras})` : ''}`);
           const hours = postInstallCount * (45/60);
           totals.woodPostInstall += postInstallCount;
@@ -5775,6 +5777,37 @@ document.addEventListener('DOMContentLoaded', function(){
     if(woodStainBuckets > 0){
       addMat(materials, '5 gal wood stain bucket', woodStainBuckets);
     }
+
+    const woodRailsForHeight = (heightFt)=>{
+      if(!isFinite(heightFt) || heightFt <= 0) return 3;
+      return heightFt >= 8 ? 4 : 3;
+    };
+
+    function addWoodPostReplacementMaterials(){
+      state.sections.forEach(s=>{
+        if((s.fenceType || '').toLowerCase() !== 'wood') return;
+        const replaceCount = parseInt(s.woodRepairPostReplace || 0, 10) || 0;
+        if(replaceCount <= 0) return;
+        const heightFt = Math.max(0, feetFromStr(s.woodHeight || s.height));
+        const railsPerPost = woodRailsForHeight(heightFt);
+        const hasKickBoard = !!s.woodAddKickBoard;
+        const tiesPerPost = railsPerPost + (hasKickBoard ? 1 : 0);
+        const totalTies = replaceCount * tiesPerPost;
+        const postLabel = normalizeLabelText(s.woodPost || 'Wood post');
+        addMat(materials, `${postLabel} posts`, replaceCount);
+        const capLabel = normalizeLabelText(s.woodRepairPostReplaceCap || '');
+        if(capLabel) addMat(materials, `${capLabel} post cap`, replaceCount);
+        const tieLabel = normalizeLabelText((s.woodRepairPostReplaceTie || SIMPSON_TIE_OPTIONS[0]) || '');
+        if(totalTies > 0){
+          addMat(materials, `Simpson ${tieLabel}`, totalTies);
+          addMat(materials, 'lag screws', totalTies * 4);
+        }
+        const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
+        addMat(materials, 'bags of Maximizer concrete', replaceCount * bagsPerPost);
+      });
+    }
+
+    addWoodPostReplacementMaterials();
 
     // ==== Materials aggregation ====
     let paintLenTotal = 0;
