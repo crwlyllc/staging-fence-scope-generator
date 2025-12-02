@@ -253,6 +253,23 @@
       </div>
     </div>
 
+    <div class="sp-card" id="sp-import-card" style="margin-bottom:16px">
+      <div class="sp-card-header">
+        <div class="sp-card-title">Reload from Notes</div>
+        <div class="sp-row">
+          <button class="sp-btn" id="sp-import-btn" type="button">Load Notes</button>
+          <button class="sp-btn ghost" id="sp-import-clear" type="button">Clear</button>
+        </div>
+      </div>
+      <div class="sp-grid">
+        <div class="sp-field col-12">
+          <label class="sp-label" for="sp-import-text">Paste saved notes</label>
+          <textarea class="sp-textarea" id="sp-import-text" placeholder="Paste previously generated notes to restore sections, crew, and map info..."></textarea>
+          <div class="sp-hint" id="sp-import-status">Paste notes that include the embedded reload key added by this generator.</div>
+        </div>
+      </div>
+    </div>
+
     <div class="sp-card" id="sp-map-card">
       <div class="sp-card-header">
         <div class="sp-card-title">Map Measurements</div>
@@ -538,6 +555,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const DEFAULT_CREW_ID = 'jesus';
 
+  const NOTES_DATA_VERSION = 1;
+  const NOTES_DATA_START = '[[SP_SCOPE_DATA_START]]';
+  const NOTES_DATA_END = '[[SP_SCOPE_DATA_END]]';
+
   const state = { sections: [], crew: DEFAULT_CREW_ID };
   const mapState = {
     map: null,
@@ -550,12 +571,17 @@ document.addEventListener('DOMContentLoaded', function(){
     nextPolylineId: 1,
     pendingAddress: '',
   };
+  let pendingMapRestore = null;
   let mapUpdateScheduled = false;
 
   const sectionsEl = $('#sp-sections');
   const outputEl   = $('#sp-output');
   const notesEl    = $('#sp-notes');
   const notesSubEl = $('#sp-notes-sub');
+  const importTextEl = document.getElementById('sp-import-text');
+  const importBtn = document.getElementById('sp-import-btn');
+  const importClearBtn = document.getElementById('sp-import-clear');
+  const importStatusEl = document.getElementById('sp-import-status');
   const estimateNumberInput = document.getElementById('sp-estimate-number');
   const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
   const mapAddressInput = document.getElementById('sp-map-address');
@@ -579,6 +605,34 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function sanitizeEstimateNumber(value){
     return (value || '').replace(/[^0-9]/g, '');
+  }
+
+  function encodePayloadForNotes(payload){
+    try{
+      const json = JSON.stringify(payload);
+      return btoa(unescape(encodeURIComponent(json)));
+    }catch(err){
+      console.error('Failed to encode notes payload', err);
+      return '';
+    }
+  }
+
+  function decodePayloadFromNotes(encoded){
+    try{
+      const json = decodeURIComponent(escape(atob(encoded)));
+      return JSON.parse(json);
+    }catch(err){
+      console.error('Failed to decode notes payload', err);
+      return null;
+    }
+  }
+
+  function extractEmbeddedNotesData(text){
+    if(!text) return '';
+    const start = text.indexOf(NOTES_DATA_START);
+    const end = text.indexOf(NOTES_DATA_END);
+    if(start === -1 || end === -1 || end <= start) return '';
+    return text.slice(start + NOTES_DATA_START.length, end).trim();
   }
 
   function updateCrewUI(){
@@ -606,6 +660,18 @@ document.addEventListener('DOMContentLoaded', function(){
       estimateStatusEl.setAttribute('data-state', nextState);
     }else{
       estimateStatusEl.removeAttribute('data-state');
+    }
+  }
+
+  function updateImportStatus(message, state){
+    if(!importStatusEl){
+      return;
+    }
+    importStatusEl.textContent = message || 'Paste notes that include the embedded reload key added by this generator.';
+    if(state){
+      importStatusEl.setAttribute('data-state', state);
+    } else {
+      importStatusEl.removeAttribute('data-state');
     }
   }
 
@@ -1196,6 +1262,75 @@ document.addEventListener('DOMContentLoaded', function(){
     scheduleMapSectionsUpdate();
   }
 
+  function serializePolylinePath(polyline){
+    if(!polyline || typeof polyline.getPath !== 'function'){
+      return [];
+    }
+    const path = polyline.getPath();
+    if(!path || typeof path.getLength !== 'function') return [];
+    const coords = [];
+    const len = path.getLength();
+    for(let i=0;i<len;i++){
+      const pt = path.getAt(i);
+      if(pt && typeof pt.lat === 'function' && typeof pt.lng === 'function'){
+        coords.push({ lat: pt.lat(), lng: pt.lng() });
+      }
+    }
+    return coords;
+  }
+
+  function serializeMapDrawing(){
+    const polylines = [];
+    if(mapState.polylines && mapState.polylines.length && typeof google !== 'undefined' && google.maps){
+      mapState.polylines.forEach(poly=>{
+        const coords = serializePolylinePath(poly);
+        if(coords.length >= 2){
+          polylines.push({ id: poly.__spPolylineId || '', path: coords });
+        }
+      });
+    }
+    const address = mapAddressInput ? (mapAddressInput.value || '').trim() : '';
+    return { address, polylines, nextPolylineId: mapState.nextPolylineId || 1 };
+  }
+
+  function applyPendingMapRestore(){
+    if(!pendingMapRestore || !mapState.map || typeof google === 'undefined' || !google.maps || !google.maps.Polyline){
+      return;
+    }
+
+    const restore = pendingMapRestore;
+    pendingMapRestore = null;
+    clearMapDrawing({ skipSections: true });
+
+    const baseOpts = { editable: true, draggable: true, strokeColor: '#d97706', strokeWeight: 3 };
+    let maxId = restore.nextPolylineId || mapState.nextPolylineId || 1;
+    (restore.polylines || []).forEach(data=>{
+      if(!data || !Array.isArray(data.path) || data.path.length < 2) return;
+      const path = data.path.map(pt => ({ lat: pt.lat, lng: pt.lng })).filter(pt=>isFinite(pt.lat) && isFinite(pt.lng));
+      if(path.length < 2) return;
+      const polyline = new google.maps.Polyline({ ...baseOpts, map: mapState.map, path });
+      polyline.__spPolylineId = data.id || `poly-${mapState.nextPolylineId++}`;
+      const numericId = parseInt(String(polyline.__spPolylineId).replace(/[^0-9]/g,''),10);
+      if(isFinite(numericId)){
+        maxId = Math.max(maxId, numericId + 1);
+      }
+      attachMapPolyline(polyline);
+    });
+    mapState.nextPolylineId = Math.max(mapState.nextPolylineId || 1, maxId);
+    scheduleMapSectionsUpdate();
+  }
+
+  function restoreMapFromSnapshot(mapData){
+    clearMapDrawing({ skipSections: true });
+    if(!mapData || !mapData.polylines || !mapData.polylines.length){
+      pendingMapRestore = null;
+      updateMapControlsUI();
+      return;
+    }
+    pendingMapRestore = mapData;
+    applyPendingMapRestore();
+  }
+
   function initializeMap(){
     if(mapState.map) return;
     if(typeof google === 'undefined' || !google.maps || !google.maps.drawing) return;
@@ -1293,6 +1428,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       });
     }
+    applyPendingMapRestore();
     updateMapControlsUI();
   }
 
@@ -3880,6 +4016,52 @@ document.addEventListener('DOMContentLoaded', function(){
       .trim();
   }
 
+  function snapshotForNotes(){
+    const crewId = (state.crew && CREWS[state.crew]) ? state.crew : DEFAULT_CREW_ID;
+    const sections = JSON.parse(JSON.stringify(state.sections || []));
+    return {
+      version: NOTES_DATA_VERSION,
+      generatedAt: new Date().toISOString(),
+      state: { crew: crewId, sections },
+      map: serializeMapDrawing(),
+      estimate: {
+        number: lastEstimateLookupNumber || '',
+        address: mapAddressInput ? (mapAddressInput.value || '').trim() : '',
+      }
+    };
+  }
+
+  function applySnapshotToState(payload){
+    if(!payload || !payload.state || !Array.isArray(payload.state.sections)){
+      throw new Error('No sections found in the embedded data');
+    }
+    clearMapDrawing({ skipSections: true });
+    const nextSections = payload.state.sections.map(sec => createSectionBase(sec));
+    if(!nextSections.length){
+      throw new Error('No sections found in the embedded data');
+    }
+
+    state.sections = nextSections;
+    state.crew = (payload.state.crew && CREWS[payload.state.crew]) ? payload.state.crew : DEFAULT_CREW_ID;
+
+    const importAddress = (payload.map && payload.map.address) || (payload.estimate && payload.estimate.address) || '';
+    if(mapAddressInput){
+      mapAddressInput.value = importAddress || '';
+      if(importAddress){
+        focusMapOnAddress(importAddress);
+      }
+    }
+
+    if(payload.map){
+      restoreMapFromSnapshot(payload.map);
+    }
+
+    render();
+    updateCrewUI();
+    renderServiceLineNotes([]);
+    generateNotes({ skipScroll: true });
+  }
+
   const PRICE_FT = {
     '1/2\"': 0.57,
     '5/8\"': 0.68,
@@ -6344,6 +6526,15 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     const fullNotesWithScenarios = [...fullNotes, '', ...inHouseScenarioLines];
+
+    const snapshot = snapshotForNotes();
+    const encodedSnapshot = encodePayloadForNotes(snapshot);
+    if(encodedSnapshot){
+      fullNotesWithScenarios.push('');
+      fullNotesWithScenarios.push('Reload key (for Scope Generator, do not edit)');
+      fullNotesWithScenarios.push(`${NOTES_DATA_START}${encodedSnapshot}${NOTES_DATA_END}`);
+    }
+
     notesEl.value = fullNotesWithScenarios.join('\n');
     outputEl.style.display = 'grid';
     if (window.parentIFrame && typeof window.parentIFrame.size === 'function') {
@@ -6599,6 +6790,44 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const KEY = 'sp_scope_v1';
 
+  function handleNotesImport(){
+    if(!importTextEl){
+      return;
+    }
+    const raw = (importTextEl.value || '').trim();
+    if(!raw){
+      updateImportStatus('Paste notes to reload.', 'warn');
+      return;
+    }
+
+    const encoded = extractEmbeddedNotesData(raw);
+    if(!encoded){
+      updateImportStatus('No embedded scope data found in the pasted notes.', 'error');
+      return;
+    }
+
+    const payload = decodePayloadFromNotes(encoded);
+    if(!payload){
+      updateImportStatus('Could not read the embedded data.', 'error');
+      return;
+    }
+
+    try{
+      applySnapshotToState(payload);
+      updateImportStatus('Scope restored from pasted notes.', 'success');
+    }catch(err){
+      console.error('Failed to apply snapshot', err);
+      updateImportStatus('Embedded data was invalid or incomplete.', 'error');
+    }
+  }
+
+  function clearImportField(){
+    if(importTextEl){
+      importTextEl.value = '';
+    }
+    updateImportStatus('', '');
+  }
+
   function scheduleAutoGenerateNotes(){
     if(isGeneratingNotes){
       return;
@@ -6703,6 +6932,12 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   if(serviceCopyAllBtn){ serviceCopyAllBtn.addEventListener('click', copyAllServiceLines); }
   if(serviceListEl){ serviceListEl.addEventListener('click', handleServiceListClick); }
+  if(importBtn){
+    importBtn.addEventListener('click', handleNotesImport);
+  }
+  if(importClearBtn){
+    importClearBtn.addEventListener('click', clearImportField);
+  }
   document.getElementById('sp-reset').addEventListener('click', resetAll);
 
   const backTopBtn = document.getElementById('sp-top-btn');
