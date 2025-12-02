@@ -635,6 +635,158 @@ document.addEventListener('DOMContentLoaded', function(){
     return text.slice(start + NOTES_DATA_START.length, end).trim();
   }
 
+  function parseLegacyNotesSnapshot(text){
+    if(!text) return null;
+
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const sections = [];
+    let current = null;
+
+    const parseNumber = (value)=>{
+      const match = String(value||'').replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);
+      return match ? parseFloat(match[0]) : NaN;
+    };
+
+    const pushCurrent = ()=>{
+      if(current){
+        sections.push(current);
+        current = null;
+      }
+    };
+
+    lines.forEach(rawLine => {
+      const line = normalizeLabelText(rawLine);
+      if(!line) return;
+
+      const sectionMatch = line.match(/^Section\s+\d+\s*-\s*(.+)$/i);
+      if(sectionMatch){
+        pushCurrent();
+        const labelText = sectionMatch[1].trim();
+        current = createSectionBase({});
+        current.label = labelText;
+        if(/map run/i.test(labelText)){
+          current.mapGeneratedLabel = labelText;
+        }
+        return;
+      }
+
+      if(!current) return;
+
+      const scopeMatch = line.match(/^-\s*Scope:\s*(.+)$/i);
+      if(scopeMatch){
+        const rawScope = scopeMatch[1].toLowerCase();
+        if(/install/.test(rawScope)) current.scopeType = 'install';
+        else if(/replace/.test(rawScope)) current.scopeType = 'replace';
+        else current.scopeType = 'repair';
+        return;
+      }
+
+      const styleMatch = line.match(/^-\s*Style:\s*(.+)$/i);
+      if(styleMatch){
+        current.style = styleMatch[1].trim();
+        return;
+      }
+
+      const heightMatch = line.match(/^-\s*Height:\s*(.+)$/i);
+      if(heightMatch){
+        current.height = heightMatch[1].trim();
+        return;
+      }
+
+      const railsMatch = line.match(/^-\s*Rails:\s*Top\s*Rail:\s*([^;]+);\s*Bottom\s*Rail:\s*(.+)$/i);
+      if(railsMatch){
+        const topRaw = railsMatch[1].trim();
+        const bottomRaw = railsMatch[2].trim();
+        const topStacked = /stacked/i.test(topRaw);
+        const topSizes = topRaw.replace(/\(stacked\)/i,'').split('+').map(part => normalizeSize(part));
+        const topSize = topSizes[0] || SEED.railSize[0];
+        const topSize2 = topStacked ? (topSizes[1] || topSizes[0] || SEED.railSize[0]) : (topSizes[1] || topSizes[0]);
+        const bottomSize = normalizeSize(bottomRaw || SEED.railSize[0]);
+        current.rails = [
+          { size: topSize, stacked: topStacked || (!!topSizes[1]), size2: topSize2 || topSize, patches:0, replacements:0 },
+          { size: bottomSize || SEED.railSize[0], stacked:false, size2: bottomSize || SEED.railSize[0], patches:0, replacements:0 },
+        ];
+        current.railsCount = current.rails.length;
+        return;
+      }
+
+      const picketMatch = line.match(/^-\s*Picket:\s*(.+)$/i);
+      if(picketMatch){
+        const clean = normalizeSize(picketMatch[1]);
+        current.picketSize = clean || current.picketSize;
+        return;
+      }
+
+      const puppyMatch = line.match(/^-\s*Puppy\s*Pickets:\s*(.+)$/i);
+      if(puppyMatch){
+        const val = puppyMatch[1].trim();
+        current.puppy = val && !/none/i.test(val) ? 'Puppy Pickets' : 'None';
+        return;
+      }
+
+      const paintingMatch = line.match(/^-\s*Painting:\s*(.+)$/i);
+      if(paintingMatch){
+        current.painting = paintingMatch[1].trim();
+        return;
+      }
+
+      const paintMethodMatch = line.match(/^-\s*Paint\s*application:\s*(.+)$/i);
+      if(paintMethodMatch){
+        current.paintingApplication = paintMethodMatch[1].trim();
+        return;
+      }
+
+      const lengthMatch = line.match(/^-\s*Length:\s*(.+)$/i);
+      if(lengthMatch){
+        const num = parseNumber(lengthMatch[1]);
+        if(isFinite(num)) current.length = num;
+        return;
+      }
+
+      const hardscapeMatch = line.match(/^-\s*Over\s*hardscape:\s*(.+)$/i);
+      if(hardscapeMatch){
+        const num = parseNumber(hardscapeMatch[1]);
+        if(isFinite(num)) current.hardscape = num;
+        return;
+      }
+
+      const trimMatch = line.match(/^-\s*Trim:\s*(.+)$/i);
+      if(trimMatch){
+        const num = parseNumber(trimMatch[1]);
+        if(isFinite(num)) current.trim = num;
+        return;
+      }
+
+      const digMatch = line.match(/^-\s*Dig\s*out:\s*(.+)$/i);
+      if(digMatch){
+        const num = parseNumber(digMatch[1]);
+        if(isFinite(num)) current.digOut = num;
+        return;
+      }
+
+      const repairPicketsMatch = line.match(/^-\s*Pickets\s*to\s*replace:\s*(.+)$/i);
+      if(repairPicketsMatch){
+        const num = parseNumber(repairPicketsMatch[1]);
+        if(isFinite(num)) current.wiPickets = num;
+        return;
+      }
+    });
+
+    pushCurrent();
+
+    if(!sections.length){
+      return null;
+    }
+
+    return {
+      version: NOTES_DATA_VERSION,
+      generatedAt: new Date().toISOString(),
+      state: { crew: DEFAULT_CREW_ID, sections },
+      map: { address: '', polylines: [], nextPolylineId: 1 },
+      estimate: { number: '', address: '' }
+    };
+  }
+
   function updateCrewUI(){
     const crewDef = getCrewDefinition(state.crew);
     if(crewSelectEl && crewDef){
@@ -6801,15 +6953,23 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const encoded = extractEmbeddedNotesData(raw);
-    if(!encoded){
-      updateImportStatus('No embedded scope data found in the pasted notes.', 'error');
-      return;
-    }
+    const payload = encoded ? decodePayloadFromNotes(encoded) : null;
 
-    const payload = decodePayloadFromNotes(encoded);
     if(!payload){
-      updateImportStatus('Could not read the embedded data.', 'error');
-      return;
+      const legacySnapshot = parseLegacyNotesSnapshot(raw);
+      if(!legacySnapshot){
+        updateImportStatus('No embedded scope data found in the pasted notes.', 'error');
+        return;
+      }
+      try{
+        applySnapshotToState(legacySnapshot);
+        updateImportStatus('Scope restored from pasted notes (legacy format).', 'success');
+        return;
+      }catch(err){
+        console.error('Failed to apply legacy snapshot', err);
+        updateImportStatus('Embedded data was invalid or incomplete.', 'error');
+        return;
+      }
     }
 
     try{
