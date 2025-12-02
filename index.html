@@ -1352,6 +1352,10 @@ document.addEventListener('DOMContentLoaded', function(){
             <option value="8ft">8ft</option>
           </select>
         </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Section Length (ft)</label>
+          ${numberControl('length','e.g., 48')}
+        </div>
         <div class="sp-field col-2" data-wood-only>
           <label class="sp-label">Construction</label>
           <select class="sp-select" data-field="woodStyle">
@@ -1560,11 +1564,6 @@ document.addEventListener('DOMContentLoaded', function(){
             <option value="inside">Stain inside</option>
             <option value="both">Stain both sides</option>
           </select>
-        </div>
-
-        <div class="sp-field col-3">
-          <label class="sp-label">Section Length (ft)</label>
-          ${numberControl('length','e.g., 48')}
         </div>
 
         <div class="sp-grid col-12" data-retaining-wall data-install-only style="display:none">
