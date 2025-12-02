@@ -5259,6 +5259,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const topCapHours = hasTopCap ? normalizedLengthFt * (0.5/60) : 0;
             const hours = baseHours + topCapHours;
             woodManHours += hours;
+            woodHelperHours += hours;
           }
           hasWoodStaining = true;
           const sectionLabel = s.label || `Section ${idx + 1}`;
