@@ -5900,8 +5900,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const capHours = totals.caps * (20/60);
     manHours += capHours;
     helperHours += capHours;
-    const puppyInsertWelderHours = totals.puppyInserts * 0.5;
-    const puppyInsertHelperHours = totals.puppyInserts * 0.5;
+    const puppyInsertWelderHours = totals.puppyInserts * 0.5; // 30 minutes each
+    const puppyInsertHelperHours = totals.puppyInserts * (5/60); // 5 minutes each
     const puppyInsertManHours = puppyInsertWelderHours + puppyInsertHelperHours;
     manHours += puppyInsertManHours;
     welderHours += puppyInsertWelderHours;
