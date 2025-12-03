@@ -279,10 +279,11 @@
       </div>
     </div>
 
-    <div class="sp-card" id="sp-map-card">
+    <div class="sp-card is-collapsed" id="sp-map-card">
       <div class="sp-card-header">
         <div class="sp-card-title">Map Measurements</div>
         <div class="sp-row">
+          <button class="sp-btn ghost" id="sp-map-toggle" type="button" aria-expanded="false">Expand Map</button>
           <button class="sp-btn ghost" id="sp-map-clear" type="button" disabled>Clear Map Sections</button>
         </div>
       </div>
@@ -638,6 +639,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const estimateNumberInput = document.getElementById('sp-estimate-number');
   const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
   const mapAddressInput = document.getElementById('sp-map-address');
+  const mapCardEl = document.getElementById('sp-map-card');
+  const mapToggleBtn = document.getElementById('sp-map-toggle');
   const estimateStatusEl = document.getElementById('sp-estimate-status');
   const defaultEstimateStatus = estimateStatusEl ? estimateStatusEl.textContent : '';
   const pushHcpBtn = document.getElementById('sp-push-hcp');
@@ -1301,6 +1304,18 @@ document.addEventListener('DOMContentLoaded', function(){
     if(clearBtn){
       const hasLinkedSections = state.sections.some(sec=>sec.mapGenerated);
       clearBtn.disabled = mapState.polylines.length === 0 && !hasLinkedSections;
+    }
+  }
+
+  function setMapCollapsed(collapsed){
+    if(!mapCardEl) return;
+    mapCardEl.classList.toggle('is-collapsed', collapsed);
+    if(mapToggleBtn){
+      mapToggleBtn.textContent = collapsed ? 'Expand Map' : 'Collapse Map';
+      mapToggleBtn.setAttribute('aria-expanded', (!collapsed).toString());
+    }
+    if(!collapsed && mapState.map && typeof google !== 'undefined' && google.maps && google.maps.event){
+      google.maps.event.trigger(mapState.map, 'resize');
     }
   }
 
@@ -7128,6 +7143,14 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!mapState.polylines.length && !hasLinkedSections) return;
       if(!confirm('Remove all map drawings and linked sections?')) return;
       clearMapDrawing();
+    });
+  }
+
+  if(mapToggleBtn && mapCardEl){
+    setMapCollapsed(mapCardEl.classList.contains('is-collapsed'));
+    mapToggleBtn.addEventListener('click', ()=>{
+      const next = !mapCardEl.classList.contains('is-collapsed');
+      setMapCollapsed(next);
     });
   }
 
