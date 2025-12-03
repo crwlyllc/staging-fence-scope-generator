@@ -6577,28 +6577,6 @@ document.addEventListener('DOMContentLoaded', function(){
       };
     });
 
-    let durationStr = 'TBD';
-    if(scheduleEntries.length === 1){
-      const entry = scheduleEntries[0];
-      durationStr = `1 day of work: ${entry.crewLabel}${entry.suffix}`;
-    } else if(scheduleEntries.length > 1){
-      const parts = scheduleEntries.map(entry => `Day ${entry.number}: ${entry.crewLabel}${entry.suffix}`);
-      durationStr = `${scheduleEntries.length} days of work: ${parts.join(', ')}`;
-    }
-
-    lines.push('');
-    lines.push('CREW');
-    lines.push(`- Lead: ${crewSummary(crewDef)}`);
-    if(scheduleEntries.length){
-      scheduleEntries.forEach(entry => {
-        const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
-        const costPart = entry.cost > 0 ? ` ($${money(entry.cost)})` : '';
-        lines.push(`- ${dayTitle}: ${entry.crewLabel}${costPart}`);
-      });
-    } else {
-      lines.push('- Schedule: TBD');
-    }
-
     const materialEntries = Object.keys(materials)
       .filter(label => materials[label] > 0)
       .sort((a, b) => a.localeCompare(b))
@@ -6623,15 +6601,6 @@ document.addEventListener('DOMContentLoaded', function(){
     } else {
       sub.push('- Schedule: TBD');
     }
-    sub.push('');
-    sub.push('JOB DURATION');
-    sub.push('- '+durationStr);
-    sub.push('');
-    sub.push('MATERIALS');
-    materialEntries.forEach(({ label, qty }) => {
-      sub.push(`- ${qty}x ${label}`);
-    });
-
     sub.push('');
     sub.push('SCOPE (Totals)');
     if (totals.replaceSections > 0) sub.push('- Sections to replace: '+totals.replaceSections);
@@ -6716,6 +6685,11 @@ document.addEventListener('DOMContentLoaded', function(){
     } else if (hasWoodStaining) {
       sub.push('- Wood staining selected; add section length and height to estimate area.');
     }
+    sub.push('');
+    sub.push('MATERIALS');
+    materialEntries.forEach(({ label, qty }) => {
+      sub.push(`- ${qty}x ${label}`);
+    });
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
     const totalCrewCount = crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0);
