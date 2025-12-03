@@ -38,6 +38,7 @@
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
   #sp-map-card{margin-bottom:16px}
   #sp-crew-card{margin-top:18px}
+  .sp-inline-cards{display:grid;gap:16px;margin-bottom:16px}
   .sp-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .sp-card-title{font-size:16px;font-weight:800}
   .sp-card.is-collapsed .sp-grid{display:none}
@@ -51,6 +52,7 @@
     .col-2{grid-column:span 2}
     .col-8{grid-column:span 8}
     .col-12{grid-column:span 12}
+    .sp-inline-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   @media(max-width:719px){
     .sp-container{padding:20px 16px 36px}
@@ -241,36 +243,38 @@
       </div>
     </div>
 
-    <div class="sp-card" id="sp-hcp-card" style="margin-bottom:16px">
-      <div class="sp-card-header">
-        <div class="sp-card-title">Housecall Pro Estimate</div>
-      </div>
-      <div class="sp-grid">
-        <div class="sp-field col-12">
-          <label class="sp-label" for="sp-estimate-number">Estimate Number from Housecall Pro</label>
-          <input class="sp-input" id="sp-estimate-number" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" />
-          <div class="sp-row" style="margin-top:8px">
-            <button class="sp-btn ghost" id="sp-estimate-lookup" type="button">Fetch Estimate Address</button>
+    <div class="sp-inline-cards">
+      <div class="sp-card" id="sp-hcp-card">
+        <div class="sp-card-header">
+          <div class="sp-card-title">Housecall Pro Estimate</div>
+        </div>
+        <div class="sp-grid">
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-estimate-number">Estimate Number from Housecall Pro</label>
+            <input class="sp-input" id="sp-estimate-number" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" />
+            <div class="sp-row" style="margin-top:8px">
+              <button class="sp-btn ghost" id="sp-estimate-lookup" type="button">Fetch Estimate Address</button>
+            </div>
+            <div class="sp-hint">Enter the estimate number and click “Fetch Estimate Address” to load the service address from Housecall Pro.</div>
+            <div class="sp-hint" id="sp-estimate-status" aria-live="polite"></div>
           </div>
-          <div class="sp-hint">Enter the estimate number and click “Fetch Estimate Address” to load the service address from Housecall Pro.</div>
-          <div class="sp-hint" id="sp-estimate-status" aria-live="polite"></div>
         </div>
       </div>
-    </div>
 
-    <div class="sp-card" id="sp-import-card" style="margin-bottom:16px">
-      <div class="sp-card-header">
-        <div class="sp-card-title">Reload from Notes</div>
-        <div class="sp-row">
-          <button class="sp-btn" id="sp-import-btn" type="button">Load Notes</button>
-          <button class="sp-btn ghost" id="sp-import-clear" type="button">Clear</button>
+      <div class="sp-card" id="sp-import-card">
+        <div class="sp-card-header">
+          <div class="sp-card-title">Reload from Notes</div>
+          <div class="sp-row">
+            <button class="sp-btn" id="sp-import-btn" type="button">Load Notes</button>
+            <button class="sp-btn ghost" id="sp-import-clear" type="button">Clear</button>
+          </div>
         </div>
-      </div>
-      <div class="sp-grid">
-        <div class="sp-field col-12">
-          <label class="sp-label" for="sp-import-text">Paste saved notes</label>
-          <textarea class="sp-textarea" id="sp-import-text" placeholder="Paste previously generated notes to restore sections, crew, and map info..."></textarea>
-          <div class="sp-hint" id="sp-import-status">Paste notes that include the embedded reload key added by this generator.</div>
+        <div class="sp-grid">
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-import-text">Paste saved notes</label>
+            <textarea class="sp-textarea" id="sp-import-text" placeholder="Paste previously generated notes to restore sections, crew, and map info..."></textarea>
+            <div class="sp-hint" id="sp-import-status">Paste notes that include the embedded reload key added by this generator.</div>
+          </div>
         </div>
       </div>
     </div>
