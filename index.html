@@ -236,6 +236,9 @@
   <div class="sp-container">
     <div class="sp-header">
       <div class="sp-title">Wrought Iron Restoration – Scope Generator</div>
+      <div class="sp-actions">
+        <button class="sp-btn" id="sp-refresh-materials" type="button">Update Material Costs</button>
+      </div>
     </div>
 
     <div class="sp-card" id="sp-hcp-card" style="margin-bottom:16px">
@@ -385,26 +388,48 @@ window.initMap = function(){
 };
 document.addEventListener('DOMContentLoaded', function(){
   document.title = 'Scope Generator';
-  (function refreshMaterials(){
-    if(typeof fetch !== 'function'){
-      return;
+  (function initMaterialsRefresh(){
+    var btn = document.getElementById('sp-refresh-materials');
+    if(!btn || typeof fetch !== 'function') return;
+
+    var defaultText = 'Update Material Costs';
+    var successText = 'Materials Updated';
+
+    function setState(state){
+      btn.dataset.state = state;
+      btn.disabled = state === 'loading';
+      btn.classList.toggle('primary', state === 'success');
+
+      if(state === 'loading'){
+        btn.textContent = 'Updating materials...';
+      } else if(state === 'success'){
+        btn.textContent = successText;
+      } else {
+        btn.textContent = defaultText;
+      }
     }
-    fetch('https://api.strongclicks.io/webhook/scopegenerator-get-materials', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-    }).then(res => {
-      if(!res.ok){
-        throw new Error(`Material refresh failed with status ${res.status}`);
-      }
-      return res.json();
-    }).then(payload => {
-      if(payload){
-        console.info('Material catalog refreshed from Housecall Pro.');
-      }
-    }).catch(err => {
-      console.warn('Unable to refresh material catalog', err);
+
+    btn.addEventListener('click', function(){
+      setState('loading');
+      fetch('https://api.strongclicks.io/webhook/scopegenerator-get-materials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      }).then(function(res){
+        if(!res.ok){
+          throw new Error('Material refresh failed with status ' + res.status);
+        }
+        return res.json();
+      }).then(function(payload){
+        setState('success');
+        if(payload){
+          console.info('Material catalog refreshed from Housecall Pro.');
+        }
+      }).catch(function(err){
+        setState('idle');
+        console.warn('Unable to refresh material catalog', err);
+      });
     });
   })();
   (function setBackground(){
