@@ -378,7 +378,9 @@
   </button>
   <button class="sp-fab" id="sp-top-btn" type="button" aria-label="Back to top">
     <span class="sp-fab-icon">↑</span>
-    <span>Top</span>
+  </button>
+  <button class="sp-fab" id="sp-bottom-btn" type="button" aria-label="Jump to bottom">
+    <span class="sp-fab-icon">↓</span>
   </button>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/iframe-resizer/js/iframeResizer.contentWindow.min.js"></script>
@@ -7185,6 +7187,11 @@ document.addEventListener('DOMContentLoaded', function(){
   const backTopBtn = document.getElementById('sp-top-btn');
   if (backTopBtn){
     backTopBtn.addEventListener('click', ()=> window.scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+
+  const backBottomBtn = document.getElementById('sp-bottom-btn');
+  if (backBottomBtn){
+    backBottomBtn.addEventListener('click', ()=> window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }));
   }
 
   if(estimateNumberInput && estimateNumberInput.value){
