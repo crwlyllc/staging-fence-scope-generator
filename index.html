@@ -309,6 +309,7 @@
         <div class="sp-field col-6">
           <label class="sp-label" for="sp-crew-select">Crew Lead</label>
           <select class="sp-select" id="sp-crew-select">
+            <option value="in-house-2">In-House 2</option>
             <option value="in-house-4">In-House 4</option>
             <option value="in-house-3">In-House 3</option>
             <option value="in-house-3-4">In-House 3 &amp; 4</option>
@@ -521,6 +522,18 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 
   const CREWS = {
+    'in-house-2': {
+      id: 'in-house-2',
+      label: 'In-House 2',
+      maxCrew: 2,
+      maxWelders: 1,
+      minCrew: 2,
+      description: '2-man in-house crew (1 welder + 1 helper). $320/day (fixed).',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        return 320;
+      }
+    },
     'in-house-4': {
       id: 'in-house-4',
       label: 'In-House 4',
@@ -6740,7 +6753,7 @@ document.addEventListener('DOMContentLoaded', function(){
       : lines;
     const fullNotes = [...outLines, '', ...cost];
 
-    const inHouseCrewIds = ['in-house-4', 'in-house-3', 'in-house-3-4'];
+    const inHouseCrewIds = ['in-house-2', 'in-house-4', 'in-house-3', 'in-house-3-4'];
     const inHouseScenarioLines = [];
     inHouseScenarioLines.push('IN-HOUSE CREW SCENARIOS (if selected for this scope)');
     inHouseCrewIds.forEach(id => {
