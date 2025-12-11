@@ -314,6 +314,7 @@
             <option value="in-house-3">In-House 3</option>
             <option value="in-house-3-4">In-House 3 &amp; 4</option>
             <option value="robert">Robert</option>
+            <option value="mark">Mark</option>
             <option value="jesus">Jesus</option>
             <option value="rodney">Rodney</option>
           </select>
@@ -582,6 +583,18 @@ document.addEventListener('DOMContentLoaded', function(){
         const baseRate = 1000;
         if(count <= 3) return baseRate;
         return baseRate + (count - 3) * 200;
+      }
+    },
+    mark: {
+      id: 'mark',
+      label: 'Mark',
+      maxCrew: 4,
+      maxWelders: 1,
+      minCrew: 1,
+      description: '1 welder with up to 3 helpers. $200/day per person (1: $200, 2: $400, 3: $600, 4: $800).',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        return count * 200;
       }
     },
     jesus: {
