@@ -1226,6 +1226,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postSize: '2x2',
       postReplacements: [],
       postRealignments: [],
+      weldRedos: 0,
       gapAdditions: [],
       diagonalBraces: [],
       walkGates: 0,
@@ -2061,6 +2062,11 @@ document.addEventListener('DOMContentLoaded', function(){
             <label class="sp-label"># Pickets to Replace</label>
             ${numberControl('wiPickets','0')}
           </div>
+          <div class="sp-field col-3" data-repair-only>
+            <label class="sp-label">Weld Redos</label>
+            ${numberControl('weldRedos','0')}
+            <div class="sp-hint">Redo broken welds (no new material). ~5 minutes each for a welder.</div>
+          </div>
 
         <!-- Finial replacements (kept as a block) -->
         <div class="sp-field col-12" data-repair-only>
@@ -2539,6 +2545,7 @@ document.addEventListener('DOMContentLoaded', function(){
       trim: val('trim'),
       digOut: val('digOut'),
       wiPickets: val('wiPickets'),
+      weldRedos: val('weldRedos'),
       walkGates: val('walkGates'),
       walkGatesRealign: val('walkGatesRealign'),
       walkGatesHardware: val('walkGatesHardware'),
@@ -2694,6 +2701,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('trim', data.trim||'');
     set('digOut', data.digOut||'');
     set('wiPickets', data.wiPickets||'');
+    set('weldRedos', data.weldRedos||'');
     set('walkGates', data.walkGates||'');
     set('walkGatesRealign', data.walkGatesRealign||'');
     set('walkGatesHardware', data.walkGatesHardware||'');
@@ -4734,7 +4742,7 @@ document.addEventListener('DOMContentLoaded', function(){
       length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
       puppyInserts:0,
       diagonalBraces:0,
-      wiPickets:0, wiPatches:0, wiRails:0, wiRailGaps:0,
+      wiPickets:0, wiPatches:0, wiRails:0, wiRailGaps:0, weldRedos:0,
       wiPicketSizes: new Set(),
       wiPatchSizes: new Set(),
       wiRailReplaceSizes: new Set(),
@@ -5081,6 +5089,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       const i = (v)=> (parseInt(v||0,10) || 0);
       let picketReplaceCount = 0;
+      let weldRedoCount = 0;
       let replaceCounts = zeroPostCounts();
       let realignCounts = zeroPostCounts();
       let realignCutWeld = 0;
@@ -5113,10 +5122,12 @@ document.addEventListener('DOMContentLoaded', function(){
           lines.push(`  - Kick board to replace: ${kickLf} lf`);
         } else {
           picketReplaceCount = i(s.wiPickets);
+          const weldRedoCount = i(s.weldRedos);
           replaceCounts = countPostGroups(s.postReplacements);
           realignCounts = countPostGroups(s.postRealignments);
           realignCutWeld = countRealignCutWeld(s.postRealignments);
           lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
+          lines.push(`  - Weld redos: ${weldRedoCount}`);
           lines.push(`  - Rail patches: ${sectionPatchTotal}`);
           lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
           const gapLineParts = [];
@@ -5342,6 +5353,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const picketSizeNormalized = normalizeSize(s.picketSize);
             if(picketSizeNormalized) totals.wiPicketSizes.add(picketSizeNormalized);
           }
+          totals.weldRedos    += weldRedoCount;
           totals.wiPatches    += sectionPatchTotal;
           if(sectionPatchTotal > 0){
             sectionPatchSizes.forEach(size=> totals.wiPatchSizes.add(size));
@@ -5400,6 +5412,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.puppyInserts)   lines.push(`- Puppy picket inserts: ${t.puppyInserts}`);
       if (t.caps)           lines.push(`- Post caps to replace: ${t.caps}`);
       if (t.wiPickets)      lines.push(`- Pickets to replace: ${t.wiPickets}`);
+      if (t.weldRedos)      lines.push(`- Weld redos: ${t.weldRedos}`);
       if (t.wiPatches)      lines.push(`- Rail patches: ${t.wiPatches}`);
       if (t.wiRails)        lines.push(`- Full rail replacements: ${t.wiRails}`);
       if (t.wiRailGaps)     lines.push(`- Full rail gap fillers: ${t.wiRailGaps}`);
@@ -5725,6 +5738,10 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       addServiceLine('Replace Damaged Pickets', picketDesc);
     }
+    if (totals.weldRedos > 0){
+      const weldLabel = describeCount(totals.weldRedos, 'weld', 'welds');
+      addServiceLine('Redo Broken Welds', `Clean and re-weld ${weldLabel} where the steel is intact (no new material needed).`);
+    }
     if (totals.wiPatches > 0){
       const rustedPortionText = totals.wiPatches === 1
         ? '1x rusted portion'
@@ -5896,6 +5913,7 @@ document.addEventListener('DOMContentLoaded', function(){
       totals.wiPatches*20 +
       totals.wiRails*30 +
       totals.wiRailGaps*20 +
+      totals.weldRedos*5 +
       totals.posts1p5*60 +
       totals.posts2x2*60 +
       totals.posts3x3*90 +
@@ -6635,6 +6653,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.installSections > 0) sub.push('- New sections to install: '+totals.installSections);
     if (totals.removalLf > 0)       sub.push(`- Removal & haul away: ${totals.removalLf} lf (sub paid $${money(totals.removalCost)})`);
     if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
+    if (totals.weldRedos > 0)       sub.push('- Weld redos: '+totals.weldRedos);
     if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
     if (totals.wiRailGaps > 0)      sub.push('- Full rail gap fillers: '+totals.wiRailGaps);
