@@ -5122,7 +5122,7 @@ document.addEventListener('DOMContentLoaded', function(){
           lines.push(`  - Kick board to replace: ${kickLf} lf`);
         } else {
           picketReplaceCount = i(s.wiPickets);
-          const weldRedoCount = i(s.weldRedos);
+          weldRedoCount = i(s.weldRedos);
           replaceCounts = countPostGroups(s.postReplacements);
           realignCounts = countPostGroups(s.postRealignments);
           realignCutWeld = countRealignCutWeld(s.postRealignments);
