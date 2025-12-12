@@ -4774,7 +4774,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodTopCapLf:0, woodTrimLf:0, woodKickLf:0, woodStainSqft:0,
       posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0, postsRealignCutWeld:0,
       retainingWallPosts: zeroPostCounts(),
-      walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
+      walkRealign:0, walkHardware:0, walkRebuild:0,
       walkGateAdds:0,
       walkGateAddsSingle:0,
       walkGateAddsDouble:0,
@@ -5391,7 +5391,6 @@ document.addEventListener('DOMContentLoaded', function(){
           totals.postsRealign3x3 += realignCounts.posts3x3;
           totals.postsRealignCutWeld += realignCutWeld;
         }
-        totals.walkGates   += wg;
         totals.walkRealign += wgr;
         totals.walkHardware+= wgh;
         totals.walkRebuild += wgb;
@@ -5450,7 +5449,6 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.postsRealign2x2) lines.push(`- 2x2 posts to realign: ${t.postsRealign2x2}`);
       if (t.postsRealign3x3) lines.push(`- 3x3 posts to realign: ${t.postsRealign3x3}`);
       if (t.postsRealignCutWeld) lines.push(`- Posts to realign (cut & weld): ${t.postsRealignCutWeld}`);
-      if (t.walkGates)     lines.push(`- Walk gates: ${t.walkGates}`);
       if (t.walkRealign)   lines.push(`- Walk gates to realign: ${t.walkRealign}`);
       if (t.walkHardware)  lines.push(`- Walk gate hardware replacements: ${t.walkHardware}${gateHardwareSummary.detail ? ` (${gateHardwareSummary.detail})` : ''}`);
       if (t.walkRebuild)   lines.push(`- Walk gates to rebuild: ${t.walkRebuild}`);
@@ -6692,7 +6690,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.postsRealign2x2 > 0) sub.push('- 2x2 posts to realign: '+totals.postsRealign2x2);
     if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
     if (totals.postsRealignCutWeld > 0) sub.push('- Posts to realign (cut & weld): '+totals.postsRealignCutWeld);
-    if (totals.walkGates > 0)       sub.push('- Walk gates: '+totals.walkGates);
     if (totals.walkRealign > 0)     sub.push('- Walk gates to realign: '+totals.walkRealign);
     if (totals.walkHardware > 0)    sub.push(`- Walk gate hardware replacements: ${totals.walkHardware}${gateHardwareSummary.detail ? ` (${gateHardwareSummary.detail})` : ''}`);
     if (totals.walkRebuild > 0)     sub.push('- Walk gates to rebuild: '+totals.walkRebuild);
