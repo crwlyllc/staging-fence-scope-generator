@@ -5411,6 +5411,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     const gateHardwareSummary = summarizeGateHardware(state.sections);
+    const walkHardwareCount = Math.max(totals.walkHardware, gateHardwareSummary.total || 0);
 
     if (woodSectionSummaries.length){
       lines.push('WOOD SECTION DETAILS');
@@ -5450,7 +5451,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.postsRealign3x3) lines.push(`- 3x3 posts to realign: ${t.postsRealign3x3}`);
       if (t.postsRealignCutWeld) lines.push(`- Posts to realign (cut & weld): ${t.postsRealignCutWeld}`);
       if (t.walkRealign)   lines.push(`- Walk gates to realign: ${t.walkRealign}`);
-      if (t.walkHardware)  lines.push(`- Walk gate hardware replacements: ${t.walkHardware}${gateHardwareSummary.detail ? ` (${gateHardwareSummary.detail})` : ''}`);
+      if (walkHardwareCount)  lines.push(`- Walk gate hardware replacements: ${walkHardwareCount}${gateHardwareSummary.detail ? ` (${gateHardwareSummary.detail})` : ''}`);
       if (t.walkRebuild)   lines.push(`- Walk gates to rebuild: ${t.walkRebuild}`);
       if (t.walkGateAdds)  lines.push(`- Walk gates to add: ${t.walkGateAdds}`);
       if (t.walkGateAddsSingle) lines.push(`- Single swing walk gates to add: ${t.walkGateAddsSingle}`);
@@ -5859,9 +5860,9 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.walkRealign > 0){
       addServiceLine('Realign Walk Gates', `Adjust and plumb ${describeCount(totals.walkRealign, 'walk gate', 'walk gates')} for smooth swing and latch.`);
     }
-    if (totals.walkHardware > 0){
+    if (walkHardwareCount > 0){
       const hwDetail = gateHardwareSummary.detail ? ` using ${gateHardwareSummary.detail}` : '';
-      addServiceLine('Replace Walk Gate Hardware', `Install new latch and hinge hardware on ${describeCount(totals.walkHardware, 'walk gate', 'walk gates')}${hwDetail}.`);
+      addServiceLine('Replace Walk Gate Hardware', `Install new latch and hinge hardware on ${describeCount(walkHardwareCount, 'walk gate', 'walk gates')}${hwDetail}.`);
     }
     if (totals.walkRebuild > 0){
       addServiceLine('Rebuild Walk Gates', `Rebuild ${describeCount(totals.walkRebuild, 'walk gate', 'walk gates')} with new frame and pickets to match the fence.`);
@@ -6691,7 +6692,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
     if (totals.postsRealignCutWeld > 0) sub.push('- Posts to realign (cut & weld): '+totals.postsRealignCutWeld);
     if (totals.walkRealign > 0)     sub.push('- Walk gates to realign: '+totals.walkRealign);
-    if (totals.walkHardware > 0)    sub.push(`- Walk gate hardware replacements: ${totals.walkHardware}${gateHardwareSummary.detail ? ` (${gateHardwareSummary.detail})` : ''}`);
+    if (walkHardwareCount > 0)    sub.push(`- Walk gate hardware replacements: ${walkHardwareCount}${gateHardwareSummary.detail ? ` (${gateHardwareSummary.detail})` : ''}`);
     if (totals.walkRebuild > 0)     sub.push('- Walk gates to rebuild: '+totals.walkRebuild);
     if (totals.walkGateAddsSingle > 0) sub.push('- Single swing walk gates to add: '+totals.walkGateAddsSingle);
     if (totals.walkGateAddsDouble > 0) sub.push('- Double swing gates to add: '+totals.walkGateAddsDouble);
