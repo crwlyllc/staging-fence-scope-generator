@@ -1278,8 +1278,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodRepairPostReplace: 0,
       woodRepairPostReplaceTie: SIMPSON_TIE_OPTIONS[0],
       woodRepairPostReplaceCap: '',
-      woodRepairPostRealign: 0,
-      woodRepairPostRealignMethod: WOOD_POST_METHODS[1].value,
+      woodRepairPostRealignDig: 0,
+      woodRepairPostRealignCutWeld: 0,
       woodRepairPostInstall: 0,
       woodRepairPostInstallMethod: WOOD_POST_INSTALL_METHODS[1].value,
       woodRepairPostInstallTie: SIMPSON_TIE_OPTIONS[0],
@@ -1867,11 +1867,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
         <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Post Realignment</label>
-          ${numberControl('woodRepairPostRealign','0')}
-          <select class="sp-select" data-field="woodRepairPostRealignMethod">
-            ${WOOD_POST_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
-          </select>
+          <label class="sp-label">Post Realignment (Dig, straighten, add concrete)</label>
+          ${numberControl('woodRepairPostRealignDig','0')}
+          <div class="sp-hint">Excavate, straighten, and re-set post with concrete.</div>
+          <label class="sp-label" style="margin-top:10px">Post Realignment (Cut &amp; Weld)</label>
+          ${numberControl('woodRepairPostRealignCutWeld','0')}
           <div class="sp-hint">Cut &amp; weld only for round steel or Postmaster posts.</div>
         </div>
         <div class="sp-field col-3" data-wood-only data-repair-only>
@@ -2277,7 +2277,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
     'walkAddPicketSize','walkAddLatch','walkAddHinges','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
-    'woodRepairPostRealignMethod','woodRepairPostInstallMethod','woodRepairPostInstallTie'
+    'woodRepairPostRealignDig','woodRepairPostRealignCutWeld','woodRepairPostInstallMethod','woodRepairPostInstallTie'
   ];
 
   function createSectionFromStyle(source){
@@ -2514,8 +2514,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodRepairPostReplace: val('woodRepairPostReplace'),
       woodRepairPostReplaceTie: val('woodRepairPostReplaceTie'),
       woodRepairPostReplaceCap: val('woodRepairPostReplaceCap'),
-      woodRepairPostRealign: val('woodRepairPostRealign'),
-      woodRepairPostRealignMethod: val('woodRepairPostRealignMethod'),
+      woodRepairPostRealignDig: val('woodRepairPostRealignDig'),
+      woodRepairPostRealignCutWeld: val('woodRepairPostRealignCutWeld'),
       woodRepairPostInstall: val('woodRepairPostInstall'),
       woodRepairPostInstallMethod: val('woodRepairPostInstallMethod'),
       woodRepairPostInstallTie: val('woodRepairPostInstallTie'),
@@ -2669,8 +2669,8 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodRepairPostReplace', data.woodRepairPostReplace || '');
     set('woodRepairPostReplaceTie', data.woodRepairPostReplaceTie || SIMPSON_TIE_OPTIONS[0]);
     set('woodRepairPostReplaceCap', data.woodRepairPostReplaceCap || '');
-    set('woodRepairPostRealign', data.woodRepairPostRealign || '');
-    set('woodRepairPostRealignMethod', data.woodRepairPostRealignMethod || WOOD_POST_METHODS[1].value);
+    set('woodRepairPostRealignDig', data.woodRepairPostRealignDig || '');
+    set('woodRepairPostRealignCutWeld', data.woodRepairPostRealignCutWeld || '');
     set('woodRepairPostInstall', data.woodRepairPostInstall || '');
     set('woodRepairPostInstallMethod', data.woodRepairPostInstallMethod || WOOD_POST_INSTALL_METHODS[1].value);
     set('woodRepairPostInstallTie', data.woodRepairPostInstallTie || SIMPSON_TIE_OPTIONS[0]);
@@ -3927,7 +3927,8 @@ document.addEventListener('DOMContentLoaded', function(){
         woodKickBoardStack: '1',
         woodTopCapSize: '2x6',
         woodTrimType: '1x4',
-        woodRepairPostRealignMethod: WOOD_POST_METHODS[1].value,
+        woodRepairPostRealignDig: '0',
+        woodRepairPostRealignCutWeld: '0',
         woodRepairPostInstallMethod: WOOD_POST_INSTALL_METHODS[1].value,
         woodRepairPostReplaceTie: SIMPSON_TIE_OPTIONS[0],
         woodRepairPostInstallTie: SIMPSON_TIE_OPTIONS[0],
@@ -4008,15 +4009,13 @@ document.addEventListener('DOMContentLoaded', function(){
   function updateWoodRepairControls(card){
     const postType = (card.querySelector('[data-field="woodPost"]')?.value || '').toLowerCase();
     const allowCutWeld = postType === 'round steel' || postType === 'postmaster';
-    const realignSel = card.querySelector('[data-field="woodRepairPostRealignMethod"]');
-    if(realignSel){
-      realignSel.querySelectorAll('option').forEach(opt=>{
-        if(opt.value === 'cut-weld'){
-          opt.disabled = !allowCutWeld;
-        }
-      });
-      if(!allowCutWeld && realignSel.value === 'cut-weld'){
-        realignSel.value = 'dig-straighten';
+    const cutWeldControl = card.querySelector('[data-field="woodRepairPostRealignCutWeld"]');
+    if(cutWeldControl){
+      const inputs = cutWeldControl.querySelectorAll('input,button');
+      inputs.forEach(el => { el.disabled = !allowCutWeld; });
+      if(!allowCutWeld){
+        const input = cutWeldControl.querySelector('input');
+        if(input){ input.value = ''; }
       }
     }
   }
@@ -5122,7 +5121,8 @@ document.addEventListener('DOMContentLoaded', function(){
           const railReplaceCount = i(s.woodRepairRailReplace);
           const railInstallCount = i(s.woodRepairRailInstall);
           const postReplaceCount = i(s.woodRepairPostReplace);
-          const postRealignCount = i(s.woodRepairPostRealign);
+          const postRealignDigCount = i(s.woodRepairPostRealignDig);
+          const postRealignCutWeldCount = i(s.woodRepairPostRealignCutWeld);
           const postInstallCount = i(s.woodRepairPostInstall);
           const panelReplaceCount = i(s.woodRepairPanelReplace);
           const gateCount = i(s.woodRepairWalkGateCount);
@@ -5134,7 +5134,8 @@ document.addEventListener('DOMContentLoaded', function(){
           lines.push(`  - Rails to replace: ${railReplaceCount}`);
           lines.push(`  - Rails to install: ${railInstallCount}`);
           lines.push(`  - Posts to replace: ${postReplaceCount}`);
-          lines.push(`  - Posts to realign: ${postRealignCount}`);
+          lines.push(`  - Posts to realign (dig/straighten): ${postRealignDigCount}`);
+          lines.push(`  - Posts to realign (cut & weld): ${postRealignCutWeldCount}`);
           lines.push(`  - Posts to install: ${postInstallCount}`);
           lines.push(`  - Panels to replace: ${panelReplaceCount}`);
           lines.push(`  - Walk gates to repair: ${gateCount}`);
@@ -5556,7 +5557,8 @@ document.addEventListener('DOMContentLoaded', function(){
         const railReplaceCount = parseInt(s.woodRepairRailReplace||0,10) || 0;
         const railInstallCount = parseInt(s.woodRepairRailInstall||0,10) || 0;
         const postReplaceCount = parseInt(s.woodRepairPostReplace||0,10) || 0;
-        const postRealignCount = parseInt(s.woodRepairPostRealign||0,10) || 0;
+        const postRealignDigCount = parseInt(s.woodRepairPostRealignDig||0,10) || 0;
+        const postRealignCutWeldCount = parseInt(s.woodRepairPostRealignCutWeld||0,10) || 0;
         const postInstallCount = parseInt(s.woodRepairPostInstall||0,10) || 0;
         const panels = parseInt(s.woodRepairPanelReplace||0,10) || 0;
         const walkGates = parseInt(s.woodRepairWalkGateCount||0,10) || 0;
@@ -5619,25 +5621,25 @@ document.addEventListener('DOMContentLoaded', function(){
           woodManHours += hours;
           woodRequiresTwoPerson = woodRequiresTwoPerson || postReplaceCount > 0;
         }
-        const realign = addCount(postRealignCount, 'post realignment', 'post realignments');
-        if(realign){
-          const method = methodLabel(WOOD_POST_METHODS, s.woodRepairPostRealignMethod);
-          parts.push(`${realign}${method ? ` via ${method}` : ''}`);
-          const isCutWeld = s.woodRepairPostRealignMethod === 'cut-weld';
-          const perPostHours = isCutWeld ? (20/60) : (45/60);
-          if(isCutWeld){
-            totals.woodPostRealignCutWeld += postRealignCount;
-            const hours = postRealignCount * perPostHours;
-            woodWelderHours += hours;
-            woodHelperHours += hours;
-            woodManHours += hours * 2;
-            woodRequiresTwoPerson = true;
-          } else {
-            totals.woodPostRealignDig += postRealignCount;
-            const hours = postRealignCount * perPostHours;
-            woodHelperHours += hours;
-            woodManHours += hours;
-          }
+        if(postRealignDigCount){
+          const realign = addCount(postRealignDigCount, 'post realignment', 'post realignments');
+          parts.push(`${realign} via dig, straighten, and add concrete`);
+          const perPostHours = (45/60);
+          totals.woodPostRealignDig += postRealignDigCount;
+          const hours = postRealignDigCount * perPostHours;
+          woodHelperHours += hours;
+          woodManHours += hours;
+        }
+        if(postRealignCutWeldCount){
+          const realign = addCount(postRealignCutWeldCount, 'post realignment', 'post realignments');
+          parts.push(`${realign} via cut & weld`);
+          const perPostHours = (20/60);
+          totals.woodPostRealignCutWeld += postRealignCutWeldCount;
+          const hours = postRealignCutWeldCount * perPostHours;
+          woodWelderHours += hours;
+          woodHelperHours += hours;
+          woodManHours += hours * 2;
+          woodRequiresTwoPerson = true;
         }
         const postInstall = addCount(postInstallCount, 'post installation', 'post installations');
         if(postInstall){
