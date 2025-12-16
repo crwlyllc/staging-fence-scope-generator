@@ -1215,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const initialFenceType = data.fenceType || 'Wrought Iron';
     const normalizedType = initialFenceType.toLowerCase();
     const defaultPainting = normalizedType === 'wood'
-      ? 'None'
+      ? ''
       : ((scope === 'install' || scope === 'replace') ? 'Spot Paint Welds' : 'Paint Section');
     const base = {
       id: uid(),
@@ -1264,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', function(){
       mapGeneratedLabel: '',
       notes: '',
       painting: defaultPainting,
-      paintingApplication: 'By Hand',
+      paintingApplication: normalizedType === 'wood' ? '' : 'By Hand',
       woodHeight: '6ft',
       woodStyle: 'Side by Side',
       woodPicketWidth: '5.5"',
@@ -1318,6 +1318,14 @@ document.addEventListener('DOMContentLoaded', function(){
         merged.woodLength = legacyLength;
       } else if(typeof merged.wroughtLength === 'undefined'){
         merged.wroughtLength = legacyLength;
+      }
+    }
+    if(normalizedType === 'wood'){
+      if(typeof merged.woodHeight === 'undefined' && typeof merged.height !== 'undefined'){
+        merged.woodHeight = merged.height;
+      }
+      if(typeof merged.woodStyle === 'undefined' && typeof merged.style !== 'undefined'){
+        merged.woodStyle = merged.style;
       }
     }
     return merged;
@@ -2498,23 +2506,24 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const currentFenceType = val('fenceType') || 'Wrought Iron';
     const normalizedFence = currentFenceType.toLowerCase();
-    const paintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
+    const paintingSelection = normalizedFence === 'wood' ? '' : val('painting');
     const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
 
     const wroughtLength = val('wroughtLength');
     const woodLength = val('woodLength');
+    const isWood = normalizedFence === 'wood';
 
     return {
       id,
       label: val('label').trim(),
       fenceType: currentFenceType,
       scopeType: val('scopeType') || 'repair',
-      style: val('style'),
-      height: val('height'),
-      postSize: val('postSize'),
-      postSpacing: val('postSpacing'),
-      panelAttachment: val('panelAttachment'),
-      installFinialStyle: val('installFinialStyle'),
+      style: isWood ? '' : val('style'),
+      height: isWood ? '' : val('height'),
+      postSize: isWood ? '' : val('postSize'),
+      postSpacing: isWood ? '' : val('postSpacing'),
+      panelAttachment: isWood ? '' : val('panelAttachment'),
+      installFinialStyle: isWood ? '' : val('installFinialStyle'),
       postReplacements,
       postRealignments,
 
@@ -2523,13 +2532,13 @@ document.addEventListener('DOMContentLoaded', function(){
       gapAdditions,
       diagonalBraces,
 
-      railSize: rails[0]?.size || '',
-      railStacked: !!rails[0]?.stacked,
-      railSize2: rails[0]?.size2 || '',
+      railSize: isWood ? '' : (rails[0]?.size || ''),
+      railStacked: isWood ? false : !!rails[0]?.stacked,
+      railSize2: isWood ? '' : (rails[0]?.size2 || ''),
 
-      picketSize: val('picketSize'),
-      picketHeight: val('picketHeight'),
-      puppy: val('puppy'),
+      picketSize: isWood ? '' : val('picketSize'),
+      picketHeight: isWood ? '' : val('picketHeight'),
+      puppy: isWood ? '' : val('puppy'),
       painting: paintingSelection,
       paintingApplication: paintingMethod,
       woodHeight: val('woodHeight'),
@@ -2576,32 +2585,32 @@ document.addEventListener('DOMContentLoaded', function(){
       woodAddTrim: val('woodAddTrim'),
       retainingWallLength: val('retainingWallLength'),
       retainingWallHeight: val('retainingWallHeight'),
-      wroughtLength: normalizedFence === 'wood' ? '' : wroughtLength,
-      woodLength: normalizedFence === 'wood' ? (woodLength || wroughtLength) : woodLength,
-      hardscape: val('hardscape'),
-      trim: val('trim'),
-      digOut: val('digOut'),
-      wiPickets: val('wiPickets'),
-      weldRedos: val('weldRedos'),
-      walkGates: val('walkGates'),
-      walkGatesRealign: val('walkGatesRealign'),
-      walkGatesHardware: val('walkGatesHardware'),
-      walkGatesRebuild: val('walkGatesRebuild'),
-      walkLatch: val('walkLatch'),
-      walkHinges: val('walkHinges'),
-      walkRebuildFrame: val('walkRebuildFrame'),
-      walkRebuildPicket: val('walkRebuildPicket'),
-      walkRebuildLatch: val('walkRebuildLatch'),
-      walkRebuildHinges: val('walkRebuildHinges'),
+      wroughtLength: isWood ? '' : wroughtLength,
+      woodLength: isWood ? woodLength : '',
+      hardscape: isWood ? '' : val('hardscape'),
+      trim: isWood ? '' : val('trim'),
+      digOut: isWood ? '' : val('digOut'),
+      wiPickets: isWood ? '' : val('wiPickets'),
+      weldRedos: isWood ? '' : val('weldRedos'),
+      walkGates: isWood ? '' : val('walkGates'),
+      walkGatesRealign: isWood ? '' : val('walkGatesRealign'),
+      walkGatesHardware: isWood ? '' : val('walkGatesHardware'),
+      walkGatesRebuild: isWood ? '' : val('walkGatesRebuild'),
+      walkLatch: isWood ? '' : val('walkLatch'),
+      walkHinges: isWood ? '' : val('walkHinges'),
+      walkRebuildFrame: isWood ? '' : val('walkRebuildFrame'),
+      walkRebuildPicket: isWood ? '' : val('walkRebuildPicket'),
+      walkRebuildLatch: isWood ? '' : val('walkRebuildLatch'),
+      walkRebuildHinges: isWood ? '' : val('walkRebuildHinges'),
 
       // NEW
-      walkGatesAdd: val('walkGatesAdd'),
-      walkAddType: val('walkAddType'),
-      walkAddPostSize: val('walkAddPostSize'),
-      walkAddFrameSize: val('walkAddFrameSize'),
-      walkAddPicketSize: val('walkAddPicketSize'),
-      walkAddLatch: val('walkAddLatch'),
-      walkAddHinges: val('walkAddHinges'),
+      walkGatesAdd: isWood ? '' : val('walkGatesAdd'),
+      walkAddType: isWood ? '' : val('walkAddType'),
+      walkAddPostSize: isWood ? '' : val('walkAddPostSize'),
+      walkAddFrameSize: isWood ? '' : val('walkAddFrameSize'),
+      walkAddPicketSize: isWood ? '' : val('walkAddPicketSize'),
+      walkAddLatch: isWood ? '' : val('walkAddLatch'),
+      walkAddHinges: isWood ? '' : val('walkAddHinges'),
 
       // NEW: finials
       finials,
@@ -2682,14 +2691,22 @@ document.addEventListener('DOMContentLoaded', function(){
     const scopeForPaint = data.scopeType || 'repair';
     const attachmentMethod = data.panelAttachment || 'Welding';
     const defaultPainting = normalizedFenceType === 'wood'
-      ? 'None'
+      ? ''
       : (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
         ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
         : (data.painting || 'Paint Section');
-    set('painting', defaultPainting);
-    set('paintingApplication', data.paintingApplication || 'By Hand');
-    set('woodHeight', data.woodHeight || '6ft');
-    set('woodStyle', data.woodStyle || 'Side by Side');
+    if(normalizedFenceType !== 'wood'){
+      set('painting', defaultPainting);
+      set('paintingApplication', data.paintingApplication || 'By Hand');
+    }
+    const woodHeightFromLegacy = (normalizedFenceType === 'wood' && !data.woodHeight)
+      ? (data.height || '6ft')
+      : (data.woodHeight || '6ft');
+    const woodStyleFromLegacy = (normalizedFenceType === 'wood' && !data.woodStyle)
+      ? (data.style || 'Side by Side')
+      : (data.woodStyle || 'Side by Side');
+    set('woodHeight', woodHeightFromLegacy);
+    set('woodStyle', woodStyleFromLegacy);
     set('woodPicketWidth', data.woodPicketWidth || '5.5"');
     set('woodRailSize', data.woodRailSize || '2x4');
     set('woodPost', data.woodPost || 'Round Steel');
@@ -2733,8 +2750,9 @@ document.addEventListener('DOMContentLoaded', function(){
     set('retainingWallLength', data.retainingWallLength || '');
     set('retainingWallHeight', data.retainingWallHeight || '');
     updateWoodAddonsConditional(card);
-    set('wroughtLength', data.wroughtLength ?? data.length ?? '');
-    set('woodLength', data.woodLength ?? data.length ?? '');
+    const isWood = normalizedFenceType === 'wood';
+    set('wroughtLength', isWood ? (data.wroughtLength ?? '') : (data.wroughtLength ?? data.length ?? ''));
+    set('woodLength', isWood ? (data.woodLength ?? data.length ?? '') : (data.woodLength ?? ''));
     set('hardscape', data.hardscape||'');
     set('trim', data.trim||'');
     set('digOut', data.digOut||'');
@@ -3915,8 +3933,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSel = card.querySelector('[data-field="painting"]');
     if(paintingSel){
       const currentVal = paintingSel.value;
-      if(isWood && currentVal !== 'None'){
-        paintingSel.value = 'None';
+      if(isWood && currentVal !== ''){
+        paintingSel.value = '';
         paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
       } else if(isInstall && isWrought){
         const attachmentSel = card.querySelector('[data-field="panelAttachment"]');
@@ -3942,8 +3960,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingWrap = paintingField?.closest('.sp-field');
     const paintingAppWrap = card.querySelector('[data-painting-application]');
     if(isWood){
-      if(paintingField && paintingField.value !== 'None'){
-        paintingField.value = 'None';
+      if(paintingField && paintingField.value){
+        paintingField.value = '';
         paintingField.dispatchEvent(new Event('change', { bubbles: true }));
       }
       if(paintingWrap){ paintingWrap.style.display = 'none'; }
@@ -5063,7 +5081,7 @@ document.addEventListener('DOMContentLoaded', function(){
       lines.push(`- Scope: ${scopeLabel}`);
       const woodFinish = s.woodFinish || 'None';
       const woodStyle = s.woodStyle || '';
-      const woodHeight = s.woodHeight || s.height;
+      const woodHeight = s.woodHeight || '';
       const woodPostLabel = (post)=>{
         if(!post) return '-';
         if(/round steel/i.test(post)) return 'Round Steel (2 3/8\")';
@@ -5754,7 +5772,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(s.woodRepairStain && s.woodRepairStain !== 'none'){
           const sideLabelMap = { outside: 'outside', inside: 'inside', both: 'both sides' };
           const sideLabel = sideLabelMap[s.woodRepairStain] || s.woodRepairStain;
-          const heightFt = Math.max(0, woodHeightFt || feetFromStr(s.height));
+          const heightFt = Math.max(0, woodHeightFt);
           const sidesMultiplier = s.woodRepairStain === 'both' ? 2 : 1;
           const normalizedLengthFt = Math.max(0, sectionLengthFt);
           const stainSqft = Math.max(0, Math.round(normalizedLengthFt * heightFt * sidesMultiplier));
@@ -5944,7 +5962,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if((s.fenceType || '').toLowerCase() !== 'wood') return;
         const replaceCount = parseInt(s.woodRepairPostReplace || 0, 10) || 0;
         if(replaceCount <= 0) return;
-        const heightFt = Math.max(0, feetFromStr(s.woodHeight || s.height));
+        const heightFt = Math.max(0, feetFromStr(s.woodHeight || ''));
         const railsPerPost = woodRailsForHeight(heightFt);
         const hasKickBoard = !!s.woodAddKickBoard;
         const tiesPerPost = railsPerPost + (hasKickBoard ? 1 : 0);
