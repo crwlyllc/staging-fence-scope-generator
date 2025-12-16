@@ -823,7 +823,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const lengthMatch = line.match(/^-\s*Length:\s*(.+)$/i);
       if(lengthMatch){
         const num = parseNumber(lengthMatch[1]);
-        if(isFinite(num)) current.length = num;
+        if(isFinite(num)){
+          current.wroughtLength = num;
+          current.woodLength = num;
+        }
         return;
       }
 
@@ -1250,6 +1253,8 @@ document.addEventListener('DOMContentLoaded', function(){
       postSpacing: '8',
       panelAttachment: 'Welding',
       installFinialStyle: SEED.finialStyles[0],
+      wroughtLength: 0,
+      woodLength: 0,
       finials: [],
       caps: [],
       panels: [],
@@ -1305,7 +1310,29 @@ document.addEventListener('DOMContentLoaded', function(){
       retainingWallLength: 0,
       retainingWallHeight: 0,
     };
-    return { ...base, ...data };
+    const merged = { ...base, ...data };
+    const legacyLength = data.length;
+    const normalizedType = (merged.fenceType || 'Wrought Iron').toLowerCase();
+    if(typeof legacyLength !== 'undefined'){
+      if(normalizedType === 'wood' && typeof merged.woodLength === 'undefined'){
+        merged.woodLength = legacyLength;
+      } else if(typeof merged.wroughtLength === 'undefined'){
+        merged.wroughtLength = legacyLength;
+      }
+    }
+    return merged;
+  }
+
+  function sectionLengthValue(section){
+    const type = (section?.fenceType || 'Wrought Iron').toLowerCase();
+    if(type === 'wood'){
+      return section?.woodLength ?? section?.length;
+    }
+    return section?.wroughtLength ?? section?.length;
+  }
+
+  function sectionLengthFt(section){
+    return parseFloat(sectionLengthValue(section) || 0) || 0;
   }
 
   function isSectionPristine(section){
@@ -1313,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const clean = v => String(v||'').trim();
     return !section.mapGenerated &&
       !clean(section.label) &&
-      Number(section.length||0) === 0 &&
+      sectionLengthFt(section) === 0 &&
       Number(section.hardscape||0) === 0 &&
       Number(section.trim||0) === 0 &&
       Number(section.digOut||0) === 0 &&
@@ -1450,11 +1477,12 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!lengthFeet) return;
       const existing = existingMapSections.get(segment.id);
       if(existing){
-        const prevLength = Number(existing.length)||0;
+        const prevLength = sectionLengthFt(existing);
         const prevLabel = existing.label||'';
         const prevGeneratedLabel = existing.mapGeneratedLabel||'';
         if(prevLength !== lengthFeet) needsRender = true;
-        existing.length = lengthFeet;
+        existing.wroughtLength = lengthFeet;
+        existing.woodLength = lengthFeet;
         existing.mapGenerated = true;
         existing.mapSegmentId = segment.id;
         existing.mapGeneratedLabel = segment.label;
@@ -1467,7 +1495,8 @@ document.addEventListener('DOMContentLoaded', function(){
       }else{
         const newSection = createSectionBase({
           label: segment.label,
-          length: lengthFeet,
+          wroughtLength: lengthFeet,
+          woodLength: lengthFeet,
           scopeType: 'repair',
           mapGenerated: true,
           mapSegmentId: segment.id,
@@ -1731,9 +1760,13 @@ document.addEventListener('DOMContentLoaded', function(){
             <option value="install">Install New Section</option>
           </select>
         </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">Section Length (ft)</label>
-          ${numberControl('length','e.g., 48')}
+        <div class="sp-field col-3" data-wrought-only>
+          <label class="sp-label">Wrought Iron Section Length (ft)</label>
+          ${numberControl('wroughtLength','e.g., 48')}
+        </div>
+        <div class="sp-field col-3" data-wood-only>
+          <label class="sp-label">Wood Section Length (ft)</label>
+          ${numberControl('woodLength','e.g., 48')}
         </div>
         <div class="sp-field col-2" data-wood-only>
           <label class="sp-label">Fence Height</label>
@@ -2468,6 +2501,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
     const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
 
+    const wroughtLength = val('wroughtLength');
+    const woodLength = val('woodLength');
+
     return {
       id,
       label: val('label').trim(),
@@ -2540,7 +2576,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodAddTrim: val('woodAddTrim'),
       retainingWallLength: val('retainingWallLength'),
       retainingWallHeight: val('retainingWallHeight'),
-      length: val('length'),
+      wroughtLength: normalizedFence === 'wood' ? '' : wroughtLength,
+      woodLength: normalizedFence === 'wood' ? (woodLength || wroughtLength) : woodLength,
       hardscape: val('hardscape'),
       trim: val('trim'),
       digOut: val('digOut'),
@@ -2696,7 +2733,8 @@ document.addEventListener('DOMContentLoaded', function(){
     set('retainingWallLength', data.retainingWallLength || '');
     set('retainingWallHeight', data.retainingWallHeight || '');
     updateWoodAddonsConditional(card);
-    set('length', data.length||'');
+    set('wroughtLength', data.wroughtLength ?? data.length ?? '');
+    set('woodLength', data.woodLength ?? data.length ?? '');
     set('hardscape', data.hardscape||'');
     set('trim', data.trim||'');
     set('digOut', data.digOut||'');
@@ -4626,7 +4664,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const styleGroups = new Map();
 
       sections.forEach(section=>{
-        const len = parseInt(section.length,10) || 0;
+        const len = sectionLengthFt(section);
         totalLength += len;
         const sectionHeight = isWood ? section.woodHeight : section.height;
         const sectionStyle = isWood ? section.woodStyle : section.style;
@@ -4878,7 +4916,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       let installInfo = null;
       if(isInstall){
-        const lengthFt = parseInt(s.length||0,10) || 0;
+        const lengthFt = sectionLengthFt(s);
         const spacingRaw = parseFloat(s.postSpacing||'8');
         const spacingFt = (isFinite(spacingRaw) && spacingRaw > 0) ? spacingRaw : 8;
         let spanCount = 0;
@@ -5103,7 +5141,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
 
-      lines.push(`- Length: ${numOrDash(s.length)} ft`);
+      lines.push(`- Length: ${numOrDash(sectionLengthValue(s))} ft`);
       if (s.hardscape > 0) lines.push(`- Over hardscape: ${s.hardscape} lf`);
       if (s.trim > 0)      lines.push(`- Trim: ${s.trim} lf`);
       if (!isInstall && s.digOut > 0)    lines.push(`- Dig out: ${s.digOut} lf`);
@@ -5350,7 +5388,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (s.notes) lines.push(`- Notes: ${s.notes}`);
       lines.push('');
 
-      totals.length       += i(s.length);
+      totals.length       += sectionLengthFt(s);
       totals.hardscape    += i(s.hardscape);
       totals.trim         += i(s.trim);
       if(isRepair){
@@ -5487,7 +5525,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSummary = state.sections.reduce((acc, s)=>{
       const fenceType = (s.fenceType || '').toLowerCase();
       if(fenceType && fenceType !== 'wrought iron') return acc;
-      const len = parseInt(s.length||0,10) || 0;
+      const len = sectionLengthFt(s);
       if(len > 0){
         const hardscape = parseInt(s.hardscape||0,10) || 0;
         const trim = parseInt(s.trim||0,10) || 0;
@@ -5543,7 +5581,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const railSize = s.woodRailSize || '';
         const picketWidth = s.woodPicketWidth || '';
         const woodHeightFt = feetFromStr(s.woodHeight || '');
-        const sectionLengthFt = parseFloat(s.length||0) || 0;
+        const sectionLength = sectionLengthFt(s);
         const isBoardOnBoard = /board on board/i.test(s.woodStyle || '');
         const addCount = (count, singular, plural)=>{
           const n = parseInt(count||0,10) || 0;
@@ -6237,7 +6275,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let totalLenPrimePaint = 0;
     let totalLenSpot  = 0;
     state.sections.forEach(s=>{
-      const len = (parseInt(s.length||0,10) || 0);
+      const len = sectionLengthFt(s);
       if(!len) return;
       if (s.painting === 'Paint Section') {
         totalLenPaint += len;
@@ -6480,7 +6518,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let sprayFinishHours = 0;
     const paintingHours = state.sections.reduce((acc, s)=>{
       if (s.painting !== 'Paint Section' && s.painting !== 'Prime and Paint') return acc;
-      const len = parseInt(s.length||0,10) || 0;
+      const len = sectionLengthFt(s);
       const method = s.paintingApplication || 'By Hand';
       let totalSectionHours = 0;
       if(method === 'Spray'){
