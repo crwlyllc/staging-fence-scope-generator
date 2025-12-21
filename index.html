@@ -4884,6 +4884,15 @@ document.addEventListener('DOMContentLoaded', function(){
         return acc;
       }, { dig: 0, cutWeld: 0 });
     };
+    const zeroWoodMethodCounts = ()=>({ 'cut-weld': 0, 'dig-straighten': 0 });
+    const addWoodMethodCount = (bucket, method, count)=>{
+      if(!bucket) return;
+      const qty = parseInt(count, 10) || 0;
+      if(qty <= 0) return;
+      const normalized = String(method || '').toLowerCase();
+      const key = normalized === 'cut-weld' ? 'cut-weld' : 'dig-straighten';
+      bucket[key] = (bucket[key] || 0) + qty;
+    };
     const totals = {
       length:0, hardscape:0, trim:0, digOut:0, finials:0, caps:0,
       puppyInserts:0,
@@ -4914,7 +4923,9 @@ document.addEventListener('DOMContentLoaded', function(){
       installSections:0, replaceSections:0,
       removalLf:0, removalCost:0,
       postsInstall: zeroPostCounts(),
-      postsReplace: zeroPostCounts()
+      postsReplace: zeroPostCounts(),
+      woodPostReplaceMethods: zeroWoodMethodCounts(),
+      woodPostInstallMethods: zeroWoodMethodCounts()
     };
     let hasWoodStaining = false;
     const woodStainDetails = [];
@@ -5742,6 +5753,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const hours = postReplaceCount * perPostHours * 2; // two-person task
           if(woodHeightFt >= 8){ totals.woodPostReplace8 += postReplaceCount; }
           else { totals.woodPostReplace6 += postReplaceCount; }
+          addWoodMethodCount(totals.woodPostReplaceMethods, s.woodRepairPostReplaceMethod, postReplaceCount);
           woodHelperHours += hours;
           woodManHours += hours;
           woodRequiresTwoPerson = woodRequiresTwoPerson || postReplaceCount > 0;
@@ -5774,6 +5786,7 @@ document.addEventListener('DOMContentLoaded', function(){
           parts.push(`${postInstall}${extras ? ` (${extras})` : ''}`);
           const hours = postInstallCount * (45/60);
           totals.woodPostInstall += postInstallCount;
+          addWoodMethodCount(totals.woodPostInstallMethods, s.woodRepairPostInstallMethod, postInstallCount);
           woodHelperHours += hours;
           woodManHours += hours;
         }
@@ -6862,15 +6875,22 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodPicketInstall > 0) sub.push('- Wood pickets to install: '+totals.woodPicketInstall);
     if (totals.woodRailReplace > 0) sub.push('- Wood rails to replace: '+totals.woodRailReplace);
     if (totals.woodRailInstall > 0) sub.push('- Wood rails to install: '+totals.woodRailInstall);
-    if (totals.woodPostReplace6 > 0 || totals.woodPostReplace8 > 0){
-      const parts = [];
-      if(totals.woodPostReplace6 > 0) parts.push(`${totals.woodPostReplace6} at 6ft`);
-      if(totals.woodPostReplace8 > 0) parts.push(`${totals.woodPostReplace8} at 8ft`);
-      sub.push(`- Wood posts to replace: ${parts.join(', ')}`);
-    }
+    const woodMethodLabel = (method)=>{
+      const match = WOOD_POST_METHODS.find(item=>item.value === method);
+      return match ? match.label : method;
+    };
+    const pushWoodPostMethodLines = (label, counts)=>{
+      if(!counts) return;
+      Object.entries(counts).forEach(([method, count])=>{
+        const qty = parseInt(count,10) || 0;
+        if(qty <= 0) return;
+        sub.push(`- ${label} (${woodMethodLabel(method)}): ${qty}`);
+      });
+    };
+    pushWoodPostMethodLines('Wood posts to replace', totals.woodPostReplaceMethods);
+    pushWoodPostMethodLines('Wood posts to install', totals.woodPostInstallMethods);
     if (totals.woodPostRealignCutWeld > 0) sub.push('- Wood posts to realign (cut & weld): '+totals.woodPostRealignCutWeld);
     if (totals.woodPostRealignDig > 0) sub.push('- Wood posts to realign (dig): '+totals.woodPostRealignDig);
-    if (totals.woodPostInstall > 0) sub.push('- Wood posts to install: '+totals.woodPostInstall);
     if (totals.woodPanels > 0) sub.push('- Wood panels to replace: '+totals.woodPanels);
     if (totals.woodGateRepair > 0) sub.push('- Wood walk gates to repair: '+totals.woodGateRepair);
     if (totals.woodGateStrengthen > 0) sub.push('- Wood gates to strengthen: '+totals.woodGateStrengthen);
