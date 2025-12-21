@@ -1267,6 +1267,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodKickBoardStack: '1',
       woodTopCapSize: '2x6',
       woodTrimType: '1x4',
+      woodPostReplacements: [],
       woodPostRealignments: [],
       woodRepairPicketReplace: 0,
       woodRepairPicketInstall: 0,
@@ -1851,18 +1852,12 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-hint">Add rails where missing (${WOOD_RAIL_SIZES.join(' / ')}).</div>
         </div>
 
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Post Replacement</label>
-          ${numberControl('woodRepairPostReplace','0')}
-          <div class="sp-row">
-            <select class="sp-select" data-field="woodRepairPostReplaceMethod">
-              ${WOOD_POST_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
-            </select>
-            <select class="sp-select" data-field="woodRepairPostReplaceTie">${createSelect(SIMPSON_TIE_OPTIONS)}</select>
-            <select class="sp-select" data-field="woodRepairPostReplaceCap">
-              <option value="">No cap</option>
-              ${createSelect(WOOD_POST_CAP_TYPES)}
-            </select>
+        <div class="sp-field col-12" data-wood-only data-repair-only>
+          <label class="sp-label">Post Replacements</label>
+          <div data-wood-post-replacements></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-wood-post-replacement-add>+ Add Post Replacement</button>
+            <span class="sp-hint">List post replacements with method, tie, and cap details.</span>
           </div>
         </div>
         <div class="sp-field col-12" data-wood-only data-repair-only>
@@ -2274,7 +2269,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
     'walkAddPicketSize','walkAddLatch','walkAddHinges','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
-    'woodRepairPostReplaceMethod','woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie'
+    'woodRepairPostReplaceMethod','woodPostReplacements','woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie'
   ];
 
   function createSectionFromStyle(source){
@@ -2460,6 +2455,34 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
 
+    const woodPostReplacements = [];
+    const woodPostRepCont = card.querySelector('[data-wood-post-replacements]');
+    if(woodPostRepCont){
+      const rows = Array.from(woodPostRepCont.querySelectorAll('[data-wood-post-replacement-row]'));
+      rows.forEach(row=>{
+        const qty = parseInt((row.querySelector('[data-wood-post-replacement-qty] input')?.value)||'0',10) || 0;
+        const method = (row.querySelector('[data-wood-post-replacement-method]')?.value) || WOOD_POST_METHODS[1].value;
+        const tie = (row.querySelector('[data-wood-post-replacement-tie]')?.value) || SIMPSON_TIE_OPTIONS[0];
+        const cap = (row.querySelector('[data-wood-post-replacement-cap]')?.value) || '';
+        if(qty>0){
+          woodPostReplacements.push({ qty, method, tie, cap });
+        }
+      });
+    }
+    if(!woodPostReplacements.length){
+      const fallbackCount = parseInt(val('woodRepairPostReplace') || '0', 10) || 0;
+      if(fallbackCount > 0){
+        woodPostReplacements.push({
+          qty: fallbackCount,
+          method: val('woodRepairPostReplaceMethod') || WOOD_POST_METHODS[1].value,
+          tie: val('woodRepairPostReplaceTie') || SIMPSON_TIE_OPTIONS[0],
+          cap: val('woodRepairPostReplaceCap') || ''
+        });
+      }
+    }
+    const woodPostReplaceTotal = woodPostReplacements.reduce((sum, item)=> sum + (parseInt(item?.qty||0,10) || 0), 0);
+    const firstWoodPostReplacement = woodPostReplacements.find(item=> (parseInt(item?.qty||0,10) || 0) > 0) || null;
+
     const woodPostRealignments = [];
     const woodPostRealignCont = card.querySelector('[data-wood-post-realign]');
     if(woodPostRealignCont){
@@ -2517,15 +2540,16 @@ document.addEventListener('DOMContentLoaded', function(){
       woodKickBoardStack: val('woodKickBoardStack'),
       woodTopCapSize: val('woodTopCapSize'),
       woodTrimType: val('woodTrimType'),
+      woodPostReplacements,
       woodPostRealignments,
       woodRepairPicketReplace: val('woodRepairPicketReplace'),
       woodRepairPicketInstall: val('woodRepairPicketInstall'),
       woodRepairRailReplace: val('woodRepairRailReplace'),
       woodRepairRailInstall: val('woodRepairRailInstall'),
-      woodRepairPostReplace: val('woodRepairPostReplace'),
-      woodRepairPostReplaceMethod: val('woodRepairPostReplaceMethod'),
-      woodRepairPostReplaceTie: val('woodRepairPostReplaceTie'),
-      woodRepairPostReplaceCap: val('woodRepairPostReplaceCap'),
+      woodRepairPostReplace: woodPostReplaceTotal,
+      woodRepairPostReplaceMethod: firstWoodPostReplacement?.method || val('woodRepairPostReplaceMethod') || WOOD_POST_METHODS[1].value,
+      woodRepairPostReplaceTie: firstWoodPostReplacement?.tie || val('woodRepairPostReplaceTie') || SIMPSON_TIE_OPTIONS[0],
+      woodRepairPostReplaceCap: firstWoodPostReplacement?.cap || val('woodRepairPostReplaceCap') || '',
       woodRepairPostInstall: val('woodRepairPostInstall'),
       woodRepairPostInstallMethod: val('woodRepairPostInstallMethod'),
       woodRepairPostInstallTie: val('woodRepairPostInstallTie'),
@@ -2735,6 +2759,7 @@ document.addEventListener('DOMContentLoaded', function(){
     // NEW: render post groups
     renderPostReplacementControls(card, data);
     renderPostRealignControls(card, data);
+    renderWoodPostReplacementControls(card, data);
     renderWoodPostRealignControls(card, data);
     // NEW: render finial rows
     renderFinialsControls(card, data);
@@ -2881,6 +2906,21 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  function persistWoodPostReplacementsFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-wood-post-replacements]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-wood-post-replacement-row]')) : [];
+    s.woodPostReplacements = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-wood-post-replacement-qty] input')?.value)||'0',10) || 0;
+      const method = (row.querySelector('[data-wood-post-replacement-method]')?.value) || WOOD_POST_METHODS[1].value;
+      const tie = (row.querySelector('[data-wood-post-replacement-tie]')?.value) || SIMPSON_TIE_OPTIONS[0];
+      const cap = (row.querySelector('[data-wood-post-replacement-cap]')?.value) || '';
+      return { qty, method, tie, cap };
+    });
+  }
+
   function renderPostReplacementControls(card, data){
     renderPostGroups(card, data, {
       prop: 'postReplacements',
@@ -3008,6 +3048,112 @@ document.addEventListener('DOMContentLoaded', function(){
         persist();
       }
     });
+  }
+
+  function renderWoodPostReplacementControls(card, data){
+    const cont = card.querySelector('[data-wood-post-replacements]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const normalized = normalizeWoodPostReplacements(data);
+    data.woodPostReplacements = normalized;
+    const methodOptions = WOOD_POST_METHODS.map(opt=>`<option value="${escapeAttr(opt.value)}">${escapeHtml(opt.label)}</option>`).join('');
+    const tieOptions = createSelect(SIMPSON_TIE_OPTIONS);
+    const capOptions = [`<option value="">No cap</option>`, createSelect(WOOD_POST_CAP_TYPES)].join('');
+
+    normalized.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-wood-post-replacement-row','');
+      row.innerHTML = `
+        <div class="sp-field col-2">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-wood-post-replacement-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${item.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Method</label>
+          <select class="sp-select" data-wood-post-replacement-method>${methodOptions}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Simpson Tie</label>
+          <select class="sp-select" data-wood-post-replacement-tie>${tieOptions}</select>
+        </div>
+        <div class="sp-field col-3">
+          <label class="sp-label">Post Cap</label>
+          <select class="sp-select" data-wood-post-replacement-cap>${capOptions}</select>
+        </div>
+        <div class="sp-field col-1" style="align-self:end">
+          <button class="sp-btn danger" data-wood-post-replacement-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const methodSel = row.querySelector('[data-wood-post-replacement-method]');
+      if(methodSel){
+        const normalizedMethod = String(item.method || WOOD_POST_METHODS[1].value).toLowerCase() === 'cut-weld' ? 'cut-weld' : 'dig-straighten';
+        methodSel.value = normalizedMethod;
+      }
+      const tieSel = row.querySelector('[data-wood-post-replacement-tie]');
+      if(tieSel){ tieSel.value = item.tie || SIMPSON_TIE_OPTIONS[0]; }
+      const capSel = row.querySelector('[data-wood-post-replacement-cap]');
+      if(capSel){ capSel.value = item.cap || ''; }
+    });
+
+    const addBtn = card.querySelector('[data-wood-post-replacement-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        if(!Array.isArray(s.woodPostReplacements)) s.woodPostReplacements = [];
+        s.woodPostReplacements.push({
+          qty: 1,
+          method: WOOD_POST_METHODS[1].value,
+          tie: SIMPSON_TIE_OPTIONS[0],
+          cap: ''
+        });
+        renderWoodPostReplacementControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+        updateWoodRepairControls(card);
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-wood-post-replacement-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-wood-post-replacement-row]'));
+      const row = btn.closest('[data-wood-post-replacement-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.woodPostReplacements)) return;
+      if(idx >= 0){
+        s.woodPostReplacements.splice(idx,1);
+        renderWoodPostReplacementControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+        updateWoodRepairControls(card);
+      }
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.closest('[data-wood-post-replacement-method], [data-wood-post-replacement-tie], [data-wood-post-replacement-cap]')){
+        persistWoodPostReplacementsFromDOM(card);
+        persist();
+        updateWoodRepairControls(card);
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-wood-post-replacement-qty]')){
+        persistWoodPostReplacementsFromDOM(card);
+        persist();
+      }
+    });
+
+    updateWoodRepairControls(card);
   }
 
   function renderWoodPostRealignControls(card, data){
@@ -4123,13 +4269,14 @@ document.addEventListener('DOMContentLoaded', function(){
   function updateWoodRepairControls(card){
     const postType = (card.querySelector('[data-field="woodPost"]')?.value || '').toLowerCase();
     const allowCutWeld = postType === 'round steel' || postType === 'postmaster';
-    const methodSelects = card.querySelectorAll('[data-wood-post-realign-method]');
+    const methodSelects = card.querySelectorAll('[data-wood-post-realign-method], [data-wood-post-replacement-method]');
     methodSelects.forEach(sel => {
       const cutOption = Array.from(sel.options).find(opt=>opt.value==='cut-weld');
       if(cutOption){ cutOption.disabled = !allowCutWeld; }
       if(!allowCutWeld && sel.value === 'cut-weld'){
         sel.value = 'dig-straighten';
         persistWoodPostRealignmentsFromDOM(card);
+        persistWoodPostReplacementsFromDOM(card);
       }
     });
   }
@@ -4906,6 +5053,35 @@ document.addEventListener('DOMContentLoaded', function(){
       }, { dig: 0, cutWeld: 0 });
     };
     const zeroWoodMethodCounts = ()=>({ 'cut-weld': 0, 'dig-straighten': 0 });
+    function normalizeWoodPostReplacements(section){
+      const entries = Array.isArray(section?.woodPostReplacements) ? section.woodPostReplacements.filter(Boolean) : [];
+      if(entries.length) return entries;
+      const fallbackCount = parseInt(section?.woodRepairPostReplace || 0, 10) || 0;
+      if(fallbackCount <= 0) return [];
+      return [{
+        qty: fallbackCount,
+        method: section?.woodRepairPostReplaceMethod || WOOD_POST_METHODS[1].value,
+        tie: section?.woodRepairPostReplaceTie || SIMPSON_TIE_OPTIONS[0],
+        cap: section?.woodRepairPostReplaceCap || ''
+      }];
+    }
+    function summarizeWoodPostReplacements(entries=[]){
+      return entries.reduce((acc, item)=>{
+        const qty = parseInt(item?.qty||0,10) || 0;
+        if(qty <= 0) return acc;
+        acc.total += qty;
+        const methodKey = String(item?.method||'').toLowerCase() === 'cut-weld' ? 'cut-weld' : 'dig-straighten';
+        acc.methods[methodKey] = (acc.methods[methodKey] || 0) + qty;
+        const tie = (item?.tie || '').trim();
+        const cap = (item?.cap || '').trim();
+        if(tie){ acc.ties.set(tie, (acc.ties.get(tie)||0) + qty); }
+        if(cap){ acc.caps.set(cap, (acc.caps.get(cap)||0) + qty); }
+        if(!acc.first && qty > 0){
+          acc.first = { ...item, method: methodKey };
+        }
+        return acc;
+      }, { total: 0, methods: zeroWoodMethodCounts(), ties: new Map(), caps: new Map(), first: null });
+    }
     const addWoodMethodCount = (bucket, method, count)=>{
       if(!bucket) return;
       const qty = parseInt(count, 10) || 0;
@@ -5279,7 +5455,9 @@ document.addEventListener('DOMContentLoaded', function(){
           const picketInstallCount = i(s.woodRepairPicketInstall);
           const railReplaceCount = i(s.woodRepairRailReplace);
           const railInstallCount = i(s.woodRepairRailInstall);
-          const postReplaceCount = i(s.woodRepairPostReplace);
+          const woodPostReplacements = normalizeWoodPostReplacements(s);
+          const woodPostReplaceSummary = summarizeWoodPostReplacements(woodPostReplacements);
+          const postReplaceCount = woodPostReplaceSummary.total;
           const woodRealignCounts = countWoodRealignMethods(s.woodPostRealignments);
           const postInstallCount = i(s.woodRepairPostInstall);
           const panelReplaceCount = i(s.woodRepairPanelReplace);
@@ -5291,7 +5469,10 @@ document.addEventListener('DOMContentLoaded', function(){
           lines.push(`  - Pickets to install: ${picketInstallCount}`);
           lines.push(`  - Rails to replace: ${railReplaceCount}`);
           lines.push(`  - Rails to install: ${railInstallCount}`);
-          lines.push(`  - Posts to replace: ${postReplaceCount}`);
+          const replaceLineParts = [];
+          if(woodPostReplaceSummary.methods['dig-straighten']) replaceLineParts.push(`${woodPostReplaceSummary.methods['dig-straighten']} (dig/straighten)`);
+          if(woodPostReplaceSummary.methods['cut-weld']) replaceLineParts.push(`${woodPostReplaceSummary.methods['cut-weld']} (cut & weld)`);
+          lines.push(`  - Posts to replace: ${replaceLineParts.length ? replaceLineParts.join('; ') : postReplaceCount}`);
           lines.push(`  - Posts to realign (dig/straighten): ${woodRealignCounts.dig}`);
           lines.push(`  - Posts to realign (cut & weld): ${woodRealignCounts.cutWeld}`);
           lines.push(`  - Posts to install: ${postInstallCount}`);
@@ -5732,7 +5913,9 @@ document.addEventListener('DOMContentLoaded', function(){
         const picketInstallCount = parseInt(s.woodRepairPicketInstall||0,10) || 0;
         const railReplaceCount = parseInt(s.woodRepairRailReplace||0,10) || 0;
         const railInstallCount = parseInt(s.woodRepairRailInstall||0,10) || 0;
-        const postReplaceCount = parseInt(s.woodRepairPostReplace||0,10) || 0;
+        const woodPostReplacementEntries = normalizeWoodPostReplacements(s);
+        const woodPostReplaceSummary = summarizeWoodPostReplacements(woodPostReplacementEntries);
+        const postReplaceCount = woodPostReplaceSummary.total;
         const postRealignCounts = countWoodRealignMethods(s.woodPostRealignments);
         const postInstallCount = parseInt(s.woodRepairPostInstall||0,10) || 0;
         const panels = parseInt(s.woodRepairPanelReplace||0,10) || 0;
@@ -5784,16 +5967,26 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         const postReplace = addCount(postReplaceCount, 'post', 'posts');
         if(postReplace){
-          const method = methodLabel(WOOD_POST_METHODS, s.woodRepairPostReplaceMethod);
-          const tie = (s.woodRepairPostReplaceTie || '').trim();
-          const cap = (s.woodRepairPostReplaceCap || '').trim();
-          const extras = [method, tie ? `Simpson ${tie}` : '', cap ? `cap: ${cap}` : ''].filter(Boolean).join(', ');
+          const methodDetails = [];
+          Object.entries(woodPostReplaceSummary.methods || {}).forEach(([method, qty])=>{
+            if(!qty) return;
+            methodDetails.push(`${qty} × ${methodLabel(WOOD_POST_METHODS, method)}`);
+            addWoodMethodCount(totals.woodPostReplaceMethods, method, qty);
+          });
+          const tieDetails = [];
+          woodPostReplaceSummary.ties.forEach((qty, tie)=>{
+            tieDetails.push(`${qty} × Simpson ${tie}`);
+          });
+          const capDetails = [];
+          woodPostReplaceSummary.caps.forEach((qty, cap)=>{
+            capDetails.push(`${qty} × ${cap} caps`);
+          });
+          const extras = [methodDetails.length ? `methods: ${methodDetails.join('; ')}` : '', tieDetails.join('; '), capDetails.join('; ')].filter(Boolean).join(' · ');
           parts.push(`Replace ${postReplace}${extras ? ` (${extras})` : ''}`);
           const perPostHours = (woodHeightFt >= 8) ? 1.5 : 1;
           const hours = postReplaceCount * perPostHours * 2; // two-person task
           if(woodHeightFt >= 8){ totals.woodPostReplace8 += postReplaceCount; }
           else { totals.woodPostReplace6 += postReplaceCount; }
-          addWoodMethodCount(totals.woodPostReplaceMethods, s.woodRepairPostReplaceMethod, postReplaceCount);
           woodHelperHours += hours;
           woodManHours += hours;
           woodRequiresTwoPerson = woodRequiresTwoPerson || postReplaceCount > 0;
@@ -6084,24 +6277,28 @@ document.addEventListener('DOMContentLoaded', function(){
     function addWoodPostReplacementMaterials(){
       state.sections.forEach(s=>{
         if((s.fenceType || '').toLowerCase() !== 'wood') return;
-        const replaceCount = parseInt(s.woodRepairPostReplace || 0, 10) || 0;
-        if(replaceCount <= 0) return;
+        const replacements = normalizeWoodPostReplacements(s);
+        if(!replacements.length) return;
         const heightFt = Math.max(0, feetFromStr(s.woodHeight || s.height));
         const railsPerPost = woodRailsForHeight(heightFt);
         const hasKickBoard = !!s.woodAddKickBoard;
         const tiesPerPost = railsPerPost + (hasKickBoard ? 1 : 0);
-        const totalTies = replaceCount * tiesPerPost;
         const postLabel = normalizeLabelText(s.woodPost || 'Wood post');
-        addMat(materials, `${postLabel} posts`, replaceCount);
-        const capLabel = normalizeLabelText(s.woodRepairPostReplaceCap || '');
-        if(capLabel) addMat(materials, `${capLabel} post cap`, replaceCount);
-        const tieLabel = normalizeLabelText((s.woodRepairPostReplaceTie || SIMPSON_TIE_OPTIONS[0]) || '');
-        if(totalTies > 0){
-          addMat(materials, `Simpson ${tieLabel}`, totalTies);
-          addMat(materials, 'lag screws', totalTies * 4);
-        }
         const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
-        addMat(materials, 'bags of Maximizer concrete', replaceCount * bagsPerPost);
+        replacements.forEach(rep=>{
+          const qty = parseInt(rep?.qty || 0, 10) || 0;
+          if(qty <= 0) return;
+          addMat(materials, `${postLabel} posts`, qty);
+          const capLabel = normalizeLabelText(rep?.cap || '');
+          if(capLabel) addMat(materials, `${capLabel} post cap`, qty);
+          const tieLabel = normalizeLabelText((rep?.tie || SIMPSON_TIE_OPTIONS[0]) || '');
+          if(tieLabel){
+            const totalTies = qty * tiesPerPost;
+            addMat(materials, `Simpson ${tieLabel}`, totalTies);
+            addMat(materials, 'lag screws', totalTies * 4);
+          }
+          addMat(materials, 'bags of Maximizer concrete', qty * bagsPerPost);
+        });
       });
     }
 
