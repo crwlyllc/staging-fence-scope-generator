@@ -4717,6 +4717,27 @@ document.addEventListener('DOMContentLoaded', function(){
       if(clean.length === 2) return `${clean[0]} and ${clean[1]}`;
       return `${clean.slice(0,-1).join(', ')}, and ${clean[clean.length-1]}`;
     }
+    function formatPrefabPanelType(info){
+      const styleLabel = normalizeLabelText(info?.style || '') || 'Prefab';
+      const railLabel = normalizeSize(info?.rail || '');
+      const picketLabel = normalizeSize(info?.picket || '');
+      const sizeParts = [];
+      if(railLabel) sizeParts.push(`${railLabel} rails`);
+      if(picketLabel) sizeParts.push(`${picketLabel} pickets`);
+      const sizeText = sizeParts.length ? joinParts(sizeParts) : '';
+      return [styleLabel, sizeText].filter(Boolean).join(' ').trim() || 'prefab panel';
+    }
+    function summarizePrefabPanelTypes(map){
+      if(!map || typeof map.forEach !== 'function' || map.size === 0) return '';
+      const parts = [];
+      map.forEach(info=>{
+        const count = parseInt(info?.count,10) || 0;
+        if(count <= 0) return;
+        const typeLabel = formatPrefabPanelType(info);
+        parts.push(`${count} × ${typeLabel}`);
+      });
+      return parts.join('; ');
+    }
     function formatFtValue(value){
       const n = parseFloat(value);
       if(!isFinite(n) || n <= 0) return '';
@@ -4920,6 +4941,7 @@ document.addEventListener('DOMContentLoaded', function(){
       retainingWallCost:0,
       panelsPrefab:0, panelsCustom:0,
       panelsInstallPrefab:0, panelsInstallCustom:0,
+      prefabPanelTypesRepair: new Map(),
       installSections:0, replaceSections:0,
       removalLf:0, removalCost:0,
       postsInstall: zeroPostCounts(),
@@ -5374,6 +5396,19 @@ document.addEventListener('DOMContentLoaded', function(){
           if(eligible){
             totals.panelsPrefab += qty;
             if(source === 'install') totals.panelsInstallPrefab += qty;
+            if(source === 'repair' && !isWood){
+              const styleLabel = normalizeLabelText(style);
+              const railLabel = normalizeSize(railSize);
+              const picketLabel = normalizeSize(picketSize);
+              const key = JSON.stringify({
+                style: styleLabel.toLowerCase(),
+                rail: railLabel.toLowerCase(),
+                picket: picketLabel.toLowerCase()
+              });
+              const prev = totals.prefabPanelTypesRepair.get(key) || { count: 0, style: styleLabel, rail: railLabel, picket: picketLabel };
+              prev.count += qty;
+              totals.prefabPanelTypesRepair.set(key, prev);
+            }
           } else {
             totals.panelsCustom += qty;
             if(source === 'install') totals.panelsInstallCustom += qty;
@@ -5551,6 +5586,8 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     const walkHardwareSummary = summarizeWalkHardware(state.sections);
+    const prefabReplacementCount = Math.max(0, totals.panelsPrefab - (totals.panelsInstallPrefab || 0));
+    const prefabReplacementDetail = summarizePrefabPanelTypes(totals.prefabPanelTypesRepair);
 
     if (woodSectionSummaries.length){
       lines.push('WOOD SECTION DETAILS');
@@ -5599,7 +5636,10 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.walkGateAdds)  lines.push(`- Walk gates to add: ${t.walkGateAdds}`);
       if (t.walkGateAddsSingle) lines.push(`- Single swing walk gates to add: ${t.walkGateAddsSingle}`);
       if (t.walkGateAddsDouble) lines.push(`- Double swing gates to add: ${t.walkGateAddsDouble}`);
-      if (t.panelsPrefab) lines.push(`- Prefab panels to install: ${t.panelsPrefab}`);
+      if (prefabReplacementCount) {
+        const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
+        lines.push(`- Prefab panel replacements: ${prefabReplacementCount}${detailSuffix}`);
+      }
       if (t.panelsCustom) lines.push(`- Panels to custom-build: ${t.panelsCustom}`);
       if (t.panelsInstallPrefab) lines.push(`- New prefab panels: ${t.panelsInstallPrefab}`);
       if (t.panelsInstallCustom) lines.push(`- New custom panels: ${t.panelsInstallCustom}`);
@@ -5995,9 +6035,9 @@ document.addEventListener('DOMContentLoaded', function(){
       const sizeDetail = uniqueBraceLabels.length ? ` using ${joinParts(uniqueBraceLabels)}` : '';
       addServiceLine('Add Diagonal Braces', `Fabricate and install ${braceDesc}${sizeDetail} to close gaps near the bottom of the fence.`);
     }
-    const prefabSwapCount = Math.max(0, totals.panelsPrefab - (totals.panelsInstallPrefab || 0));
-    if (prefabSwapCount > 0){
-      addServiceLine('Install Prefab Panels', `Swap in ${describeCount(prefabSwapCount, 'prefabricated panel', 'prefabricated panels')} and secure them to existing posts.`);
+    if (prefabReplacementCount > 0){
+      const typeSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
+      addServiceLine('Install Prefab Panels', `Swap in ${describeCount(prefabReplacementCount, 'prefabricated panel', 'prefabricated panels')}${typeSuffix} and secure them to existing posts.`);
     }
     const customSwapCount = Math.max(0, totals.panelsCustom - (totals.panelsInstallCustom || 0));
     if (customSwapCount > 0){
@@ -6864,7 +6904,10 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (totals.diagonalBraces > 0)  sub.push('- Diagonal braces to add: '+totals.diagonalBraces);
     if (totals.digOut > 0)          sub.push('- Dig out: '+totals.digOut+' lf');
-    if (totals.panelsPrefab > 0)    sub.push('- Prefab panels to install: '+totals.panelsPrefab);
+    if (prefabReplacementCount > 0){
+      const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
+      sub.push(`- Prefab panel replacements: ${prefabReplacementCount}${detailSuffix}`);
+    }
     if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
     if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
     if (totals.panelsInstallCustom > 0) sub.push('- New custom panels: '+totals.panelsInstallCustom);
