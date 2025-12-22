@@ -586,8 +586,8 @@ document.addEventListener('DOMContentLoaded', function(){
       label: 'Mark',
       maxCrew: 4,
       maxWelders: 1,
-      minCrew: 1,
-      description: '1 welder with up to 3 helpers. $200/day per person (1: $200, 2: $400, 3: $600, 4: $800).',
+      minCrew: 2,
+      description: 'Minimum 2-man crew (1 welder + 1 helper) with up to 2 additional helpers. $200/day per person (2: $400, 3: $600, 4: $800).',
       dailyCost(count){
         if(!count || count <= 0) return 0;
         return count * 200;
