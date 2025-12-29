@@ -522,6 +522,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'in-house-2': {
       id: 'in-house-2',
       label: 'In-House 2',
+      isInHouse: true,
       maxCrew: 2,
       maxWelders: 1,
       minCrew: 2,
@@ -534,6 +535,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'in-house-4': {
       id: 'in-house-4',
       label: 'In-House 4',
+      isInHouse: true,
       maxCrew: 4,
       maxWelders: 2,
       minCrew: 4,
@@ -546,6 +548,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'in-house-3': {
       id: 'in-house-3',
       label: 'In-House 3',
+      isInHouse: true,
       maxCrew: 3,
       maxWelders: 2,
       minCrew: 3,
@@ -558,6 +561,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'in-house-3-4': {
       id: 'in-house-3-4',
       label: 'In-House 3 & 4',
+      isInHouse: true,
       maxCrew: 7,
       maxWelders: 4,
       minCrew: 7,
@@ -637,6 +641,14 @@ document.addEventListener('DOMContentLoaded', function(){
   const NOTES_DATA_START = '[[SP_SCOPE_DATA_START]]';
   const NOTES_DATA_END = '[[SP_SCOPE_DATA_END]]';
 
+  const HQ_ADDRESS = '2233 Franklin Dr Mesquite TX';
+  const TRAVEL_SETTINGS = {
+    dieselPrice: 3,
+    mpg: 13,
+    wagePerHour: 20,
+    minutesPerMile: 1,
+  };
+
   const state = { sections: [], crew: DEFAULT_CREW_ID };
   const mapState = {
     map: null,
@@ -645,6 +657,9 @@ document.addEventListener('DOMContentLoaded', function(){
     geocoder: null,
     autocomplete: null,
     marker: null,
+    addressLocation: null,
+    baseLocation: null,
+    baseLocationPromise: null,
     maxZoomService: null,
     nextPolylineId: 1,
     pendingAddress: '',
@@ -1085,6 +1100,120 @@ document.addEventListener('DOMContentLoaded', function(){
     focusMapOnAddress(address);
   }
 
+  function normalizeAddressText(addr){
+    return (addr || '').trim();
+  }
+
+  function geocodeAddress(address){
+    return new Promise(resolve => {
+      const value = normalizeAddressText(address);
+      if(!value || !mapState.geocoder){
+        resolve(null);
+        return;
+      }
+      mapState.geocoder.geocode({ address: value }, (results, status)=>{
+        if(status === 'OK' && results && results[0] && results[0].geometry && results[0].geometry.location){
+          resolve(results[0].geometry.location);
+        }else{
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  async function getBaseLocation(){
+    if(mapState.baseLocation){
+      return mapState.baseLocation;
+    }
+    if(mapState.baseLocationPromise){
+      return mapState.baseLocationPromise;
+    }
+    mapState.baseLocationPromise = geocodeAddress(HQ_ADDRESS).then(loc=>{
+      mapState.baseLocation = loc;
+      mapState.baseLocationPromise = null;
+      return loc;
+    });
+    return mapState.baseLocationPromise;
+  }
+
+  function addressesMatch(a, b){
+    return normalizeAddressText(a).toLowerCase() === normalizeAddressText(b).toLowerCase();
+  }
+
+  async function resolveJobLocation(jobAddress){
+    const normalized = normalizeAddressText(jobAddress);
+    if(!normalized){
+      return null;
+    }
+    if(mapState.addressLocation && addressesMatch(mapState.pendingAddress, normalized)){
+      return mapState.addressLocation;
+    }
+    return geocodeAddress(normalized);
+  }
+
+  function milesBetween(locA, locB){
+    if(typeof google === 'undefined' || !google.maps || !google.maps.geometry || !google.maps.geometry.spherical){
+      return 0;
+    }
+    if(!locA || !locB) return 0;
+    const meters = google.maps.geometry.spherical.computeDistanceBetween(locA, locB);
+    return meters / 1609.34;
+  }
+
+  function isInHouseCrew(crewDef){
+    return Boolean(crewDef && crewDef.isInHouse);
+  }
+
+  async function computeTravelCost({ crewDef, crewSchedule, jobAddress }){
+    const result = { cost: 0, breakdown: [] };
+    if(!isInHouseCrew(crewDef)){
+      return result;
+    }
+
+    const normalizedAddress = normalizeAddressText(jobAddress);
+    if(!normalizedAddress){
+      result.breakdown.push('- Travel: Address required to calculate fuel and drive time.');
+      return result;
+    }
+
+    const [baseLoc, jobLoc] = await Promise.all([
+      getBaseLocation(),
+      resolveJobLocation(normalizedAddress)
+    ]);
+
+    if(!baseLoc || !jobLoc){
+      result.breakdown.push('- Travel: Unable to locate job address; travel cost not included.');
+      return result;
+    }
+
+    const milesOneWay = milesBetween(baseLoc, jobLoc);
+    if(!milesOneWay || !isFinite(milesOneWay)){
+      result.breakdown.push('- Travel: Unable to calculate distance; travel cost not included.');
+      return result;
+    }
+
+    const roundTripMiles = milesOneWay * 2;
+    const travelDays = crewSchedule.filter(day => (day.crew||0) > 0).length;
+    if(travelDays <= 0){
+      return result;
+    }
+
+    const fuelPerDay = (roundTripMiles / TRAVEL_SETTINGS.mpg) * TRAVEL_SETTINGS.dieselPrice;
+    const totalFuelCost = fuelPerDay * travelDays;
+    const travelMinutesPerDay = roundTripMiles * TRAVEL_SETTINGS.minutesPerMile;
+    const travelLaborCost = crewSchedule.reduce((acc, day)=>{
+      const crewCount = day.crew || 0;
+      if(crewCount <= 0) return acc;
+      const hours = (travelMinutesPerDay / 60) * crewCount;
+      return acc + (hours * TRAVEL_SETTINGS.wagePerHour);
+    }, 0);
+
+    const cost = totalFuelCost + travelLaborCost;
+    result.cost = cost;
+    result.breakdown.push(`- Travel: ${roundTripMiles.toFixed(1)} miles round trip x ${travelDays} day(s) = $${money(cost)} (fuel $${money(totalFuelCost)}, travel labor $${money(travelLaborCost)})`);
+    return result;
+  }
+
   async function fetchEstimateByNumber(estimateNumber, options){
     const opts = options || {};
     const signal = opts.signal;
@@ -1358,6 +1487,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(typeof google === 'undefined' || !google.maps || !mapState.map){
       return;
     }
+    mapState.addressLocation = location || null;
     if(!location){
       if(mapState.marker){
         mapState.marker.setMap(null);
@@ -4531,7 +4661,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  function generateNotes(eventOrOptions){
+  async function generateNotes(eventOrOptions){
     let options = {};
     if(eventOrOptions && typeof eventOrOptions === 'object'){
       if('target' in eventOrOptions || 'currentTarget' in eventOrOptions){
@@ -6963,7 +7093,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const crewCost = crewSchedule.reduce((acc, day) => acc + crewCostForCount(crewDef, day.crew), 0);
     const consumablesCost = scheduleEntries.length * 50;
     const removalCost = totals.removalCost || 0;
-    const directCosts = crewCost + costMaterials + removalCost + consumablesCost;
+    const jobAddress = lastEstimateAddress || (mapAddressInput ? mapAddressInput.value : '');
+    const travelCostResult = await computeTravelCost({ crewDef, crewSchedule, jobAddress });
+    const travelCost = travelCostResult.cost || 0;
+    const directCosts = crewCost + travelCost + costMaterials + removalCost + consumablesCost;
     const revenueRes = computeChargeRevenue(directCosts);
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
@@ -6983,11 +7116,12 @@ document.addEventListener('DOMContentLoaded', function(){
       : 'TBD';
     const laborLabel = crewDef ? `${crewDef.label}` : 'Crew';
     cost.push(`- Labor (${laborLabel}): $${money(crewCost)} (${laborDetailWithDays})`);
+    travelCostResult.breakdown.forEach(line => cost.push(line));
     cost.push('- Consumables: $'+money(consumablesCost));
     cost.push('- Materials: $'+money(costMaterials));
     if(removalCost>0){ cost.push('- Removal & disposal (paid to sub): $'+money(removalCost)); }
     matBreak.forEach(line=> cost.push(line));
-    cost.push('- Total: $'+money(crewCost + costMaterials + removalCost + consumablesCost));
+    cost.push('- Total: $'+money(crewCost + travelCost + costMaterials + removalCost + consumablesCost));
     if (unpriced) cost.push('  - Note: Some sizes have no price mapping and were counted as $0.');
 
     cost.push('');
@@ -7008,16 +7142,20 @@ document.addEventListener('DOMContentLoaded', function(){
     const inHouseCrewIds = ['in-house-2', 'in-house-4', 'in-house-3', 'in-house-3-4'];
     const inHouseScenarioLines = [];
     inHouseScenarioLines.push('IN-HOUSE CREW SCENARIOS (if selected for this scope)');
-    inHouseCrewIds.forEach(id => {
+    for (const id of inHouseCrewIds){
       const def = CREWS[id];
-      if (!def) return;
+      if (!def) continue;
+      const altTravel = await computeTravelCost({ crewDef: def, crewSchedule, jobAddress });
       const altCrewCost = crewSchedule.reduce((acc, day) => acc + crewCostForCount(def, day.crew), 0);
-      const altDirectCosts = altCrewCost + costMaterials + removalCost + consumablesCost;
+      const altDirectCosts = altCrewCost + (altTravel.cost || 0) + costMaterials + removalCost + consumablesCost;
       const altRevenueRes = computeChargeRevenue(altDirectCosts);
       const altRevenue = altRevenueRes && isFinite(altRevenueRes.revenue) ? altRevenueRes.revenue : NaN;
       const revenueLabel = isFinite(altRevenue) ? `$${money(altRevenue)}` : 'Invalid pricing inputs';
-      inHouseScenarioLines.push(`- ${def.label}: total cost $${money(altDirectCosts)}; total revenue ${revenueLabel}`);
-    });
+      const travelNote = altTravel.cost > 0
+        ? ` (includes $${money(altTravel.cost)} travel)`
+        : (altTravel.breakdown[0] ? ` (${altTravel.breakdown[0].replace(/^[-]\s*/, '')})` : '');
+      inHouseScenarioLines.push(`- ${def.label}: total cost $${money(altDirectCosts)}${travelNote}; total revenue ${revenueLabel}`);
+    }
 
     const fullNotesWithScenarios = [...fullNotes, '', ...inHouseScenarioLines];
 
