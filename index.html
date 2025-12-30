@@ -235,15 +235,40 @@
 </head>
 <body>
 <div id="sp-scope">
-  <div class="sp-container">
-    <div class="sp-header">
-      <div class="sp-title">Scope Generator</div>
-      <div class="sp-actions">
-        <button class="sp-btn" id="sp-refresh-materials" type="button">Update Material Costs</button>
+    <div class="sp-container">
+      <div class="sp-header">
+        <div class="sp-title">Scope Generator</div>
+        <div class="sp-actions">
+          <button class="sp-btn" id="sp-refresh-materials" type="button">Update Material Costs</button>
+        </div>
       </div>
-    </div>
 
     <div class="sp-inline-cards">
+      <div class="sp-card" id="sp-manual-quote-card">
+        <div class="sp-card-header">
+          <div class="sp-card-title">Manual Quote</div>
+        </div>
+        <div class="sp-grid">
+          <div class="sp-field col-6">
+            <label class="sp-label" for="sp-manual-cost">Total Direct Costs</label>
+            <div class="sp-row">
+              <input class="sp-input" id="sp-manual-cost" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Enter total cost (e.g., 4500)" />
+              <button class="sp-btn" id="sp-manual-calc" type="button">Calculate Charge</button>
+            </div>
+            <div class="sp-hint">Plug in the combined labor, travel, materials, and disposal costs.</div>
+            <div class="sp-hint" id="sp-manual-status">Uses the standard pricing formula.</div>
+          </div>
+          <div class="sp-field col-6">
+            <label class="sp-label" for="sp-manual-charge">Recommended Charge</label>
+            <div class="sp-row">
+              <input class="sp-input" id="sp-manual-charge" type="text" readonly placeholder="$0.00" />
+              <span class="sp-chip is-info" id="sp-manual-mode" style="display:none">Pricing</span>
+            </div>
+            <div class="sp-hint">Calculated from the direct cost you enter.</div>
+          </div>
+        </div>
+      </div>
+
       <div class="sp-card" id="sp-hcp-card">
         <div class="sp-card-header">
           <div class="sp-card-title">Housecall Pro Estimate</div>
@@ -682,6 +707,11 @@ document.addEventListener('DOMContentLoaded', function(){
   const mapToggleBtn = document.getElementById('sp-map-toggle');
   const estimateStatusEl = document.getElementById('sp-estimate-status');
   const defaultEstimateStatus = estimateStatusEl ? estimateStatusEl.textContent : '';
+  const manualCostInput = document.getElementById('sp-manual-cost');
+  const manualCalcBtn = document.getElementById('sp-manual-calc');
+  const manualChargeOutput = document.getElementById('sp-manual-charge');
+  const manualModeChip = document.getElementById('sp-manual-mode');
+  const manualStatusEl = document.getElementById('sp-manual-status');
   const pushHcpBtn = document.getElementById('sp-push-hcp');
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
@@ -4625,6 +4655,11 @@ document.addEventListener('DOMContentLoaded', function(){
     return `${crewDef.label} – ${crewDef.description}`;
   }
   function money(n){ return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function parseCurrencyInput(value){
+    const cleaned = String(value || '').replace(/,/g, '');
+    const num = parseFloat(cleaned);
+    return isFinite(num) ? num : NaN;
+  }
 
   const RATES = {
     netTarget:  0.25,
@@ -4659,6 +4694,47 @@ document.addEventListener('DOMContentLoaded', function(){
       const rev2 = Math.max(candidateC, candidateD);
       return { revenue: rev2, mode: 'capped' };
     }
+  }
+
+  function updateManualQuote(){
+    if(!manualCostInput || !manualChargeOutput || !manualStatusEl || !manualModeChip) return;
+
+    const raw = (manualCostInput.value || '').trim();
+    if(!raw){
+      manualChargeOutput.value = '';
+      manualModeChip.style.display = 'none';
+      manualStatusEl.textContent = 'Enter total direct costs to compute the price to charge.';
+      delete manualStatusEl.dataset.state;
+      return;
+    }
+
+    const totalCost = parseCurrencyInput(raw);
+    if(!isFinite(totalCost) || totalCost < 0){
+      manualChargeOutput.value = '';
+      manualModeChip.style.display = 'none';
+      manualStatusEl.textContent = 'Enter a valid non-negative cost amount.';
+      manualStatusEl.dataset.state = 'error';
+      return;
+    }
+
+    const pricing = computeChargeRevenue(totalCost);
+    if(!pricing || !isFinite(pricing.revenue)){
+      manualChargeOutput.value = '';
+      manualModeChip.style.display = 'none';
+      manualStatusEl.textContent = 'Pricing inputs produced an invalid result.';
+      manualStatusEl.dataset.state = 'error';
+      return;
+    }
+
+    manualChargeOutput.value = '$' + money(pricing.revenue);
+    manualModeChip.textContent = pricing.mode === 'capped' ? 'MCOR capped' : 'Standard %';
+    manualModeChip.classList.toggle('is-warn', pricing.mode === 'capped');
+    manualModeChip.classList.toggle('is-info', pricing.mode !== 'capped');
+    manualModeChip.style.display = 'inline-block';
+    manualStatusEl.textContent = pricing.mode === 'capped'
+      ? 'Standard pricing formula with MCOR cap applied.'
+      : 'Standard pricing formula applied.';
+    manualStatusEl.dataset.state = 'success';
   }
 
   async function generateNotes(eventOrOptions){
@@ -7543,6 +7619,19 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  if(manualCalcBtn){
+    manualCalcBtn.addEventListener('click', updateManualQuote);
+  }
+  if(manualCostInput){
+    manualCostInput.addEventListener('input', ()=> updateManualQuote());
+    manualCostInput.addEventListener('keydown', evt=>{
+      if(evt.key === 'Enter'){
+        evt.preventDefault();
+        updateManualQuote();
+      }
+    });
+  }
+
   const quickAddBtn = document.getElementById('sp-quick-add');
   if(quickAddBtn){ quickAddBtn.addEventListener('click', ()=>{ addSection(); persist(); }); }
   const quickDupFirstBtn = document.getElementById('sp-quick-dup-first');
@@ -7596,6 +7685,8 @@ document.addEventListener('DOMContentLoaded', function(){
   if (backBottomBtn){
     backBottomBtn.addEventListener('click', ()=> window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }));
   }
+
+  updateManualQuote();
 
   if(estimateNumberInput && estimateNumberInput.value){
     runEstimateLookup();
