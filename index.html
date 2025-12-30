@@ -4691,10 +4691,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const RATES = {
     netTarget:  0.25,
-    overhead:   0.0549,
+    overhead:   0,
     commission: 0.25,
     cac:        393.38,
-    mcor:       0.1708
+    // Combined overhead + MCOR flat rate
+    mcor:       0.20
   };
 
   function computeChargeRevenue(B1_directCosts){
