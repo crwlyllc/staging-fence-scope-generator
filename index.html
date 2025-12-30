@@ -231,6 +231,25 @@
   .sp-card.is-wood [data-wrought-only]{ display:none !important; }
   .sp-card:not(.is-wood) [data-wood-only]{ display:none !important; }
 
+  .sp-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.35);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:9999;
+  }
+  .sp-modal.is-open{ display:flex; }
+  .sp-modal-card{
+    width:min(680px, 100%);
+    max-height:90vh;
+    overflow:auto;
+    border-radius:var(--sp-radius);
+    box-shadow:0 20px 60px rgba(0,0,0,0.16);
+  }
+
   </style>
 </head>
 <body>
@@ -239,14 +258,18 @@
       <div class="sp-header">
         <div class="sp-title">Scope Generator</div>
         <div class="sp-actions">
+          <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
           <button class="sp-btn" id="sp-refresh-materials" type="button">Update Material Costs</button>
         </div>
       </div>
 
-    <div class="sp-inline-cards">
-      <div class="sp-card" id="sp-manual-quote-card">
+    <div class="sp-modal" id="sp-manual-modal" aria-hidden="true" role="dialog" aria-labelledby="sp-manual-title">
+      <div class="sp-card sp-modal-card" id="sp-manual-quote-card">
         <div class="sp-card-header">
-          <div class="sp-card-title">Manual Quote</div>
+          <div class="sp-card-title" id="sp-manual-title">Manual Quote</div>
+          <div class="sp-row">
+            <button class="sp-btn ghost" id="sp-manual-close" type="button">Close</button>
+          </div>
         </div>
         <div class="sp-grid">
           <div class="sp-field col-6">
@@ -268,7 +291,9 @@
           </div>
         </div>
       </div>
+    </div>
 
+    <div class="sp-inline-cards">
       <div class="sp-card" id="sp-hcp-card">
         <div class="sp-card-header">
           <div class="sp-card-title">Housecall Pro Estimate</div>
@@ -712,6 +737,9 @@ document.addEventListener('DOMContentLoaded', function(){
   const manualChargeOutput = document.getElementById('sp-manual-charge');
   const manualModeChip = document.getElementById('sp-manual-mode');
   const manualStatusEl = document.getElementById('sp-manual-status');
+  const manualModal = document.getElementById('sp-manual-modal');
+  const manualOpenBtn = document.getElementById('sp-open-manual');
+  const manualCloseBtn = document.getElementById('sp-manual-close');
   const pushHcpBtn = document.getElementById('sp-push-hcp');
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
@@ -4696,6 +4724,19 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function setManualModal(open){
+    if(!manualModal) return;
+    manualModal.setAttribute('aria-hidden', open ? 'false' : 'true');
+    manualModal.classList.toggle('is-open', !!open);
+
+    if(open && manualCostInput){
+      manualCostInput.focus();
+      if(typeof manualCostInput.select === 'function'){
+        manualCostInput.select();
+      }
+    }
+  }
+
   function updateManualQuote(){
     if(!manualCostInput || !manualChargeOutput || !manualStatusEl || !manualModeChip) return;
 
@@ -7618,6 +7659,23 @@ document.addEventListener('DOMContentLoaded', function(){
       persist();
     });
   }
+
+  if(manualOpenBtn && manualModal){
+    manualOpenBtn.addEventListener('click', ()=> setManualModal(true));
+    manualModal.addEventListener('click', evt=>{
+      if(evt.target === manualModal){
+        setManualModal(false);
+      }
+    });
+  }
+  if(manualCloseBtn){
+    manualCloseBtn.addEventListener('click', ()=> setManualModal(false));
+  }
+  document.addEventListener('keydown', evt=>{
+    if(evt.key === 'Escape' && manualModal && manualModal.classList.contains('is-open')){
+      setManualModal(false);
+    }
+  });
 
   if(manualCalcBtn){
     manualCalcBtn.addEventListener('click', updateManualQuote);
