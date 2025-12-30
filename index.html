@@ -7248,6 +7248,9 @@ document.addEventListener('DOMContentLoaded', function(){
       cost.push('⚠️ Pricing inputs produce an invalid result. Check RATES (commission, net target, overhead, MCOR, CAC).');
     } else {
       cost.push('- Price to charge: $'+money(revenue));
+      cost.push('- Total direct costs: $'+money(directCosts));
+      cost.push('- Overhead amount: $'+money(revenue * RATES.overhead));
+      cost.push('- Gross profit: $'+money(revenue - directCosts - (revenue * RATES.overhead)));
       cost.push('- Commission (per formula): $'+money(commissionFormula$));
     }
 
