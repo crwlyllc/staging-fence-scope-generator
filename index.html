@@ -7247,11 +7247,16 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!isFinite(revenue)){
       cost.push('⚠️ Pricing inputs produce an invalid result. Check RATES (commission, net target, overhead, MCOR, CAC).');
     } else {
+      const grossProfit = revenue - directCosts - (revenue * RATES.overhead);
+      const netProfit = grossProfit - commissionFormula$;
+      const netProfitPct = revenue !== 0 ? (netProfit / revenue) * 100 : NaN;
       cost.push('- Price to charge: $'+money(revenue));
       cost.push('- Total direct costs: $'+money(directCosts));
       cost.push('- Overhead amount: $'+money(revenue * RATES.overhead));
-      cost.push('- Gross profit: $'+money(revenue - directCosts - (revenue * RATES.overhead)));
+      cost.push('- Gross profit: $'+money(grossProfit));
       cost.push('- Commission (per formula): $'+money(commissionFormula$));
+      cost.push('- Net profit: $'+money(netProfit));
+      cost.push('- Net profit %: '+(isFinite(netProfitPct) ? netProfitPct.toFixed(1) : 'Invalid')+'%');
     }
 
     const idxTotals = lines.indexOf('TOTALS');
