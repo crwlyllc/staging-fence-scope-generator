@@ -7177,6 +7177,19 @@ document.addEventListener('DOMContentLoaded', function(){
       };
     });
 
+    const averageCrewSize = scheduleEntries.length
+      ? crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0) / scheduleEntries.length
+      : 0;
+    const estimatedOnsiteHours = averageCrewSize > 0 ? manHours / averageCrewSize : 0;
+    const formatHours = (hours) => {
+      if (!isFinite(hours) || hours <= 0) return '';
+      const rounded = Math.round(hours * 10) / 10;
+      const isWhole = Math.abs(rounded - Math.round(rounded)) < 0.05;
+      return isWhole ? `${Math.round(rounded)} hours` : `${rounded.toFixed(1)} hours`;
+    };
+    const estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
+    const totalCrewHoursLabel = formatHours(manHours);
+
     const materialEntries = Object.keys(materials)
       .filter(label => materials[label] > 0)
       .sort((a, b) => a.localeCompare(b))
@@ -7192,6 +7205,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const sub = [];
     sub.push(`CREW: ${crewSummary(crewDef)}`);
+    if (estimatedOnsiteLabel) {
+      const crewTimeDetail = totalCrewHoursLabel
+        ? `${estimatedOnsiteLabel} onsite (${totalCrewHoursLabel} of crew time)`
+        : `${estimatedOnsiteLabel} onsite`;
+      sub.push(`- Estimated time: ${crewTimeDetail}`);
+    }
     if(scheduleEntries.length){
       scheduleEntries.forEach(entry => {
         const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
@@ -7337,6 +7356,12 @@ document.addEventListener('DOMContentLoaded', function(){
       : 'TBD';
     const laborLabel = crewDef ? `${crewDef.label}` : 'Crew';
     cost.push(`- Labor (${laborLabel}): $${money(crewCost)} (${laborDetailWithDays})`);
+    if (estimatedOnsiteLabel) {
+      const timeDetail = totalCrewHoursLabel
+        ? `${estimatedOnsiteLabel} onsite (~${totalCrewHoursLabel} of crew time)`
+        : estimatedOnsiteLabel;
+      cost.push(`- Estimated time (${laborLabel}): ${timeDetail}`);
+    }
     travelCostResult.breakdown.forEach(line => cost.push(line));
     cost.push('- Consumables: $'+money(consumablesCost));
     cost.push('- Materials: $'+money(costMaterials));
