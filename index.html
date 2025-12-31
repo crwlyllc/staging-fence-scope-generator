@@ -2291,16 +2291,6 @@ document.addEventListener('DOMContentLoaded', function(){
             <label class="sp-label">Puppy Pickets</label>
             <select class="sp-select" data-field="puppy">${createSelect(SEED.puppy)}</select>
           </div>
-          <div class="sp-field col-3" data-repair-only>
-            <label class="sp-label"># Pickets to Replace</label>
-            ${numberControl('wiPickets','0')}
-          </div>
-          <div class="sp-field col-3" data-repair-only>
-            <label class="sp-label">Weld Redos</label>
-            ${numberControl('weldRedos','0')}
-            <div class="sp-hint">Redo broken welds (no new material). ~5 minutes each for a welder.</div>
-          </div>
-
         </div>
         </div>
         <div class="sp-scope-group col-12 is-repair">
@@ -2312,6 +2302,21 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
           </div>
           <div class="sp-grid sp-scope-grid">
+          <div class="sp-field col-12" data-repair-only>
+            <label class="sp-label">Rail Repairs</label>
+            <div class="sp-rail-row" data-rail-repair-row></div>
+          </div>
+
+          <div class="sp-field col-3" data-repair-only>
+            <label class="sp-label"># Pickets to Replace</label>
+            ${numberControl('wiPickets','0')}
+          </div>
+          <div class="sp-field col-3" data-repair-only>
+            <label class="sp-label">Weld Redos</label>
+            ${numberControl('weldRedos','0')}
+            <div class="sp-hint">Redo broken welds (no new material). ~5 minutes each for a welder.</div>
+          </div>
+
         <!-- Finial replacements (kept as a block) -->
         <div class="sp-field col-12" data-repair-only>
           <label class="sp-label">Finial Replacements</label>
@@ -3552,12 +3557,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function renderRailsControls(card, data){
     const row  = card.querySelector('[data-rails-row]');
+    const repairRow = card.querySelector('[data-rail-repair-row]');
     if(!row) return;
     $$('[data-rail-block]', row).forEach(el=> el.remove());
+    if(repairRow) $$('[data-rail-block]', repairRow).forEach(el=> el.remove());
     const count = parseInt((data.railsCount!=null?data.railsCount:2),10);
     const labels = railLabels(count);
     const rails = Array.isArray(data.rails) ? data.rails : [];
     row.style.setProperty('--rail-cols', `repeat(${count+1}, minmax(200px, 1fr))`);
+    if(repairRow){
+      repairRow.style.setProperty('--rail-cols', `repeat(${count}, minmax(200px, 1fr))`);
+    }
     labels.forEach((label,i)=>{
       const block = document.createElement('div');
       block.className = `sp-field`;
@@ -3577,16 +3587,25 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label">Second ${label} Size</label>
           <select class="sp-select" data-field="railSize2_${i}">${createSelect(SEED.railSize)}</select>
         </div>
-        <div class="sp-field" data-rail-repair style="margin-top:6px">
-          <label class="sp-label"># Rail Patches (${label})</label>
-          ${patchesHtml}
-        </div>
-        <div class="sp-field" data-rail-repair style="margin-top:6px">
-          <label class="sp-label"># Full Rail Replacements (${label})</label>
-          ${replHtml}
-        </div>
       `;
       row.appendChild(block);
+      if(repairRow){
+        const repairBlock = document.createElement('div');
+        repairBlock.className = 'sp-field';
+        repairBlock.setAttribute('data-rail-block','');
+        repairBlock.innerHTML = `
+          <label class="sp-label">${label} Repairs</label>
+          <div class="sp-field" data-rail-repair style="margin-top:6px">
+            <label class="sp-label"># Rail Patches (${label})</label>
+            ${patchesHtml}
+          </div>
+          <div class="sp-field" data-rail-repair style="margin-top:6px">
+            <label class="sp-label"># Full Rail Replacements (${label})</label>
+            ${replHtml}
+          </div>
+        `;
+        repairRow.appendChild(repairBlock);
+      }
       const r = rails[i] || {};
       const sizeEl    = card.querySelector(`[data-field="railSize_${i}"]`);
       const stackEl   = card.querySelector(`[data-field="railStacked_${i}"]`);
