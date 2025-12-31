@@ -5521,7 +5521,7 @@ document.addEventListener('DOMContentLoaded', function(){
       let realignCounts = zeroPostCounts();
       let realignCutWeld = 0;
       if(isRepair){
-        lines.push(`- Repairs:`);
+        const repairLines = [];
         if(isWood){
           picketReplaceCount = i(s.woodRepairPicketReplace);
           const picketInstallCount = i(s.woodRepairPicketInstall);
@@ -5535,48 +5535,52 @@ document.addEventListener('DOMContentLoaded', function(){
           const topCapLf = i(s.woodRepairTopCapReplaceLf);
           const trimLf = i(s.woodRepairTrimReplaceLf);
           const kickLf = i(s.woodRepairKickReplaceLf);
-          lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
-          lines.push(`  - Pickets to install: ${picketInstallCount}`);
-          lines.push(`  - Rails to replace: ${railReplaceCount}`);
-          lines.push(`  - Rails to install: ${railInstallCount}`);
-          lines.push(`  - Posts to replace: ${postReplaceCount}`);
-          lines.push(`  - Posts to realign (dig/straighten): ${woodRealignCounts.dig}`);
-          lines.push(`  - Posts to realign (cut & weld): ${woodRealignCounts.cutWeld}`);
-          lines.push(`  - Posts to install: ${postInstallCount}`);
-          lines.push(`  - Panels to replace: ${panelReplaceCount}`);
-          lines.push(`  - Walk gates to repair: ${gateCount}`);
-          lines.push(`  - Top cap to replace: ${topCapLf} lf`);
-          lines.push(`  - Trim to replace: ${trimLf} lf`);
-          lines.push(`  - Kick board to replace: ${kickLf} lf`);
+          if(picketReplaceCount > 0) repairLines.push(`  - Pickets to replace: ${picketReplaceCount}`);
+          if(picketInstallCount > 0) repairLines.push(`  - Pickets to install: ${picketInstallCount}`);
+          if(railReplaceCount > 0) repairLines.push(`  - Rails to replace: ${railReplaceCount}`);
+          if(railInstallCount > 0) repairLines.push(`  - Rails to install: ${railInstallCount}`);
+          if(postReplaceCount > 0) repairLines.push(`  - Posts to replace: ${postReplaceCount}`);
+          if(woodRealignCounts.dig > 0) repairLines.push(`  - Posts to realign (dig/straighten): ${woodRealignCounts.dig}`);
+          if(woodRealignCounts.cutWeld > 0) repairLines.push(`  - Posts to realign (cut & weld): ${woodRealignCounts.cutWeld}`);
+          if(postInstallCount > 0) repairLines.push(`  - Posts to install: ${postInstallCount}`);
+          if(panelReplaceCount > 0) repairLines.push(`  - Panels to replace: ${panelReplaceCount}`);
+          if(gateCount > 0) repairLines.push(`  - Walk gates to repair: ${gateCount}`);
+          if(topCapLf > 0) repairLines.push(`  - Top cap to replace: ${topCapLf} lf`);
+          if(trimLf > 0) repairLines.push(`  - Trim to replace: ${trimLf} lf`);
+          if(kickLf > 0) repairLines.push(`  - Kick board to replace: ${kickLf} lf`);
         } else {
           picketReplaceCount = i(s.wiPickets);
           weldRedoCount = i(s.weldRedos);
           replaceCounts = countPostGroups(s.postReplacements);
           realignCounts = countPostGroups(s.postRealignments);
           realignCutWeld = countRealignCutWeld(s.postRealignments);
-          lines.push(`  - Pickets to replace: ${picketReplaceCount}`);
-          lines.push(`  - Weld redos: ${weldRedoCount}`);
-          lines.push(`  - Rail patches: ${sectionPatchTotal}`);
-          lines.push(`  - Full rail replacements: ${sectionReplTotal}`);
+          if(picketReplaceCount > 0) repairLines.push(`  - Pickets to replace: ${picketReplaceCount}`);
+          if(weldRedoCount > 0) repairLines.push(`  - Weld redos: ${weldRedoCount}`);
+          if(sectionPatchTotal > 0) repairLines.push(`  - Rail patches: ${sectionPatchTotal}`);
+          if(sectionReplTotal > 0) repairLines.push(`  - Full rail replacements: ${sectionReplTotal}`);
           const gapLineParts = [];
           gapCountByLabel.forEach((qty,label)=>{ gapLineParts.push(`${qty} × ${label}`); });
           const gapSummary = (sectionGapTotal > 0 && gapLineParts.length)
             ? ` (${gapLineParts.join('; ')})`
             : '';
-          lines.push(`  - Full rail gap fillers: ${sectionGapTotal}${gapSummary}`);
-          lines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
-          lines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
-          lines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
-          lines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
-          lines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
-          lines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
+          if(sectionGapTotal > 0) repairLines.push(`  - Full rail gap fillers: ${sectionGapTotal}${gapSummary}`);
+          if(replaceCounts.posts2x2 > 0) repairLines.push(`  - 2x2 posts to replace: ${replaceCounts.posts2x2}`);
+          if(replaceCounts.posts3x3 > 0) repairLines.push(`  - 3x3 posts to replace: ${replaceCounts.posts3x3}`);
+          if(replaceCounts.posts1p5 > 0) repairLines.push(`  - 1 1/2" x 1 1/2" posts to replace: ${replaceCounts.posts1p5}`);
+          if(replaceCounts.posts4x4 > 0) repairLines.push(`  - 4x4 posts to replace: ${replaceCounts.posts4x4}`);
+          if(realignCounts.posts2x2 > 0) repairLines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
+          if(realignCounts.posts3x3 > 0) repairLines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
           if(realignCutWeld > 0){
-            lines.push(`  - Posts to realign (cut & weld): ${realignCutWeld}`);
+            repairLines.push(`  - Posts to realign (cut & weld): ${realignCutWeld}`);
           }
           if(braceTotalQty > 0){
             const braceSummary = braceLineParts.length ? ` (${braceLineParts.join('; ')})` : '';
-            lines.push(`  - Diagonal brace additions: ${braceTotalQty}${braceSummary}`);
+            repairLines.push(`  - Diagonal brace additions: ${braceTotalQty}${braceSummary}`);
           }
+        }
+        if(repairLines.length){
+          lines.push(`- Repairs:`);
+          repairLines.forEach(line=>lines.push(line));
         }
       }
 
