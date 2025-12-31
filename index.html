@@ -40,6 +40,18 @@
   #sp-map-card{margin-bottom:16px}
   #sp-crew-card{margin-top:18px}
   .sp-inline-cards{display:grid;gap:16px;margin-bottom:16px}
+  .sp-scope-group{border:1px solid var(--sp-border);background:#f8fafc;border-radius:12px;padding:14px;position:relative;overflow:hidden;gap:10px}
+  .sp-scope-group::before{content:"";position:absolute;inset:12px auto 12px 12px;width:4px;border-radius:999px;background:var(--accent, var(--sp-green));opacity:.9}
+  .sp-scope-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+  .sp-scope-pill{background:var(--accent, var(--sp-green));color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:999px;letter-spacing:.4px;text-transform:uppercase}
+  .sp-scope-title{font-weight:800;font-size:15px}
+  .sp-scope-sub{color:var(--sp-muted);font-size:13px}
+  .sp-scope-grid{gap:10px}
+  .sp-scope-group.is-basics{--accent:#0f766e;background:#ecfdf3}
+  .sp-scope-group.is-wood{--accent:#b45309;background:#fff7ed}
+  .sp-scope-group.is-style{--accent:#4338ca;background:#eef2ff}
+  .sp-scope-group.is-repair{--accent:#9f1239;background:#fff1f2}
+  .sp-scope-group.is-gates{--accent:#0ea5e9;background:#f0f9ff}
   .sp-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .sp-card-title{font-size:16px;font-weight:800}
   .sp-card.is-collapsed .sp-grid{display:none}
@@ -1896,249 +1908,285 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
       </div>
       <div class="sp-grid">
-        <!-- ========== GROUP: Section Details ========== -->
-        <div class="sp-field col-6">
-          <label class="sp-label">Section Label (e.g., Front Right, Right Side, Back Right, etc)</label>
-          <input class="sp-input" data-field="label" placeholder="Enter a label" />
+        <div class="sp-scope-group col-12 is-basics">
+          <div class="sp-scope-head">
+            <div class="sp-scope-pill">Basics</div>
+            <div>
+              <div class="sp-scope-title">Section Layout</div>
+              <div class="sp-scope-sub">Label, fence type, and overall length.</div>
+            </div>
+          </div>
+          <div class="sp-grid sp-scope-grid">
+            <div class="sp-field col-6">
+              <label class="sp-label">Section Label (e.g., Front Right, Right Side, Back Right, etc)</label>
+              <input class="sp-input" data-field="label" placeholder="Enter a label" />
+            </div>
+            <div class="sp-field col-2">
+              <label class="sp-label">Fence Type</label>
+              <select class="sp-select" data-field="fenceType">
+                <option value="Wrought Iron">Wrought Iron</option>
+                <option value="Wood">Wood</option>
+              </select>
+            </div>
+            <div class="sp-field col-2">
+              <label class="sp-label">Section Scope</label>
+              <select class="sp-select" data-field="scopeType">
+                <option value="repair">Repair Existing</option>
+                <option value="replace">Replace Section</option>
+                <option value="install">Install New Section</option>
+              </select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Section Length (ft)</label>
+              ${numberControl('length','e.g., 48')}
+            </div>
+          </div>
         </div>
-        <div class="sp-field col-2">
-          <label class="sp-label">Fence Type</label>
-          <select class="sp-select" data-field="fenceType">
-            <option value="Wrought Iron">Wrought Iron</option>
-            <option value="Wood">Wood</option>
-          </select>
-        </div>
-        <div class="sp-field col-2">
-          <label class="sp-label">Section Scope</label>
-          <select class="sp-select" data-field="scopeType">
-            <option value="repair">Repair Existing</option>
-            <option value="replace">Replace Section</option>
-            <option value="install">Install New Section</option>
-          </select>
-        </div>
-        <div class="sp-field col-3">
-          <label class="sp-label">Section Length (ft)</label>
-          ${numberControl('length','e.g., 48')}
-        </div>
-        <div class="sp-field col-2" data-wood-only>
-          <label class="sp-label">Fence Height</label>
-          <select class="sp-select" data-field="woodHeight">
-            <option value="6ft">6ft</option>
-            <option value="8ft">8ft</option>
-          </select>
-        </div>
-        <div class="sp-field col-2" data-wood-only>
-          <label class="sp-label">Construction</label>
-          <select class="sp-select" data-field="woodStyle">
-            <option value="Board on Board">Board on Board</option>
-            <option value="Side by Side">Side by Side</option>
-          </select>
-        </div>
-        <div class="sp-field col-2" data-wood-only>
-          <label class="sp-label">Picket Width</label>
-          <select class="sp-select" data-field="woodPicketWidth">${createSelect(WOOD_PICKET_WIDTHS)}</select>
-        </div>
-        <div class="sp-field col-2" data-wood-only>
-          <label class="sp-label">Rail Size</label>
-          <select class="sp-select" data-field="woodRailSize">${createSelect(WOOD_RAIL_SIZES)}</select>
-        </div>
-        <div class="sp-field col-3" data-wood-only>
-          <label class="sp-label">Posts</label>
-          <select class="sp-select" data-field="woodPost">
-            <option value="Wood 4x4">Wood 4x4</option>
-            <option value="Round Steel">Round Steel</option>
-            <option value="Postmaster">Postmaster</option>
-          </select>
-        </div>
-        <div class="sp-field col-3" data-wood-only>
-          <label class="sp-label">Wood Type</label>
-          <select class="sp-select" data-field="woodType">
-            <option value="Cedar">Cedar</option>
-            <option value="Pressure Treated">Pressure Treated</option>
-          </select>
-        </div>
-        <div class="sp-field col-2" data-wood-only>
-          <label class="sp-label">Finish Type</label>
-          <select class="sp-select" data-field="woodFinish">
-            <option value="Oil Based Stain">Oil Based Stain</option>
-            <option value="Water Based Stain">Water Based Stain</option>
-            <option value="Painted">Painted</option>
-            <option value="Unfinished">Unfinished</option>
-          </select>
-        </div>
-        <div class="sp-field col-12" data-wood-only>
-          <label class="sp-label">Add-ons</label>
-          <div class="sp-row">
-            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddKickBoard" /> Kick Board</label>
-            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddTopCap" /> Top Cap</label>
-            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddTrim" /> Trim</label>
+        <div class="sp-scope-group col-12 is-wood" data-wood-only>
+          <div class="sp-scope-head">
+            <div class="sp-scope-pill">Wood</div>
+            <div>
+              <div class="sp-scope-title">Wood Build & Finish</div>
+              <div class="sp-scope-sub">Pick height, construction style, material, and add-ons.</div>
+            </div>
+          </div>
+          <div class="sp-grid sp-scope-grid">
+            <div class="sp-field col-2">
+              <label class="sp-label">Fence Height</label>
+              <select class="sp-select" data-field="woodHeight">
+                <option value="6ft">6ft</option>
+                <option value="8ft">8ft</option>
+              </select>
+            </div>
+            <div class="sp-field col-2">
+              <label class="sp-label">Construction</label>
+              <select class="sp-select" data-field="woodStyle">
+                <option value="Board on Board">Board on Board</option>
+                <option value="Side by Side">Side by Side</option>
+              </select>
+            </div>
+            <div class="sp-field col-2">
+              <label class="sp-label">Picket Width</label>
+              <select class="sp-select" data-field="woodPicketWidth">${createSelect(WOOD_PICKET_WIDTHS)}</select>
+            </div>
+            <div class="sp-field col-2">
+              <label class="sp-label">Rail Size</label>
+              <select class="sp-select" data-field="woodRailSize">${createSelect(WOOD_RAIL_SIZES)}</select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Posts</label>
+              <select class="sp-select" data-field="woodPost">
+                <option value="Wood 4x4">Wood 4x4</option>
+                <option value="Round Steel">Round Steel</option>
+                <option value="Postmaster">Postmaster</option>
+              </select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Wood Type</label>
+              <select class="sp-select" data-field="woodType">
+                <option value="Cedar">Cedar</option>
+                <option value="Pressure Treated">Pressure Treated</option>
+              </select>
+            </div>
+            <div class="sp-field col-2">
+              <label class="sp-label">Finish Type</label>
+              <select class="sp-select" data-field="woodFinish">
+                <option value="Oil Based Stain">Oil Based Stain</option>
+                <option value="Water Based Stain">Water Based Stain</option>
+                <option value="Painted">Painted</option>
+                <option value="Unfinished">Unfinished</option>
+              </select>
+            </div>
+            <div class="sp-field col-12">
+              <label class="sp-label">Add-ons</label>
+              <div class="sp-row">
+                <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddKickBoard" /> Kick Board</label>
+                <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddTopCap" /> Top Cap</label>
+                <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodAddTrim" /> Trim</label>
+              </div>
+            </div>
+
+            <div class="sp-grid col-12" data-wood-only data-kickboard-settings style="display:none">
+              <div class="sp-field col-2">
+                <label class="sp-label">Kick Board Size</label>
+                <select class="sp-select" data-field="woodKickBoardSize">
+                  <option value="2x6">2x6</option>
+                  <option value="2x8">2x8</option>
+                  <option value="2x10">2x10</option>
+                  <option value="2x12">2x12</option>
+                </select>
+              </div>
+              <div class="sp-field col-2">
+                <label class="sp-label">Kick Board Stack Height</label>
+                <select class="sp-select" data-field="woodKickBoardStack">
+                  <option value="1">1 Board</option>
+                  <option value="2">2 Board Stack</option>
+                  <option value="3">3 Board Stack</option>
+                  <option value="4">4 Board Stack</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="sp-grid col-12" data-wood-only data-topcap-settings style="display:none">
+              <div class="sp-field col-2">
+                <label class="sp-label">Top Cap Size</label>
+                <select class="sp-select" data-field="woodTopCapSize">
+                  <option value="2x6">2x6</option>
+                  <option value="2x8">2x8</option>
+                  <option value="2x10">2x10</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="sp-grid col-12" data-wood-only data-trim-settings style="display:none">
+              <div class="sp-field col-3">
+                <label class="sp-label">Trim Type</label>
+                <select class="sp-select" data-field="woodTrimType">${createSelect(WOOD_TRIM_TYPES)}</select>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="sp-grid col-12" data-wood-only data-kickboard-settings style="display:none">
-          <div class="sp-field col-2">
-            <label class="sp-label">Kick Board Size</label>
-            <select class="sp-select" data-field="woodKickBoardSize">
-              <option value="2x6">2x6</option>
-              <option value="2x8">2x8</option>
-              <option value="2x10">2x10</option>
-              <option value="2x12">2x12</option>
-            </select>
+        <div class="sp-scope-group col-12 is-repair" data-wood-only data-repair-only>
+          <div class="sp-scope-head">
+            <div class="sp-scope-pill">Wood Repairs</div>
+            <div>
+              <div class="sp-scope-title">Touch-ups, replacements, and rebuilds</div>
+              <div class="sp-scope-sub">Bundle every patch, post, and gate repair in one place.</div>
+            </div>
           </div>
-          <div class="sp-field col-2">
-            <label class="sp-label">Kick Board Stack Height</label>
-            <select class="sp-select" data-field="woodKickBoardStack">
-              <option value="1">1 Board</option>
-              <option value="2">2 Board Stack</option>
-              <option value="3">3 Board Stack</option>
-              <option value="4">4 Board Stack</option>
-            </select>
+          <div class="sp-grid sp-scope-grid">
+            <div class="sp-field col-3">
+              <label class="sp-label">Picket Replacement</label>
+              ${numberControl('woodRepairPicketReplace','0')}
+              <div class="sp-hint">Remove damaged pickets and install new ones.</div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Picket Installation</label>
+              ${numberControl('woodRepairPicketInstall','0')}
+              <div class="sp-hint">Install missing pickets to close gaps.</div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Rail Replacement</label>
+              ${numberControl('woodRepairRailReplace','0')}
+              <div class="sp-hint">Replace broken rails (${WOOD_RAIL_SIZES.join(' / ')}).</div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Rail Installation</label>
+              ${numberControl('woodRepairRailInstall','0')}
+              <div class="sp-hint">Add rails where missing (${WOOD_RAIL_SIZES.join(' / ')}).</div>
+            </div>
+
+            <div class="sp-field col-3">
+              <label class="sp-label">Post Replacement</label>
+              ${numberControl('woodRepairPostReplace','0')}
+              <div class="sp-row">
+                <select class="sp-select" data-field="woodRepairPostReplaceMethod">
+                  ${WOOD_POST_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
+                </select>
+                <select class="sp-select" data-field="woodRepairPostReplaceTie">${createSelect(SIMPSON_TIE_OPTIONS)}</select>
+                <select class="sp-select" data-field="woodRepairPostReplaceCap">
+                  <option value="">No cap</option>
+                  ${createSelect(WOOD_POST_CAP_TYPES)}
+                </select>
+              </div>
+            </div>
+            <div class="sp-field col-12">
+              <label class="sp-label">Post Realignments</label>
+              <div data-wood-post-realign></div>
+              <div class="sp-row" style="margin-top:6px">
+                <button class="sp-btn ghost" type="button" data-wood-post-realign-add>+ Add Post Realignment</button>
+                <span class="sp-hint">Add leaning posts and choose the realignment method.</span>
+              </div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Post Installation</label>
+              ${numberControl('woodRepairPostInstall','0')}
+              <div class="sp-row">
+                <select class="sp-select" data-field="woodRepairPostInstallMethod">${WOOD_POST_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select>
+                <select class="sp-select" data-field="woodRepairPostInstallTie">${createSelect(SIMPSON_TIE_OPTIONS)}</select>
+              </div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Panel Replacement</label>
+              ${numberControl('woodRepairPanelReplace','0')}
+              <input class="sp-input" data-field="woodRepairPanelWidth" type="number" min="1" step="0.1" placeholder="Panel width (ft)" />
+              <div class="sp-hint">Most panels are 8 ft wide.</div>
+            </div>
+
+            <div class="sp-field col-3">
+              <label class="sp-label">Walk Gate Repair</label>
+              ${numberControl('woodRepairWalkGateCount','0')}
+              <div class="sp-row" style="gap:10px; margin-top:6px">
+                <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateHinges" /> Replace hinges</label>
+                <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateLatch" /> Replace latch</label>
+                <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateWood" /> Replace wood</label>
+              </div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Walk Gate Strengthen</label>
+              ${numberControl('woodRepairGateStrengthen','0')}
+              <div class="sp-hint">Add framing (2x4) to beef up the gate.</div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Walk Gate Replace</label>
+              ${numberControl('woodRepairGateReplace','0')}
+              <div class="sp-hint">Remove and rebuild with new hardware.</div>
+            </div>
+
+            <div class="sp-field col-3">
+              <label class="sp-label">Top Cap Replacement (lf)</label>
+              ${numberControl('woodRepairTopCapReplaceLf','0')}
+              <select class="sp-select" data-field="woodRepairTopCapReplaceSize">
+                <option value="2x6">2x6</option>
+                <option value="2x8">2x8</option>
+                <option value="2x10">2x10</option>
+              </select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Trim Replacement (lf)</label>
+              ${numberControl('woodRepairTrimReplaceLf','0')}
+              <select class="sp-select" data-field="woodRepairTrimReplaceSize">${createSelect(WOOD_TRIM_TYPES)}</select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Kick Board Replacement (lf)</label>
+              ${numberControl('woodRepairKickReplaceLf','0')}
+              <div class="sp-row">
+                <select class="sp-select" data-field="woodRepairKickReplaceSize">
+                  <option value="2x6">2x6</option>
+                  <option value="2x8">2x8</option>
+                  <option value="2x10">2x10</option>
+                  <option value="2x12">2x12</option>
+                </select>
+                <select class="sp-select" data-field="woodRepairKickReplaceStack">
+                  <option value="1">1 Board</option>
+                  <option value="2">2 Board Stack</option>
+                  <option value="3">3 Board Stack</option>
+                  <option value="4">4 Board Stack</option>
+                </select>
+              </div>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Staining</label>
+              <select class="sp-select" data-field="woodRepairStain">
+                <option value="none">No staining</option>
+                <option value="outside">Stain outside</option>
+                <option value="inside">Stain inside</option>
+                <option value="both">Stain both sides</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="sp-grid col-12" data-wood-only data-topcap-settings style="display:none">
-          <div class="sp-field col-2">
-            <label class="sp-label">Top Cap Size</label>
-            <select class="sp-select" data-field="woodTopCapSize">
-              <option value="2x6">2x6</option>
-              <option value="2x8">2x8</option>
-              <option value="2x10">2x10</option>
-            </select>
+        <div class="sp-scope-group col-12 is-style">
+          <div class="sp-scope-head">
+            <div class="sp-scope-pill">Style & Finish</div>
+            <div>
+              <div class="sp-scope-title">Fence style, layout & finishing touches</div>
+              <div class="sp-scope-sub">Keep design controls together for wrought iron and install scenarios.</div>
+            </div>
           </div>
-        </div>
-
-        <div class="sp-grid col-12" data-wood-only data-trim-settings style="display:none">
-          <div class="sp-field col-3">
-            <label class="sp-label">Trim Type</label>
-            <select class="sp-select" data-field="woodTrimType">${createSelect(WOOD_TRIM_TYPES)}</select>
-          </div>
-        </div>
-
-        <div class="sp-divider" data-wood-only data-repair-only></div>
-        <div class="sp-field col-12" data-wood-only data-repair-only>
-          <div class="sp-label">Wood Repair Options</div>
-        </div>
-
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Picket Replacement</label>
-          ${numberControl('woodRepairPicketReplace','0')}
-          <div class="sp-hint">Remove damaged pickets and install new ones.</div>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Picket Installation</label>
-          ${numberControl('woodRepairPicketInstall','0')}
-          <div class="sp-hint">Install missing pickets to close gaps.</div>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Rail Replacement</label>
-          ${numberControl('woodRepairRailReplace','0')}
-          <div class="sp-hint">Replace broken rails (${WOOD_RAIL_SIZES.join(' / ')}).</div>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Rail Installation</label>
-          ${numberControl('woodRepairRailInstall','0')}
-          <div class="sp-hint">Add rails where missing (${WOOD_RAIL_SIZES.join(' / ')}).</div>
-        </div>
-
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Post Replacement</label>
-          ${numberControl('woodRepairPostReplace','0')}
-          <div class="sp-row">
-            <select class="sp-select" data-field="woodRepairPostReplaceMethod">
-              ${WOOD_POST_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
-            </select>
-            <select class="sp-select" data-field="woodRepairPostReplaceTie">${createSelect(SIMPSON_TIE_OPTIONS)}</select>
-            <select class="sp-select" data-field="woodRepairPostReplaceCap">
-              <option value="">No cap</option>
-              ${createSelect(WOOD_POST_CAP_TYPES)}
-            </select>
-          </div>
-        </div>
-        <div class="sp-field col-12" data-wood-only data-repair-only>
-          <label class="sp-label">Post Realignments</label>
-          <div data-wood-post-realign></div>
-          <div class="sp-row" style="margin-top:6px">
-            <button class="sp-btn ghost" type="button" data-wood-post-realign-add>+ Add Post Realignment</button>
-            <span class="sp-hint">Add leaning posts and choose the realignment method.</span>
-          </div>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Post Installation</label>
-          ${numberControl('woodRepairPostInstall','0')}
-          <div class="sp-row">
-            <select class="sp-select" data-field="woodRepairPostInstallMethod">${WOOD_POST_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select>
-            <select class="sp-select" data-field="woodRepairPostInstallTie">${createSelect(SIMPSON_TIE_OPTIONS)}</select>
-          </div>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Panel Replacement</label>
-          ${numberControl('woodRepairPanelReplace','0')}
-          <input class="sp-input" data-field="woodRepairPanelWidth" type="number" min="1" step="0.1" placeholder="Panel width (ft)" />
-          <div class="sp-hint">Most panels are 8 ft wide.</div>
-        </div>
-
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Walk Gate Repair</label>
-          ${numberControl('woodRepairWalkGateCount','0')}
-          <div class="sp-row" style="gap:10px; margin-top:6px">
-            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateHinges" /> Replace hinges</label>
-            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateLatch" /> Replace latch</label>
-            <label class="sp-row" style="gap:6px"><input type="checkbox" data-field="woodRepairWalkGateWood" /> Replace wood</label>
-          </div>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Walk Gate Strengthen</label>
-          ${numberControl('woodRepairGateStrengthen','0')}
-          <div class="sp-hint">Add framing (2x4) to beef up the gate.</div>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Walk Gate Replace</label>
-          ${numberControl('woodRepairGateReplace','0')}
-          <div class="sp-hint">Remove and rebuild with new hardware.</div>
-        </div>
-
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Top Cap Replacement (lf)</label>
-          ${numberControl('woodRepairTopCapReplaceLf','0')}
-          <select class="sp-select" data-field="woodRepairTopCapReplaceSize">
-            <option value="2x6">2x6</option>
-            <option value="2x8">2x8</option>
-            <option value="2x10">2x10</option>
-          </select>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Trim Replacement (lf)</label>
-          ${numberControl('woodRepairTrimReplaceLf','0')}
-          <select class="sp-select" data-field="woodRepairTrimReplaceSize">${createSelect(WOOD_TRIM_TYPES)}</select>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Kick Board Replacement (lf)</label>
-          ${numberControl('woodRepairKickReplaceLf','0')}
-          <div class="sp-row">
-            <select class="sp-select" data-field="woodRepairKickReplaceSize">
-              <option value="2x6">2x6</option>
-              <option value="2x8">2x8</option>
-              <option value="2x10">2x10</option>
-              <option value="2x12">2x12</option>
-            </select>
-            <select class="sp-select" data-field="woodRepairKickReplaceStack">
-              <option value="1">1 Board</option>
-              <option value="2">2 Board Stack</option>
-              <option value="3">3 Board Stack</option>
-              <option value="4">4 Board Stack</option>
-            </select>
-          </div>
-        </div>
-        <div class="sp-field col-3" data-wood-only data-repair-only>
-          <label class="sp-label">Staining</label>
-          <select class="sp-select" data-field="woodRepairStain">
-            <option value="none">No staining</option>
-            <option value="outside">Stain outside</option>
-            <option value="inside">Stain inside</option>
-            <option value="both">Stain both sides</option>
-          </select>
-        </div>
-
+          <div class="sp-grid sp-scope-grid">
         <div class="sp-grid col-12" data-retaining-wall data-install-only style="display:none">
           <div class="sp-field col-3">
             <label class="sp-label">Retaining Wall Length (ft)</label>
@@ -2254,6 +2302,17 @@ document.addEventListener('DOMContentLoaded', function(){
             <div class="sp-hint">Redo broken welds (no new material). ~5 minutes each for a welder.</div>
           </div>
 
+        </div>
+        </div>
+        <div class="sp-scope-group col-12 is-repair">
+          <div class="sp-scope-head">
+            <div class="sp-scope-pill">Repairs</div>
+            <div>
+              <div class="sp-scope-title">Posts, caps, panels & patch work</div>
+              <div class="sp-scope-sub">Group all replacement and reinforcement items in one stack.</div>
+            </div>
+          </div>
+          <div class="sp-grid sp-scope-grid">
         <!-- Finial replacements (kept as a block) -->
         <div class="sp-field col-12" data-repair-only>
           <label class="sp-label">Finial Replacements</label>
@@ -2334,6 +2393,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
         <div class="col-12 sp-divider"></div>
 
+          </div>
+        </div>
+        <div class="sp-scope-group col-12 is-gates">
+          <div class="sp-scope-head">
+            <div class="sp-scope-pill">Gates</div>
+            <div>
+              <div class="sp-scope-title">Gate repairs & new openings</div>
+              <div class="sp-scope-sub">Split gate work from other patches.</div>
+            </div>
+          </div>
+          <div class="sp-grid sp-scope-grid">
         <!-- ========== GROUP: Gates (unchanged, follows after above groups) ========== -->
         <div class="sp-field col-3" data-repair-only>
           <label class="sp-label"># Walk Gates</label>
@@ -2428,6 +2498,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
         </div>
 
+          </div>
+        </div>
         <!-- Notes (section-specific) - LAST -->
         <div class="sp-field col-12">
           <label class="sp-label">Notes (section-specific)</label>
