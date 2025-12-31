@@ -15,13 +15,14 @@
     --sp-card:#ffffff;
     --sp-radius:14px;
     --sp-stage-bg:#EBEBEB;
+    --sp-floating-offset:96px;
   }
   #sp-scope{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji";color:var(--sp-ink)}
   #sp-scope *{box-sizing:border-box}
 
   body{margin:0;background:var(--sp-stage-bg);}  
   body,html{min-height:100%;}
-  .sp-container{max-width:1100px;margin:0 auto;padding:24px 24px 40px}
+  .sp-container{max-width:1100px;margin:0 auto;padding:24px 24px calc(40px + var(--sp-floating-offset, 0px))}
   .sp-header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;margin-bottom:18px}
   .sp-title{font-size:22px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;gap:10px;line-height:1.2}
   .sp-badge{background:var(--sp-green);color:#fff;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
@@ -55,7 +56,7 @@
     .sp-inline-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   @media(max-width:719px){
-    .sp-container{padding:20px 16px 36px}
+    .sp-container{padding:20px 16px calc(36px + var(--sp-floating-offset, 0px))}
     .sp-header{flex-direction:column;align-items:flex-start;gap:16px}
     .sp-title{font-size:20px}
     .sp-actions{width:100%;flex-direction:column;align-items:stretch}
