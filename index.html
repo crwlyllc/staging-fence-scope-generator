@@ -7114,10 +7114,14 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.wiRailGaps > 0)      sub.push('- Full rail gap fillers: '+totals.wiRailGaps);
     const pushPostLinesSub = (label, counts)=>{
       const parts = [];
-      if(counts.posts1p5) parts.push(`${counts.posts1p5} × 1 1/2" x 1 1/2"`);
-      if(counts.posts2x2) parts.push(`${counts.posts2x2} × 2x2`);
-      if(counts.posts3x3) parts.push(`${counts.posts3x3} × 3x3`);
-      if(counts.posts4x4) parts.push(`${counts.posts4x4} × 4x4`);
+      const addIfPresent = (key, label)=>{
+        const qty = parseInt(counts?.[key], 10) || 0;
+        if(qty > 0) parts.push(`${qty} × ${label}`);
+      };
+      addIfPresent('posts1p5', '1 1/2" x 1 1/2"');
+      addIfPresent('posts2x2', '2x2');
+      addIfPresent('posts3x3', '3x3');
+      addIfPresent('posts4x4', '4x4');
       if(parts.length) sub.push(`- ${label}: ${parts.join(', ')}`);
     };
     pushPostLinesSub('Posts to replace', totals.postsReplace || zeroPostCounts());
