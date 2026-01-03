@@ -376,11 +376,13 @@
           <label class="sp-label" for="sp-crew-select">Crew Lead</label>
           <select class="sp-select" id="sp-crew-select">
             <option value="in-house-2">In-House 2</option>
-            <option value="in-house-3">In-House 3</option>
             <option value="in-house-4">In-House 4</option>
+            <option value="in-house-3">In-House 3</option>
+            <option value="in-house-3-4">In-House 3 &amp; 4</option>
+            <option value="robert">Robert</option>
             <option value="mark">Mark</option>
-            <option value="rodney">Rodney</option>
             <option value="jesus">Jesus</option>
+            <option value="rodney">Rodney</option>
           </select>
           <div class="sp-hint" id="sp-crew-details"></div>
         </div>
@@ -596,6 +598,19 @@ document.addEventListener('DOMContentLoaded', function(){
         return 320;
       }
     },
+    'in-house-4': {
+      id: 'in-house-4',
+      label: 'In-House 4',
+      isInHouse: true,
+      maxCrew: 4,
+      maxWelders: 2,
+      minCrew: 4,
+      description: '4-man in-house crew (2 welders + 2 helpers). $640/day (fixed).',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        return 640;
+      }
+    },
     'in-house-3': {
       id: 'in-house-3',
       label: 'In-House 3',
@@ -609,17 +624,31 @@ document.addEventListener('DOMContentLoaded', function(){
         return 480;
       }
     },
-    'in-house-4': {
-      id: 'in-house-4',
-      label: 'In-House 4',
+    'in-house-3-4': {
+      id: 'in-house-3-4',
+      label: 'In-House 3 & 4',
       isInHouse: true,
-      maxCrew: 4,
-      maxWelders: 2,
-      minCrew: 4,
-      description: '4-man in-house crew (2 welders + 2 helpers). $640/day (fixed).',
+      maxCrew: 7,
+      maxWelders: 4,
+      minCrew: 7,
+      description: 'Combined in-house crews (4 welders + 3 helpers). $1,120/day (fixed).',
       dailyCost(count){
         if(!count || count <= 0) return 0;
-        return 640;
+        return 1120;
+      }
+    },
+    robert: {
+      id: 'robert',
+      label: 'Robert',
+      maxCrew: 7,
+      maxWelders: 2,
+      minCrew: 3,
+      description: 'Up to 7 guys (max 2 welders). $1,000/day for 3 crew; +$200 for each additional.',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        const baseRate = 1000;
+        if(count <= 3) return baseRate;
+        return baseRate + (count - 3) * 200;
       }
     },
     mark: {
@@ -634,24 +663,6 @@ document.addEventListener('DOMContentLoaded', function(){
         return count * 200;
       }
     },
-    rodney: {
-      id: 'rodney',
-      label: 'Rodney',
-      maxCrew: 2,
-      maxWelders: 1,
-      minCrew: 1,
-      description: 'Up to 2 guys (max 1 welder). $300 for the first, $200 second.',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        const tiers = [0, 300, 200];
-        let total = 0;
-        for(let i=1;i<=count;i++){
-          const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
-          total += rate;
-        }
-        return total;
-      }
-    },
     jesus: {
       id: 'jesus',
       label: 'Jesus',
@@ -662,6 +673,24 @@ document.addEventListener('DOMContentLoaded', function(){
       dailyCost(count){
         if(!count || count <= 0) return 0;
         const tiers = [0, 350, 250, 200, 200];
+        let total = 0;
+        for(let i=1;i<=count;i++){
+          const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
+          total += rate;
+        }
+        return total;
+      }
+    },
+    rodney: {
+      id: 'rodney',
+      label: 'Rodney',
+      maxCrew: 2,
+      maxWelders: 1,
+      minCrew: 1,
+      description: 'Up to 2 guys (max 1 welder). $300 for the first, $200 second.',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        const tiers = [0, 300, 200];
         let total = 0;
         for(let i=1;i<=count;i++){
           const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
@@ -2388,7 +2417,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label"># Walk Gates</label>
           ${numberControl('walkGates','0')}
         </div>
-        <div class="sp-field col-12" data-wg-wrap data-repair-only style="display:none" aria-hidden="true" hidden>
+        <div class="sp-field col-12" data-wg-wrap data-repair-only style="display:none">
           <div class="sp-grid">
             <div class="sp-field col-3">
               <label class="sp-label"># Walk Gates to Realign</label>
@@ -4397,25 +4426,16 @@ document.addEventListener('DOMContentLoaded', function(){
     const hw = getN('walkGatesHardware');
     const rb = getN('walkGatesRebuild');
     const add = getN('walkGatesAdd');
+    const scopeSel = card.querySelector('[data-field="scopeType"]');
+    const scope = scopeSel ? scopeSel.value : 'repair';
+    const isInstall = scope === 'install' || scope === 'replace';
+
     const wrap = card.querySelector('[data-wg-wrap]');
-    if(wrap){
-      const showWalkGates = wg > 0;
-      wrap.style.display = showWalkGates ? '' : 'none';
-      wrap.toggleAttribute('hidden', !showWalkGates);
-      wrap.setAttribute('aria-hidden', showWalkGates ? 'false' : 'true');
-    }
+    if(wrap){ wrap.style.display = (!isInstall && wg>0) ? 'block' : 'none'; }
     const hwWrap = card.querySelector('[data-wg-hw-wrap]');
-    if(hwWrap){
-      const showHw = wg>0 && hw>0;
-      hwWrap.style.display = showHw ? 'block' : 'none';
-      hwWrap.toggleAttribute('hidden', !showHw);
-    }
+    if(hwWrap){ hwWrap.style.display = (!isInstall && wg>0 && hw>0) ? 'block' : 'none'; }
     const rbWrap = card.querySelector('[data-wg-rebuild-wrap]');
-    if(rbWrap){
-      const showRb = wg>0 && rb>0;
-      rbWrap.style.display = showRb ? 'block' : 'none';
-      rbWrap.toggleAttribute('hidden', !showRb);
-    }
+    if(rbWrap){ rbWrap.style.display = (!isInstall && wg>0 && rb>0) ? 'block' : 'none'; }
 
     const addWrap = card.querySelector('[data-wg-add-wrap]');
     if(addWrap){ addWrap.style.display = add>0 ? 'block' : 'none'; }
@@ -7373,7 +7393,7 @@ document.addEventListener('DOMContentLoaded', function(){
       : lines;
     const fullNotes = [...outLines, '', ...cost];
 
-    const inHouseCrewIds = ['in-house-2', 'in-house-3', 'in-house-4'];
+    const inHouseCrewIds = ['in-house-2', 'in-house-4', 'in-house-3', 'in-house-3-4'];
     const inHouseScenarioLines = [];
     inHouseScenarioLines.push('IN-HOUSE CREW SCENARIOS (if selected for this scope)');
     for (const id of inHouseCrewIds){
