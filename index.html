@@ -2388,7 +2388,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <label class="sp-label"># Walk Gates</label>
           ${numberControl('walkGates','0')}
         </div>
-        <div class="sp-field col-12" data-wg-wrap data-repair-only style="display:none">
+        <div class="sp-field col-12" data-wg-wrap data-repair-only style="display:none" aria-hidden="true" hidden>
           <div class="sp-grid">
             <div class="sp-field col-3">
               <label class="sp-label"># Walk Gates to Realign</label>
@@ -4399,13 +4399,23 @@ document.addEventListener('DOMContentLoaded', function(){
     const add = getN('walkGatesAdd');
     const wrap = card.querySelector('[data-wg-wrap]');
     if(wrap){
-      wrap.style.display = wg>0 ? '' : 'none';
-      wrap.setAttribute('aria-hidden', wg>0 ? 'false' : 'true');
+      const showWalkGates = wg > 0;
+      wrap.style.display = showWalkGates ? '' : 'none';
+      wrap.toggleAttribute('hidden', !showWalkGates);
+      wrap.setAttribute('aria-hidden', showWalkGates ? 'false' : 'true');
     }
     const hwWrap = card.querySelector('[data-wg-hw-wrap]');
-    if(hwWrap){ hwWrap.style.display = (wg>0 && hw>0) ? 'block' : 'none'; }
+    if(hwWrap){
+      const showHw = wg>0 && hw>0;
+      hwWrap.style.display = showHw ? 'block' : 'none';
+      hwWrap.toggleAttribute('hidden', !showHw);
+    }
     const rbWrap = card.querySelector('[data-wg-rebuild-wrap]');
-    if(rbWrap){ rbWrap.style.display = (wg>0 && rb>0) ? 'block' : 'none'; }
+    if(rbWrap){
+      const showRb = wg>0 && rb>0;
+      rbWrap.style.display = showRb ? 'block' : 'none';
+      rbWrap.toggleAttribute('hidden', !showRb);
+    }
 
     const addWrap = card.querySelector('[data-wg-add-wrap]');
     if(addWrap){ addWrap.style.display = add>0 ? 'block' : 'none'; }
