@@ -376,13 +376,11 @@
           <label class="sp-label" for="sp-crew-select">Crew Lead</label>
           <select class="sp-select" id="sp-crew-select">
             <option value="in-house-2">In-House 2</option>
-            <option value="in-house-4">In-House 4</option>
             <option value="in-house-3">In-House 3</option>
-            <option value="in-house-3-4">In-House 3 &amp; 4</option>
-            <option value="robert">Robert</option>
+            <option value="in-house-4">In-House 4</option>
             <option value="mark">Mark</option>
-            <option value="jesus">Jesus</option>
             <option value="rodney">Rodney</option>
+            <option value="jesus">Jesus</option>
           </select>
           <div class="sp-hint" id="sp-crew-details"></div>
         </div>
@@ -598,19 +596,6 @@ document.addEventListener('DOMContentLoaded', function(){
         return 320;
       }
     },
-    'in-house-4': {
-      id: 'in-house-4',
-      label: 'In-House 4',
-      isInHouse: true,
-      maxCrew: 4,
-      maxWelders: 2,
-      minCrew: 4,
-      description: '4-man in-house crew (2 welders + 2 helpers). $640/day (fixed).',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        return 640;
-      }
-    },
     'in-house-3': {
       id: 'in-house-3',
       label: 'In-House 3',
@@ -624,31 +609,17 @@ document.addEventListener('DOMContentLoaded', function(){
         return 480;
       }
     },
-    'in-house-3-4': {
-      id: 'in-house-3-4',
-      label: 'In-House 3 & 4',
+    'in-house-4': {
+      id: 'in-house-4',
+      label: 'In-House 4',
       isInHouse: true,
-      maxCrew: 7,
-      maxWelders: 4,
-      minCrew: 7,
-      description: 'Combined in-house crews (4 welders + 3 helpers). $1,120/day (fixed).',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        return 1120;
-      }
-    },
-    robert: {
-      id: 'robert',
-      label: 'Robert',
-      maxCrew: 7,
+      maxCrew: 4,
       maxWelders: 2,
-      minCrew: 3,
-      description: 'Up to 7 guys (max 2 welders). $1,000/day for 3 crew; +$200 for each additional.',
+      minCrew: 4,
+      description: '4-man in-house crew (2 welders + 2 helpers). $640/day (fixed).',
       dailyCost(count){
         if(!count || count <= 0) return 0;
-        const baseRate = 1000;
-        if(count <= 3) return baseRate;
-        return baseRate + (count - 3) * 200;
+        return 640;
       }
     },
     mark: {
@@ -663,24 +634,6 @@ document.addEventListener('DOMContentLoaded', function(){
         return count * 200;
       }
     },
-    jesus: {
-      id: 'jesus',
-      label: 'Jesus',
-      maxCrew: 4,
-      maxWelders: 1,
-      minCrew: 1,
-      description: 'Up to 4 guys (max 1 welder). $350 for the first, $250 second, $200 third & fourth.',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        const tiers = [0, 350, 250, 200, 200];
-        let total = 0;
-        for(let i=1;i<=count;i++){
-          const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
-          total += rate;
-        }
-        return total;
-      }
-    },
     rodney: {
       id: 'rodney',
       label: 'Rodney',
@@ -691,6 +644,24 @@ document.addEventListener('DOMContentLoaded', function(){
       dailyCost(count){
         if(!count || count <= 0) return 0;
         const tiers = [0, 300, 200];
+        let total = 0;
+        for(let i=1;i<=count;i++){
+          const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
+          total += rate;
+        }
+        return total;
+      }
+    },
+    jesus: {
+      id: 'jesus',
+      label: 'Jesus',
+      maxCrew: 4,
+      maxWelders: 1,
+      minCrew: 1,
+      description: 'Up to 4 guys (max 1 welder). $350 for the first, $250 second, $200 third & fourth.',
+      dailyCost(count){
+        if(!count || count <= 0) return 0;
+        const tiers = [0, 350, 250, 200, 200];
         let total = 0;
         for(let i=1;i<=count;i++){
           const rate = tiers[i] != null ? tiers[i] : tiers[tiers.length-1];
@@ -7393,7 +7364,7 @@ document.addEventListener('DOMContentLoaded', function(){
       : lines;
     const fullNotes = [...outLines, '', ...cost];
 
-    const inHouseCrewIds = ['in-house-2', 'in-house-4', 'in-house-3', 'in-house-3-4'];
+    const inHouseCrewIds = ['in-house-2', 'in-house-3', 'in-house-4'];
     const inHouseScenarioLines = [];
     inHouseScenarioLines.push('IN-HOUSE CREW SCENARIOS (if selected for this scope)');
     for (const id of inHouseCrewIds){
