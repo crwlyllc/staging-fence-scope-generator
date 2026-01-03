@@ -4397,16 +4397,12 @@ document.addEventListener('DOMContentLoaded', function(){
     const hw = getN('walkGatesHardware');
     const rb = getN('walkGatesRebuild');
     const add = getN('walkGatesAdd');
-    const scopeSel = card.querySelector('[data-field="scopeType"]');
-    const scope = scopeSel ? scopeSel.value : 'repair';
-    const isInstall = scope === 'install' || scope === 'replace';
-
     const wrap = card.querySelector('[data-wg-wrap]');
-    if(wrap){ wrap.style.display = (!isInstall && wg>0) ? 'block' : 'none'; }
+    if(wrap){ wrap.style.display = wg>0 ? 'block' : 'none'; }
     const hwWrap = card.querySelector('[data-wg-hw-wrap]');
-    if(hwWrap){ hwWrap.style.display = (!isInstall && wg>0 && hw>0) ? 'block' : 'none'; }
+    if(hwWrap){ hwWrap.style.display = (wg>0 && hw>0) ? 'block' : 'none'; }
     const rbWrap = card.querySelector('[data-wg-rebuild-wrap]');
-    if(rbWrap){ rbWrap.style.display = (!isInstall && wg>0 && rb>0) ? 'block' : 'none'; }
+    if(rbWrap){ rbWrap.style.display = (wg>0 && rb>0) ? 'block' : 'none'; }
 
     const addWrap = card.querySelector('[data-wg-add-wrap]');
     if(addWrap){ addWrap.style.display = add>0 ? 'block' : 'none'; }
