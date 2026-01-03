@@ -4398,7 +4398,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const rb = getN('walkGatesRebuild');
     const add = getN('walkGatesAdd');
     const wrap = card.querySelector('[data-wg-wrap]');
-    if(wrap){ wrap.style.display = wg>0 ? 'block' : 'none'; }
+    if(wrap){
+      wrap.style.display = wg>0 ? '' : 'none';
+      wrap.setAttribute('aria-hidden', wg>0 ? 'false' : 'true');
+    }
     const hwWrap = card.querySelector('[data-wg-hw-wrap]');
     if(hwWrap){ hwWrap.style.display = (wg>0 && hw>0) ? 'block' : 'none'; }
     const rbWrap = card.querySelector('[data-wg-rebuild-wrap]');
