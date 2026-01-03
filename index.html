@@ -4397,22 +4397,25 @@ document.addEventListener('DOMContentLoaded', function(){
     const hw = getN('walkGatesHardware');
     const rb = getN('walkGatesRebuild');
     const add = getN('walkGatesAdd');
+    const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
+    const scope = (card.querySelector('[data-field="scopeType"]')?.value || '').toLowerCase();
+    const isWroughtIronRepair = fenceType === 'wrought iron' && scope === 'repair';
     const wrap = card.querySelector('[data-wg-wrap]');
     if(wrap){
-      const showWalkGates = wg > 0;
+      const showWalkGates = isWroughtIronRepair && wg > 0;
       wrap.style.display = showWalkGates ? '' : 'none';
       wrap.toggleAttribute('hidden', !showWalkGates);
       wrap.setAttribute('aria-hidden', showWalkGates ? 'false' : 'true');
     }
     const hwWrap = card.querySelector('[data-wg-hw-wrap]');
     if(hwWrap){
-      const showHw = wg>0 && hw>0;
+      const showHw = isWroughtIronRepair && wg>0 && hw>0;
       hwWrap.style.display = showHw ? 'block' : 'none';
       hwWrap.toggleAttribute('hidden', !showHw);
     }
     const rbWrap = card.querySelector('[data-wg-rebuild-wrap]');
     if(rbWrap){
-      const showRb = wg>0 && rb>0;
+      const showRb = isWroughtIronRepair && wg>0 && rb>0;
       rbWrap.style.display = showRb ? 'block' : 'none';
       rbWrap.toggleAttribute('hidden', !showRb);
     }
