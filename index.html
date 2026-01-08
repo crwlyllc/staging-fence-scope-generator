@@ -905,6 +905,12 @@ document.addEventListener('DOMContentLoaded', function(){
         return;
       }
 
+      const prepMatch = line.match(/^-\s*Prep\s*needs:\s*(.+)$/i);
+      if(prepMatch){
+        current.paintingPrepExtra = /more|extra|yes|true/i.test(prepMatch[1]);
+        return;
+      }
+
       const lengthMatch = line.match(/^-\s*Length:\s*(.+)$/i);
       if(lengthMatch){
         const num = parseNumber(lengthMatch[1]);
@@ -1462,6 +1468,7 @@ document.addEventListener('DOMContentLoaded', function(){
       notes: '',
       painting: defaultPainting,
       paintingApplication: 'By Hand',
+      paintingPrepExtra: false,
       woodHeight: '6ft',
       woodStyle: 'Side by Side',
       woodPicketWidth: '5.5"',
@@ -2269,6 +2276,13 @@ document.addEventListener('DOMContentLoaded', function(){
               <option value="Spray">Spray</option>
             </select>
           </div>
+          <div class="sp-field col-3" data-painting-prep style="display:none">
+            <label class="sp-label">Prep Needs</label>
+            <label class="sp-row" style="gap:6px">
+              <input type="checkbox" data-field="paintingPrepExtra" />
+              More than usual prep
+            </label>
+          </div>
 
           <div class="col-12 sp-divider"></div>
 
@@ -2554,7 +2568,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const STYLE_FIELDS = [
     'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','installFinialStyle','railsCount','rails',
-    'picketSize','picketHeight','puppy','puppyPicketSize','puppyPicketHeight','puppyPicketReplace','painting','paintingApplication','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
+    'picketSize','picketHeight','puppy','puppyPicketSize','puppyPicketHeight','puppyPicketReplace','painting','paintingApplication','paintingPrepExtra','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
@@ -2762,6 +2776,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const normalizedFence = currentFenceType.toLowerCase();
     const paintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
     const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
+    const paintingPrepExtra = paintingSelection === 'Paint Section' ? val('paintingPrepExtra') : false;
 
     return {
       id,
@@ -2794,6 +2809,7 @@ document.addEventListener('DOMContentLoaded', function(){
       puppyPicketReplace: val('puppyPicketReplace'),
       painting: paintingSelection,
       paintingApplication: paintingMethod,
+      paintingPrepExtra,
       woodHeight: val('woodHeight'),
       woodStyle: val('woodStyle'),
       woodPicketWidth: val('woodPicketWidth'),
@@ -2952,6 +2968,7 @@ document.addEventListener('DOMContentLoaded', function(){
         : (data.painting || 'Paint Section');
     set('painting', defaultPainting);
     set('paintingApplication', data.paintingApplication || 'By Hand');
+    set('paintingPrepExtra', Boolean(data.paintingPrepExtra));
     set('woodHeight', data.woodHeight || '6ft');
     set('woodStyle', data.woodStyle || 'Side by Side');
     set('woodPicketWidth', data.woodPicketWidth || '5.5"');
@@ -4260,12 +4277,21 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function updatePaintingApplicationUI(card){
     const wrap = card.querySelector('[data-painting-application]');
+    const prepWrap = card.querySelector('[data-painting-prep]');
     if(!wrap) return;
     const paintingSel = card.querySelector('[data-field="painting"]');
     const methodSel = card.querySelector('[data-field="paintingApplication"]');
+    const prepSel = card.querySelector('[data-field="paintingPrepExtra"]');
     const paintingVal = paintingSel ? paintingSel.value : '';
     const show = paintingVal === 'Paint Section' || paintingVal === 'Prime and Paint';
     wrap.style.display = show ? '' : 'none';
+    if(prepWrap){
+      const showPrep = paintingVal === 'Paint Section';
+      prepWrap.style.display = showPrep ? '' : 'none';
+      if(!showPrep && prepSel){
+        prepSel.checked = false;
+      }
+    }
     if(show){
       if(methodSel && !methodSel.value){
         methodSel.value = 'By Hand';
@@ -4346,6 +4372,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingField = card.querySelector('[data-field="painting"]');
     const paintingWrap = paintingField?.closest('.sp-field');
     const paintingAppWrap = card.querySelector('[data-painting-application]');
+    const paintingPrepWrap = card.querySelector('[data-painting-prep]');
     if(isWood){
       if(paintingField && paintingField.value !== 'None'){
         paintingField.value = 'None';
@@ -4353,6 +4380,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       if(paintingWrap){ paintingWrap.style.display = 'none'; }
       if(paintingAppWrap){ paintingAppWrap.style.display = 'none'; }
+      if(paintingPrepWrap){ paintingPrepWrap.style.display = 'none'; }
     }else{
       if(paintingWrap){ paintingWrap.style.display = ''; }
       updatePaintingApplicationUI(card);
@@ -5640,6 +5668,9 @@ document.addEventListener('DOMContentLoaded', function(){
         if(paintingLabel === 'Paint Section' || paintingLabel === 'Prime and Paint'){
           const application = s.paintingApplication || 'By Hand';
           lines.push(`- Paint application: ${application}`);
+          if(paintingLabel === 'Paint Section' && s.paintingPrepExtra){
+            lines.push('- Prep needs: More than usual prep');
+          }
         }
       }
       const braceLine = braceLineParts.length ? `- Diagonal brace additions: ${braceLineParts.join('; ')} (4 ft each)` : '';
@@ -7154,6 +7185,9 @@ document.addEventListener('DOMContentLoaded', function(){
         totalSectionHours = baseHours + hardscapeHours + trimHours;
       }
       if(totalSectionHours <= 0) return acc;
+      if(s.painting === 'Paint Section' && s.paintingPrepExtra){
+        totalSectionHours *= 1.25;
+      }
       if(method === 'Spray'){
         sprayBaseHours += totalSectionHours;
       }
