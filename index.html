@@ -568,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function(){
   ];
 
   const PUPPY_INSERT_SIZES = ['1/2"','5/8"'];
+  const PANEL_REPLACEMENT_STYLES = [...SEED.style, 'Flat Top w/ Puppy Picket Insert'];
 
   const GATE = {
     latchTypes: [
@@ -3867,7 +3868,7 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
         <div class="sp-field col-3">
           <label class="sp-label">Style</label>
-          <select class="sp-select" data-panel-style>${createSelect(SEED.style)}</select>
+          <select class="sp-select" data-panel-style>${createSelect(PANEL_REPLACEMENT_STYLES)}</select>
         </div>
         <div class="sp-field col-2">
           <label class="sp-label">Rail Size</label>
@@ -4744,6 +4745,13 @@ document.addEventListener('DOMContentLoaded', function(){
       .replace(/×/g,'x')
       .trim();
   }
+  function isPanelPuppyInsertStyle(style){
+    return /Puppy Picket Insert/i.test(style || '');
+  }
+  function normalizePuppyInsertSize(size){
+    const normalized = normalizeSize(size);
+    return PUPPY_INSERT_SIZES.includes(normalized) ? normalized : PUPPY_INSERT_SIZES[0];
+  }
 
   function puppyPicketDetailLabel(size, height){
     const normalizedSize = normalizeSize(size);
@@ -5011,6 +5019,21 @@ document.addEventListener('DOMContentLoaded', function(){
       const p = (ps==='1/2"')? 'p1/2"' : (ps==='5/8"'? 'p5/8"' : `p${ps}`);
       const sKey = /Finials/i.test(style) ? 'finials' : 'base';
       return `${feet}|${p}|${sKey}`;
+    }
+    function collectPanelPuppyInsertInfo(list, fallbackSize){
+      const sizes = new Map();
+      let total = 0;
+      if(!Array.isArray(list)) return { total, sizes };
+      list.forEach(panel=>{
+        if(!panel) return;
+        const qty = parseInt(panel.qty,10) || 0;
+        if(qty <= 0) return;
+        if(!isPanelPuppyInsertStyle(panel.style)) return;
+        const sizeLabel = normalizePuppyInsertSize(panel.picketSize || fallbackSize);
+        total += qty;
+        sizes.set(sizeLabel, (sizes.get(sizeLabel)||0) + qty);
+      });
+      return { total, sizes };
     }
     function isPrefabEligible(widthIn, railSize, picketSize){
       const rs = normalizeSize(railSize);
@@ -5791,15 +5814,26 @@ document.addEventListener('DOMContentLoaded', function(){
         });
       }
 
+      const panelPuppyInsertInfo = (!isWood && isRepair)
+        ? collectPanelPuppyInsertInfo(s.panels, s.picketSize)
+        : { total: 0, sizes: new Map() };
       const puppyInsertArr = isRepair && Array.isArray(s.puppyInserts) ? s.puppyInserts : [];
-      const puppyInsertCount = puppyInsertArr.reduce((acc,item)=> acc + (parseInt(item?.qty||0,10) || 0), 0);
+      const puppyInsertCount = puppyInsertArr.reduce((acc,item)=> acc + (parseInt(item?.qty||0,10) || 0), 0)
+        + (panelPuppyInsertInfo.total || 0);
       if(puppyInsertCount){
-        lines.push(`- Puppy picket inserts: ${puppyInsertCount}`);
+        const insertSizeMap = new Map();
         puppyInsertArr.forEach(item=>{
           const qty = parseInt(item?.qty||0,10) || 0;
           if(!qty) return;
-          const normalized = normalizeSize(item?.picketSize);
-          const sizeLabel = PUPPY_INSERT_SIZES.includes(normalized) ? normalized : PUPPY_INSERT_SIZES[0];
+          const sizeLabel = normalizePuppyInsertSize(item?.picketSize);
+          insertSizeMap.set(sizeLabel, (insertSizeMap.get(sizeLabel)||0) + qty);
+        });
+        panelPuppyInsertInfo.sizes.forEach((qty, sizeLabel)=>{
+          if(!qty) return;
+          insertSizeMap.set(sizeLabel, (insertSizeMap.get(sizeLabel)||0) + qty);
+        });
+        lines.push(`- Puppy picket inserts: ${puppyInsertCount}`);
+        insertSizeMap.forEach((qty, sizeLabel)=>{
           lines.push(`  - ${qty} × ${sizeLabel} pickets (includes 25 plugs per insert)`);
         });
       }
@@ -5981,8 +6015,13 @@ document.addEventListener('DOMContentLoaded', function(){
           puppyInsertArr.forEach(item=>{
             const qty = parseInt(item?.qty||0,10) || 0;
             if(!qty) return;
-            const normalized = normalizeSize(item?.picketSize);
-            const sizeLabel = PUPPY_INSERT_SIZES.includes(normalized) ? normalized : PUPPY_INSERT_SIZES[0];
+            const sizeLabel = normalizePuppyInsertSize(item?.picketSize);
+            totals.puppyInsertSizes.set(sizeLabel, (totals.puppyInsertSizes.get(sizeLabel)||0) + qty);
+            addMat(materials, `puppy picket insert (${sizeLabel})`, qty);
+            addMat(materials, `picket plugs (${sizeLabel})`, qty * 25);
+          });
+          panelPuppyInsertInfo.sizes.forEach((qty, sizeLabel)=>{
+            if(!qty) return;
             totals.puppyInsertSizes.set(sizeLabel, (totals.puppyInsertSizes.get(sizeLabel)||0) + qty);
             addMat(materials, `puppy picket insert (${sizeLabel})`, qty);
             addMat(materials, `picket plugs (${sizeLabel})`, qty * 25);
