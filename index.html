@@ -536,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
   const SEED = {
-    style:["Flat Top","Extended Picket","Extended Picket w/ Finials"],
+    style:["Flat Top","Flat Top w/ Puppy Pickets","Extended Picket","Extended Picket w/ Finials"],
     height:["3ft","4ft","5ft","6ft","8ft"],
     railSize:["1\u201D","3/4\u201D","1/2\u201D","1 \u00BC\u201D","1 \u00BD\u201D","1 \u00BE\u201D","1x2\u201D","2\u201D","3\u201D","Flat Bar 1/4\" x 1\""],
     picketSize:["1/2\u201D","5/8\u201D","3/4\u201D","1\u201D"],
@@ -4989,6 +4989,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const PANEL_PRICE = {
       // keyed as: `${feet}ft|p${psize}|style`
       // style key: 'base' for standard/extended (no finials); 'finials' when Extended Picket w/ Finials
+      // puppy key: 'puppy' for Flat Top w/ Puppy Pickets
+      'puppy': 111.37,
       '3|p1/2"|base': 59.91,
       '3|p5/8"|base': 59.91,
       '4|p1/2"|base': 64.48,
@@ -5002,6 +5004,9 @@ document.addEventListener('DOMContentLoaded', function(){
     };
     function feetFromHeightStr(h){ const m = String(h||'').match(/(\d+)/); return m? parseInt(m[1],10):0; }
     function pkey(feet, picketSize, style){
+      if(/Puppy Pickets/i.test(style)){
+        return 'puppy';
+      }
       const ps = normalizeSize(picketSize);
       const p = (ps==='1/2"')? 'p1/2"' : (ps==='5/8"'? 'p5/8"' : `p${ps}`);
       const sKey = /Finials/i.test(style) ? 'finials' : 'base';
