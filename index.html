@@ -6560,6 +6560,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const weldRepairHours = (
       totals.wiPickets*12 +
+      totals.puppyPickets*12 +
       totals.diagonalBraces*12 +
       totals.wiPatches*20 +
       totals.wiRails*30 +
@@ -7345,6 +7346,16 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.installSections > 0) sub.push('- New sections to install: '+totals.installSections);
     if (totals.removalLf > 0)       sub.push(`- Removal & haul away: ${totals.removalLf} lf (sub paid $${money(totals.removalCost)})`);
     if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
+    if (totals.puppyPickets > 0){
+      const detailParts = [];
+      if(totals.puppyPicketDetails && typeof totals.puppyPicketDetails.forEach === 'function'){
+        totals.puppyPicketDetails.forEach((count, label)=>{
+          if(count>0){ detailParts.push(`${count} × ${label}`); }
+        });
+      }
+      const detail = detailParts.length ? ` (${detailParts.join('; ')})` : '';
+      sub.push(`- Puppy pickets to replace: ${totals.puppyPickets}${detail}`);
+    }
     if (totals.weldRedos > 0)       sub.push('- Weld redos: '+totals.weldRedos);
     if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
