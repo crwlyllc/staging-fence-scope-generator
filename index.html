@@ -1422,6 +1422,9 @@ document.addEventListener('DOMContentLoaded', function(){
         {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
         {size:SEED.railSize[0], stacked:false, size2:SEED.railSize[0], patches:0, replacements:0},
       ],
+      puppyPicketSize: SEED.picketSize[0],
+      puppyPicketHeight: '',
+      puppyPicketReplace: 0,
       postSize: '2x2',
       postReplacements: [],
       postRealignments: [],
@@ -1516,6 +1519,7 @@ document.addEventListener('DOMContentLoaded', function(){
       Number(section.hardscape||0) === 0 &&
       Number(section.trim||0) === 0 &&
       Number(section.digOut||0) === 0 &&
+      Number(section.puppyPicketReplace||0) === 0 &&
       Number(section.walkGates||0) === 0 &&
       clean(section.notes) === '' &&
       (!section.postReplacements || section.postReplacements.length === 0) &&
@@ -2315,6 +2319,18 @@ document.addEventListener('DOMContentLoaded', function(){
             <label class="sp-label"># Pickets to Replace</label>
             ${numberControl('wiPickets','0')}
           </div>
+          <div class="sp-field col-3" data-repair-only data-wrought-only data-puppy-repair>
+            <label class="sp-label">Puppy Picket Size</label>
+            <select class="sp-select" data-field="puppyPicketSize">${createSelect(SEED.picketSize)}</select>
+          </div>
+          <div class="sp-field col-3" data-repair-only data-wrought-only data-puppy-repair>
+            <label class="sp-label">Puppy Picket Height (inches)</label>
+            ${numberControl('puppyPicketHeight','e.g., 24')}
+          </div>
+          <div class="sp-field col-3" data-repair-only data-wrought-only data-puppy-repair>
+            <label class="sp-label"># Puppy Pickets to Replace</label>
+            ${numberControl('puppyPicketReplace','0')}
+          </div>
           <div class="sp-field col-3" data-repair-only>
             <label class="sp-label">Weld Redos</label>
             ${numberControl('weldRedos','0')}
@@ -2538,7 +2554,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const STYLE_FIELDS = [
     'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','installFinialStyle','railsCount','rails',
-    'picketSize','picketHeight','puppy','painting','paintingApplication','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
+    'picketSize','picketHeight','puppy','puppyPicketSize','puppyPicketHeight','puppyPicketReplace','painting','paintingApplication','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
@@ -2773,6 +2789,9 @@ document.addEventListener('DOMContentLoaded', function(){
       picketSize: val('picketSize'),
       picketHeight: val('picketHeight'),
       puppy: val('puppy'),
+      puppyPicketSize: val('puppyPicketSize'),
+      puppyPicketHeight: val('puppyPicketHeight'),
+      puppyPicketReplace: val('puppyPicketReplace'),
       painting: paintingSelection,
       paintingApplication: paintingMethod,
       woodHeight: val('woodHeight'),
@@ -2920,6 +2939,9 @@ document.addEventListener('DOMContentLoaded', function(){
     set('picketSize', data.picketSize||SEED.picketSize[0]);
     set('picketHeight', data.picketHeight||'');
     set('puppy', data.puppy||SEED.puppy[0]);
+    set('puppyPicketSize', data.puppyPicketSize || data.picketSize || SEED.picketSize[0]);
+    set('puppyPicketHeight', data.puppyPicketHeight || '');
+    set('puppyPicketReplace', data.puppyPicketReplace || '');
     const normalizedFenceType = (data.fenceType || 'Wrought Iron').toLowerCase();
     const scopeForPaint = data.scopeType || 'repair';
     const attachmentMethod = data.panelAttachment || 'Welding';
@@ -4213,6 +4235,29 @@ document.addEventListener('DOMContentLoaded', function(){
     return /finials/i.test(String(style||'')) || /finials/i.test(String(puppy||''));
   }
 
+  function hasPuppyPickets(puppy){
+    return /puppy/i.test(String(puppy||'')) && !/none/i.test(String(puppy||''));
+  }
+
+  function updatePuppyPicketRepairFields(card){
+    const scopeSel = card.querySelector('[data-field="scopeType"]');
+    const scope = scopeSel ? scopeSel.value : 'repair';
+    const isRepair = scope !== 'install' && scope !== 'replace';
+    const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
+    const isWrought = fenceType === 'wrought iron';
+    const puppyVal = (card.querySelector('[data-field="puppy"]') || {}).value || '';
+    const show = isRepair && isWrought && hasPuppyPickets(puppyVal);
+    card.querySelectorAll('[data-puppy-repair]').forEach(el=>{
+      el.style.display = show ? '' : 'none';
+    });
+    if(show){
+      const sizeSel = card.querySelector('[data-field="puppyPicketSize"]');
+      if(sizeSel && !sizeSel.value){
+        sizeSel.value = (card.querySelector('[data-field="picketSize"]') || {}).value || SEED.picketSize[0];
+      }
+    }
+  }
+
   function updatePaintingApplicationUI(card){
     const wrap = card.querySelector('[data-painting-application]');
     if(!wrap) return;
@@ -4289,6 +4334,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
     updatePaintingApplicationUI(card);
+    updatePuppyPicketRepairFields(card);
   }
 
   function updateFenceTypeConditional(card){
@@ -4345,6 +4391,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     updateWoodAddonsConditional(card);
     updateWoodRepairControls(card);
+    updatePuppyPicketRepairFields(card);
   }
 
   function resetSectionForFenceType(card, nextType){
@@ -4668,6 +4715,15 @@ document.addEventListener('DOMContentLoaded', function(){
       .replace(/\\u00BE|¾/g,'3/4')
       .replace(/×/g,'x')
       .trim();
+  }
+
+  function puppyPicketDetailLabel(size, height){
+    const normalizedSize = normalizeSize(size);
+    const sizeLabel = normalizedSize || normalizeLabelText(size);
+    const heightNum = parseInt(height||0,10) || 0;
+    const heightLabel = heightNum > 0 ? `${heightNum} in` : '';
+    if(sizeLabel && heightLabel) return `${sizeLabel} × ${heightLabel}`;
+    return sizeLabel || (heightLabel ? `${heightLabel} tall` : '');
   }
 
   function snapshotForNotes(){
@@ -5262,12 +5318,14 @@ document.addEventListener('DOMContentLoaded', function(){
       puppyInserts:0,
       diagonalBraces:0,
       wiPickets:0, wiPatches:0, wiRails:0, wiRailGaps:0, weldRedos:0,
+      puppyPickets:0,
       wiPicketSizes: new Set(),
       wiPatchSizes: new Set(),
       wiRailReplaceSizes: new Set(),
       wiRailGapSizes: new Set(),
       diagonalBraceSizes: new Map(),
       puppyInsertSizes: new Map(),
+      puppyPicketDetails: new Map(),
       woodPicketReplace:0, woodPicketInstall:0, woodRailReplace:0, woodRailInstall:0,
       woodPostReplace6:0, woodPostReplace8:0, woodPostRealignCutWeld:0, woodPostRealignDig:0,
       woodPostInstall:0, woodPanels:0, woodGateRepair:0, woodGateStrengthen:0, woodGateReplace:0,
@@ -5332,6 +5390,7 @@ document.addEventListener('DOMContentLoaded', function(){
     state.sections.forEach((s, idx)=>{
       const title  = s.label ? `Section ${idx+1} - ${s.label}` : `Section ${idx+1}`;
       const picket = s.picketHeight ? `${s.picketSize} (height ${s.picketHeight} in)` : `${s.picketSize}`;
+      const puppyPicketDetail = puppyPicketDetailLabel(s.puppyPicketSize, s.puppyPicketHeight);
       const gapAdditionsArr = Array.isArray(s.gapAdditions) ? s.gapAdditions : [];
       const diagonalBracesArr = Array.isArray(s.diagonalBraces) ? s.diagonalBraces : [];
       const braceCountByLabel = new Map();
@@ -5612,6 +5671,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const i = (v)=> (parseInt(v||0,10) || 0);
       let picketReplaceCount = 0;
       let weldRedoCount = 0;
+      let puppyPicketReplaceCount = 0;
       let replaceCounts = zeroPostCounts();
       let realignCounts = zeroPostCounts();
       let realignCutWeld = 0;
@@ -5646,10 +5706,15 @@ document.addEventListener('DOMContentLoaded', function(){
         } else {
           picketReplaceCount = i(s.wiPickets);
           weldRedoCount = i(s.weldRedos);
+          puppyPicketReplaceCount = hasPuppyPickets(s.puppy) ? i(s.puppyPicketReplace) : 0;
           replaceCounts = countPostGroups(s.postReplacements);
           realignCounts = countPostGroups(s.postRealignments);
           realignCutWeld = countRealignCutWeld(s.postRealignments);
           if(picketReplaceCount > 0) repairLines.push(`  - Pickets to replace: ${picketReplaceCount}`);
+          if(puppyPicketReplaceCount > 0){
+            const detailSuffix = puppyPicketDetail ? ` (${puppyPicketDetail})` : '';
+            repairLines.push(`  - Puppy pickets to replace: ${puppyPicketReplaceCount}${detailSuffix}`);
+          }
           if(weldRedoCount > 0) repairLines.push(`  - Weld redos: ${weldRedoCount}`);
           if(sectionPatchTotal > 0) repairLines.push(`  - Rail patches: ${sectionPatchTotal}`);
           if(sectionReplTotal > 0) repairLines.push(`  - Full rail replacements: ${sectionReplTotal}`);
@@ -5893,6 +5958,12 @@ document.addEventListener('DOMContentLoaded', function(){
             const picketSizeNormalized = normalizeSize(s.picketSize);
             if(picketSizeNormalized) totals.wiPicketSizes.add(picketSizeNormalized);
           }
+          if(puppyPicketReplaceCount > 0){
+            totals.puppyPickets += puppyPicketReplaceCount;
+            const detailLabel = puppyPicketDetail || normalizeLabelText(s.puppyPicketSize || 'puppy picket');
+            const labelKey = detailLabel || 'puppy picket';
+            totals.puppyPicketDetails.set(labelKey, (totals.puppyPicketDetails.get(labelKey)||0) + puppyPicketReplaceCount);
+          }
           totals.weldRedos    += weldRedoCount;
           totals.wiPatches    += sectionPatchTotal;
           if(sectionPatchTotal > 0){
@@ -5956,6 +6027,16 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.puppyInserts)   lines.push(`- Puppy picket inserts: ${t.puppyInserts}`);
       if (t.caps)           lines.push(`- Post caps to replace: ${t.caps}`);
       if (t.wiPickets)      lines.push(`- Pickets to replace: ${t.wiPickets}`);
+      if (t.puppyPickets){
+        const detailParts = [];
+        if(t.puppyPicketDetails && typeof t.puppyPicketDetails.forEach === 'function'){
+          t.puppyPicketDetails.forEach((count, label)=>{
+            if(count>0){ detailParts.push(`${count} × ${label}`); }
+          });
+        }
+        const detail = detailParts.length ? ` (${detailParts.join('; ')})` : '';
+        lines.push(`- Puppy pickets to replace: ${t.puppyPickets}${detail}`);
+      }
       if (t.weldRedos)      lines.push(`- Weld redos: ${t.weldRedos}`);
       if (t.wiPatches)      lines.push(`- Rail patches: ${t.wiPatches}`);
       if (t.wiRails)        lines.push(`- Full rail replacements: ${t.wiRails}`);
@@ -6278,18 +6359,34 @@ document.addEventListener('DOMContentLoaded', function(){
       addServiceLine('Dig Out Encroaching Soil', `Remove built-up soil along ${totals.digOut} linear feet to expose fence bottom rails. If any additional repairs are exposed, we can let you know and get you a quote for the additional repairs.`);
     }
     const picketCount = parseInt(totals.wiPickets, 10) || 0;
-    if (picketCount > 0){
-      const picketPlural = picketCount === 1 ? '' : 's';
-      const picketSizes = Array.from(totals.wiPicketSizes || []).filter(Boolean);
-      let picketDesc = '';
-      if(picketSizes.length === 1){
-        const size = picketSizes[0];
-        picketDesc = `Cut out ${picketCount}x rusted ${size} picket${picketPlural} and weld in ${picketCount}x new ${size} steel picket${picketPlural}.`;
-      } else {
-        const sizeSuffix = picketSizes.length > 1 ? ` (${joinParts(picketSizes)})` : '';
-        picketDesc = `Cut out ${picketCount}x rusted picket${picketPlural}${sizeSuffix} and weld in ${picketCount}x new steel picket${picketPlural}${sizeSuffix}.`;
+    const puppyPicketCount = parseInt(totals.puppyPickets, 10) || 0;
+    if (picketCount > 0 || puppyPicketCount > 0){
+      const picketSegments = [];
+      if(picketCount > 0){
+        const picketPlural = picketCount === 1 ? '' : 's';
+        const picketSizes = Array.from(totals.wiPicketSizes || []).filter(Boolean);
+        let picketDesc = '';
+        if(picketSizes.length === 1){
+          const size = picketSizes[0];
+          picketDesc = `Cut out ${picketCount}x rusted ${size} picket${picketPlural} and weld in ${picketCount}x new ${size} steel picket${picketPlural}.`;
+        } else {
+          const sizeSuffix = picketSizes.length > 1 ? ` (${joinParts(picketSizes)})` : '';
+          picketDesc = `Cut out ${picketCount}x rusted picket${picketPlural}${sizeSuffix} and weld in ${picketCount}x new steel picket${picketPlural}${sizeSuffix}.`;
+        }
+        picketSegments.push(picketDesc);
       }
-      addServiceLine('Replace Damaged Pickets', picketDesc);
+      if(puppyPicketCount > 0){
+        const detailParts = [];
+        if(totals.puppyPicketDetails && typeof totals.puppyPicketDetails.forEach === 'function'){
+          totals.puppyPicketDetails.forEach((count, label)=>{
+            if(count>0){ detailParts.push(`${count} × ${label}`); }
+          });
+        }
+        const detail = detailParts.length ? ` (${detailParts.join('; ')})` : '';
+        const puppyLabel = describeCount(puppyPicketCount, 'puppy picket', 'puppy pickets');
+        picketSegments.push(`Replace ${puppyLabel}${detail}.`);
+      }
+      addServiceLine('Replace Damaged Pickets', picketSegments.join(' '));
     }
     if (totals.weldRedos > 0){
       const weldLabel = describeCount(totals.weldRedos, 'weld', 'welds');
@@ -6682,18 +6779,40 @@ document.addEventListener('DOMContentLoaded', function(){
     // WI picket sticks from replacements
     const picketBySizeCalc = {};
     state.sections.forEach(s=>{
+      const scopeType = s.scopeType || 'repair';
+      const isRepair = scopeType !== 'install' && scopeType !== 'replace';
+      const isWrought = (s.fenceType || '').toLowerCase() === 'wrought iron';
       const need = parseInt(s.wiPickets||0,10) || 0;
-      if(!need) return;
-      let ph = parseInt(s.picketHeight||0,10) || 0; // inches
-      if (ph <= 0) {
-        const hf = feetFromStr(s.height);
-        if (hf > 0) ph = hf * 12;
+      if(need){
+        let ph = parseInt(s.picketHeight||0,10) || 0; // inches
+        if (ph <= 0) {
+          const hf = feetFromStr(s.height);
+          if (hf > 0) ph = hf * 12;
+        }
+        if (ph <= 0) ph = 54;
+        const perStick = Math.max(1, Math.floor(144 / ph));
+        const sticks = Math.ceil(need / perStick);
+        const size = normalizeSize(s.picketSize);
+        picketBySizeCalc[size] = (picketBySizeCalc[size]||0) + sticks;
       }
-      if (ph <= 0) ph = 54;
-      const perStick = Math.max(1, Math.floor(144 / ph));
-      const sticks = Math.ceil(need / perStick);
-      const size = normalizeSize(s.picketSize);
-      picketBySizeCalc[size] = (picketBySizeCalc[size]||0) + sticks;
+      if(isRepair && isWrought && hasPuppyPickets(s.puppy)){
+        const puppyNeed = parseInt(s.puppyPicketReplace||0,10) || 0;
+        if(puppyNeed){
+          let ph = parseInt(s.puppyPicketHeight||0,10) || 0;
+          if (ph <= 0) {
+            ph = parseInt(s.picketHeight||0,10) || 0;
+          }
+          if (ph <= 0) {
+            const hf = feetFromStr(s.height);
+            if (hf > 0) ph = hf * 12;
+          }
+          if (ph <= 0) ph = 54;
+          const perStick = Math.max(1, Math.floor(144 / ph));
+          const sticks = Math.ceil(puppyNeed / perStick);
+          const size = normalizeSize(s.puppyPicketSize || s.picketSize);
+          picketBySizeCalc[size] = (picketBySizeCalc[size]||0) + sticks;
+        }
+      }
     });
     Object.entries(picketBySizeCalc).forEach(([size, qty])=>{
       addPicketSticks(size, qty);
