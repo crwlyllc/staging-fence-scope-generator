@@ -28,13 +28,14 @@
   .sp-badge{background:var(--sp-green);color:#fff;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
 
   .sp-actions{display:flex;gap:10px;flex-wrap:wrap}
-  .sp-btn{appearance:none;border:1px solid var(--sp-border);background:#fff;color:var(--sp-ink);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .02s ease,border-color .2s ease,background .2s ease;min-height:44px}
+  .sp-btn{appearance:none;border:1px solid var(--sp-border);background:#fff;color:var(--sp-ink);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .02s ease,border-color .2s ease,background .2s ease;min-height:44px;font-size:14px;text-decoration:none}
   .sp-btn:active{transform:translateY(1px)}
   .sp-btn.primary{background:var(--sp-green);color:#fff;border-color:var(--sp-green)}
   .sp-btn.ghost{background:#fff}
   .sp-btn.danger{background:#fff;color:#b91c1c;border-color:#fecaca}
   .sp-btn.danger.is-confirm{background:#b91c1c;color:#fff;border-color:#b91c1c}
   .sp-btn.sp-btn-schedule{background:#0d6fbe;color:#fff;border-color:#0d6fbe}
+  .sp-btn.is-hidden{display:none}
 
   .sp-sections{display:grid;gap:16px}
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
@@ -291,7 +292,7 @@
         <div class="sp-actions">
           <a class="sp-btn sp-btn-schedule" href="https://pro.housecallpro.com/app/calendar_new" target="_blank" rel="noopener noreferrer">Schedule</a>
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
-          <button class="sp-btn" id="sp-refresh-materials" type="button">Update Material Costs</button>
+          <button class="sp-btn is-hidden" id="sp-refresh-materials" type="button">Update Material Costs</button>
         </div>
       </div>
 
