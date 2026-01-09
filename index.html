@@ -34,6 +34,7 @@
   .sp-btn.ghost{background:#fff}
   .sp-btn.danger{background:#fff;color:#b91c1c;border-color:#fecaca}
   .sp-btn.danger.is-confirm{background:#b91c1c;color:#fff;border-color:#b91c1c}
+  .sp-btn.sp-btn-schedule{background:#0d6fbe;color:#fff;border-color:#0d6fbe}
 
   .sp-sections{display:grid;gap:16px}
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
@@ -288,7 +289,7 @@
       <div class="sp-header">
         <div class="sp-title">Scope Generator</div>
         <div class="sp-actions">
-          <a class="sp-btn ghost" id="sp-estimate-link" href="https://pro.housecallpro.com/app/calendar_new" target="_blank" rel="noopener noreferrer">View Estimate in HCP</a>
+          <a class="sp-btn sp-btn-schedule" href="https://pro.housecallpro.com/app/calendar_new" target="_blank" rel="noopener noreferrer">Schedule</a>
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
           <button class="sp-btn" id="sp-refresh-materials" type="button">Update Material Costs</button>
         </div>
@@ -780,8 +781,6 @@ document.addEventListener('DOMContentLoaded', function(){
     wagePerHour: 20,
     minutesPerMile: 1,
   };
-  const HCP_ESTIMATE_BASE_URL = 'https://pro.housecallpro.com/app/estimates/';
-  const HCP_CALENDAR_URL = 'https://pro.housecallpro.com/app/calendar_new';
 
   const state = { sections: [], crew: DEFAULT_CREW_ID };
   const mapState = {
@@ -811,7 +810,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const importStatusEl = document.getElementById('sp-import-status');
   const estimateNumberInput = document.getElementById('sp-estimate-number');
   const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
-  const estimateLinkBtn = document.getElementById('sp-estimate-link');
   const mapAddressInput = document.getElementById('sp-map-address');
   const mapCardEl = document.getElementById('sp-map-card');
   const mapToggleBtn = document.getElementById('sp-map-toggle');
@@ -844,7 +842,6 @@ document.addEventListener('DOMContentLoaded', function(){
   let estimateLookupController = null;
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
-  let lastEstimateLink = '';
   let lastEstimateExists = false;
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
@@ -1067,15 +1064,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  function updateEstimateLink(url){
-    if(!estimateLinkBtn){
-      return;
-    }
-    const nextUrl = url || HCP_CALENDAR_URL;
-    estimateLinkBtn.href = nextUrl;
-    estimateLinkBtn.style.display = '';
-  }
-
   function updateImportStatus(message, state){
     if(!importStatusEl){
       return;
@@ -1267,14 +1255,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     return '';
-  }
-
-  function buildEstimateLink(payload){
-    const estimateId = extractEstimateId(payload);
-    if(!estimateId){
-      return '';
-    }
-    return `${HCP_ESTIMATE_BASE_URL}${encodeURIComponent(estimateId)}`;
   }
 
   function zoomMapToMax(location){
@@ -1509,14 +1489,11 @@ document.addEventListener('DOMContentLoaded', function(){
         return;
       }
       const addressResult = extractEstimateAddressPayload(estimate);
-      const estimateLink = buildEstimateLink(estimate);
       if(addressResult.hasAddress){
         const formatted = addressResult.formatted;
         lastEstimateLookupNumber = estimateNumber;
         lastEstimateAddress = formatted;
         lastEstimateExists = true;
-        lastEstimateLink = estimateLink;
-        updateEstimateLink(estimateLink);
         if(formatted){
           setMapAddressFromEstimate(formatted);
           updateEstimateStatus('Address loaded from Housecall Pro.', 'success');
@@ -1529,23 +1506,17 @@ document.addEventListener('DOMContentLoaded', function(){
           lastEstimateLookupNumber = estimateNumber;
           lastEstimateAddress = '';
           lastEstimateExists = false;
-          lastEstimateLink = '';
-          updateEstimateLink('');
           updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
         }else{
           lastEstimateLookupNumber = estimateNumber;
           lastEstimateAddress = '';
           lastEstimateExists = true;
-          lastEstimateLink = estimateLink;
-          updateEstimateLink(estimateLink);
           updateEstimateStatus('Estimate found but no address was provided.', 'warn');
         }
       }else{
         lastEstimateLookupNumber = estimateNumber;
         lastEstimateAddress = '';
         lastEstimateExists = false;
-        lastEstimateLink = '';
-        updateEstimateLink('');
         updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
       }
     }catch(err){
@@ -1556,8 +1527,6 @@ document.addEventListener('DOMContentLoaded', function(){
       lastEstimateLookupNumber = '';
       lastEstimateAddress = '';
       lastEstimateExists = false;
-      lastEstimateLink = '';
-      updateEstimateLink('');
       updateEstimateStatus('Unable to load estimate address. Please try again.', 'error');
     }finally{
       if(estimateLookupController === controller){
@@ -1579,17 +1548,10 @@ document.addEventListener('DOMContentLoaded', function(){
       lastEstimateLookupNumber = '';
       lastEstimateAddress = '';
       lastEstimateExists = false;
-      lastEstimateLink = '';
-      updateEstimateLink('');
       updateEstimateStatus('', '');
       return;
     }
     if(digits === lastEstimateLookupNumber){
-      if(lastEstimateExists && lastEstimateLink){
-        updateEstimateLink(lastEstimateLink);
-      }else{
-        updateEstimateLink('');
-      }
       if(lastEstimateAddress && mapAddressInput && !mapAddressInput.value.trim()){
         setMapAddressFromEstimate(lastEstimateAddress);
         updateEstimateStatus('Address loaded from Housecall Pro.', 'success');
@@ -8300,8 +8262,6 @@ document.addEventListener('DOMContentLoaded', function(){
         lastEstimateLookupNumber = '';
         lastEstimateAddress = '';
         lastEstimateExists = false;
-        lastEstimateLink = '';
-        updateEstimateLink('');
         updateEstimateStatus('', '');
       }
     });
