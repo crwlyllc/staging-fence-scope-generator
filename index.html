@@ -5055,7 +5055,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const grossProfit = revenue - totalCost - (revenue * RATES.overhead);
     const netProfit = grossProfit - commissionValue;
 
-    if(manualGrossOutput) manualGrossOutput.value = '$' + money(revenue);
+    if(manualGrossOutput) manualGrossOutput.value = '$' + money(grossProfit);
     if(manualCommissionOutput) manualCommissionOutput.value = '$' + money(commissionValue);
     if(manualNetOutput) manualNetOutput.value = '$' + money(netProfit);
 
@@ -5063,7 +5063,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const crewDays = rawDays ? parseCurrencyInput(rawDays) : NaN;
     if(manualGrossDayOutput){
       if(isFinite(crewDays) && crewDays > 0){
-        manualGrossDayOutput.value = '$' + money(revenue / crewDays);
+        manualGrossDayOutput.value = '$' + money(grossProfit / crewDays);
       } else {
         manualGrossDayOutput.value = '';
       }
@@ -5077,7 +5077,13 @@ document.addEventListener('DOMContentLoaded', function(){
         totalEl.value = '';
         return;
       }
-      totalEl.value = '$' + money(target * crewDays);
+      const targetGross = target * crewDays;
+      const grossRevenue = (targetGross + totalCost) / (1 - RATES.overhead);
+      if(!isFinite(grossRevenue)){
+        totalEl.value = '';
+        return;
+      }
+      totalEl.value = '$' + money(grossRevenue);
     });
   }
 
