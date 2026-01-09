@@ -288,7 +288,7 @@
       <div class="sp-header">
         <div class="sp-title">Scope Generator</div>
         <div class="sp-actions">
-          <a class="sp-btn ghost" id="sp-estimate-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none">View Estimate in HCP</a>
+          <a class="sp-btn ghost" id="sp-estimate-link" href="https://pro.housecallpro.com/app/calendar_new" target="_blank" rel="noopener noreferrer">View Estimate in HCP</a>
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
           <button class="sp-btn" id="sp-refresh-materials" type="button">Update Material Costs</button>
         </div>
@@ -325,7 +325,7 @@
         <div class="sp-grid">
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-days">Crew days on site</label>
-            <input class="sp-input" id="sp-manual-days" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 3" />
+            <input class="sp-input" id="sp-manual-days" type="number" inputmode="numeric" step="1" min="0" pattern="[0-9]*" placeholder="e.g., 3" />
             <div class="sp-hint">Needed for gross-per-day targets and scenario totals.</div>
           </div>
         </div>
@@ -781,6 +781,7 @@ document.addEventListener('DOMContentLoaded', function(){
     minutesPerMile: 1,
   };
   const HCP_ESTIMATE_BASE_URL = 'https://pro.housecallpro.com/estimates/';
+  const HCP_CALENDAR_URL = 'https://pro.housecallpro.com/app/calendar_new';
 
   const state = { sections: [], crew: DEFAULT_CREW_ID };
   const mapState = {
@@ -1070,13 +1071,9 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!estimateLinkBtn){
       return;
     }
-    if(url){
-      estimateLinkBtn.href = url;
-      estimateLinkBtn.style.display = '';
-    }else{
-      estimateLinkBtn.removeAttribute('href');
-      estimateLinkBtn.style.display = 'none';
-    }
+    const nextUrl = url || HCP_CALENDAR_URL;
+    estimateLinkBtn.href = nextUrl;
+    estimateLinkBtn.style.display = '';
   }
 
   function updateImportStatus(message, state){
@@ -5152,7 +5149,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(manualNetOutput) manualNetOutput.value = '$' + money(netProfit);
 
     const rawDays = manualDaysInput ? (manualDaysInput.value || '').trim() : '';
-    const crewDays = rawDays ? parseCurrencyInput(rawDays) : NaN;
+    const crewDays = rawDays && /^\d+$/.test(rawDays) ? parseInt(rawDays, 10) : NaN;
     if(manualGrossDayOutput){
       if(isFinite(crewDays) && crewDays > 0){
         manualGrossDayOutput.value = '$' + money(grossProfit / crewDays);
@@ -8248,7 +8245,13 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
   if(manualDaysInput){
-    manualDaysInput.addEventListener('input', ()=> updateManualQuote());
+    manualDaysInput.addEventListener('input', ()=> {
+      const digitsOnly = (manualDaysInput.value || '').replace(/[^\d]/g, '');
+      if(manualDaysInput.value !== digitsOnly){
+        manualDaysInput.value = digitsOnly;
+      }
+      updateManualQuote();
+    });
   }
 
   const quickAddBtn = document.getElementById('sp-quick-add');
