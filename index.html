@@ -288,6 +288,7 @@
       <div class="sp-header">
         <div class="sp-title">Scope Generator</div>
         <div class="sp-actions">
+          <a class="sp-btn ghost" id="sp-estimate-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none">View Estimate in HCP</a>
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
           <button class="sp-btn" id="sp-refresh-materials" type="button">Update Material Costs</button>
         </div>
@@ -779,6 +780,7 @@ document.addEventListener('DOMContentLoaded', function(){
     wagePerHour: 20,
     minutesPerMile: 1,
   };
+  const HCP_ESTIMATE_BASE_URL = 'https://pro.housecallpro.com/estimates/';
 
   const state = { sections: [], crew: DEFAULT_CREW_ID };
   const mapState = {
@@ -808,6 +810,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const importStatusEl = document.getElementById('sp-import-status');
   const estimateNumberInput = document.getElementById('sp-estimate-number');
   const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
+  const estimateLinkBtn = document.getElementById('sp-estimate-link');
   const mapAddressInput = document.getElementById('sp-map-address');
   const mapCardEl = document.getElementById('sp-map-card');
   const mapToggleBtn = document.getElementById('sp-map-toggle');
@@ -840,6 +843,8 @@ document.addEventListener('DOMContentLoaded', function(){
   let estimateLookupController = null;
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
+  let lastEstimateLink = '';
+  let lastEstimateExists = false;
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
 
@@ -1061,6 +1066,19 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function updateEstimateLink(url){
+    if(!estimateLinkBtn){
+      return;
+    }
+    if(url){
+      estimateLinkBtn.href = url;
+      estimateLinkBtn.style.display = '';
+    }else{
+      estimateLinkBtn.removeAttribute('href');
+      estimateLinkBtn.style.display = 'none';
+    }
+  }
+
   function updateImportStatus(message, state){
     if(!importStatusEl){
       return;
@@ -1183,6 +1201,56 @@ document.addEventListener('DOMContentLoaded', function(){
       const value = payload[key];
       return value && typeof value === 'object' ? isEstimateNotFound(value) : false;
     });
+  }
+
+  function extractEstimateId(payload){
+    if(!payload){
+      return '';
+    }
+    if(typeof payload === 'string' || typeof payload === 'number'){
+      return '';
+    }
+    if(Array.isArray(payload)){
+      for(const item of payload){
+        const candidate = extractEstimateId(item);
+        if(candidate){
+          return candidate;
+        }
+      }
+      return '';
+    }
+
+    const candidates = [payload];
+    ['data', 'result', 'estimate'].forEach(key=>{
+      if(payload && payload[key]){
+        candidates.push(payload[key]);
+      }
+    });
+
+    for(const candidate of candidates){
+      if(!candidate || typeof candidate !== 'object'){
+        continue;
+      }
+      const idCandidate = candidate.id
+        || candidate.estimateId
+        || candidate.estimate_id
+        || candidate.estimateID
+        || candidate.estimateNumber
+        || candidate.estimate_number;
+      if(idCandidate){
+        return String(idCandidate).trim();
+      }
+    }
+
+    return '';
+  }
+
+  function buildEstimateLink(payload, estimateNumber){
+    const estimateId = extractEstimateId(payload) || estimateNumber;
+    if(!estimateId){
+      return '';
+    }
+    return `${HCP_ESTIMATE_BASE_URL}${encodeURIComponent(estimateId)}`;
   }
 
   function zoomMapToMax(location){
@@ -1417,10 +1485,14 @@ document.addEventListener('DOMContentLoaded', function(){
         return;
       }
       const addressResult = extractEstimateAddressPayload(estimate);
+      const estimateLink = buildEstimateLink(estimate, estimateNumber);
       if(addressResult.hasAddress){
         const formatted = addressResult.formatted;
         lastEstimateLookupNumber = estimateNumber;
         lastEstimateAddress = formatted;
+        lastEstimateExists = true;
+        lastEstimateLink = estimateLink;
+        updateEstimateLink(estimateLink);
         if(formatted){
           setMapAddressFromEstimate(formatted);
           updateEstimateStatus('Address loaded from Housecall Pro.', 'success');
@@ -1432,15 +1504,24 @@ document.addEventListener('DOMContentLoaded', function(){
         if(notFound){
           lastEstimateLookupNumber = estimateNumber;
           lastEstimateAddress = '';
+          lastEstimateExists = false;
+          lastEstimateLink = '';
+          updateEstimateLink('');
           updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
         }else{
           lastEstimateLookupNumber = estimateNumber;
           lastEstimateAddress = '';
+          lastEstimateExists = true;
+          lastEstimateLink = estimateLink;
+          updateEstimateLink(estimateLink);
           updateEstimateStatus('Estimate found but no address was provided.', 'warn');
         }
       }else{
         lastEstimateLookupNumber = estimateNumber;
         lastEstimateAddress = '';
+        lastEstimateExists = false;
+        lastEstimateLink = '';
+        updateEstimateLink('');
         updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
       }
     }catch(err){
@@ -1450,6 +1531,9 @@ document.addEventListener('DOMContentLoaded', function(){
       console.error('Estimate lookup failed', err);
       lastEstimateLookupNumber = '';
       lastEstimateAddress = '';
+      lastEstimateExists = false;
+      lastEstimateLink = '';
+      updateEstimateLink('');
       updateEstimateStatus('Unable to load estimate address. Please try again.', 'error');
     }finally{
       if(estimateLookupController === controller){
@@ -1470,10 +1554,18 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!digits){
       lastEstimateLookupNumber = '';
       lastEstimateAddress = '';
+      lastEstimateExists = false;
+      lastEstimateLink = '';
+      updateEstimateLink('');
       updateEstimateStatus('', '');
       return;
     }
     if(digits === lastEstimateLookupNumber){
+      if(lastEstimateExists && lastEstimateLink){
+        updateEstimateLink(lastEstimateLink);
+      }else{
+        updateEstimateLink('');
+      }
       if(lastEstimateAddress && mapAddressInput && !mapAddressInput.value.trim()){
         setMapAddressFromEstimate(lastEstimateAddress);
         updateEstimateStatus('Address loaded from Housecall Pro.', 'success');
@@ -8177,6 +8269,9 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         lastEstimateLookupNumber = '';
         lastEstimateAddress = '';
+        lastEstimateExists = false;
+        lastEstimateLink = '';
+        updateEstimateLink('');
         updateEstimateStatus('', '');
       }
     });
