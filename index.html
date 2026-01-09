@@ -265,6 +265,20 @@
     border-radius:var(--sp-radius);
     box-shadow:0 20px 60px rgba(0,0,0,0.16);
   }
+  .sp-manual-scenario{
+    display:grid;
+    gap:12px;
+    padding:12px;
+    border:1px dashed var(--sp-border);
+    border-radius:12px;
+    background:#f8fafc;
+  }
+  @media(min-width:720px){
+    .sp-manual-scenario{
+      grid-template-columns:160px minmax(0,1fr);
+      align-items:center;
+    }
+  }
 
   </style>
 </head>
@@ -304,6 +318,56 @@
               <span class="sp-chip is-info" id="sp-manual-mode" style="display:none">Pricing</span>
             </div>
             <div class="sp-hint">Calculated from the direct cost you enter.</div>
+          </div>
+        </div>
+        <div class="sp-divider"></div>
+        <div class="sp-grid">
+          <div class="sp-field col-6">
+            <label class="sp-label" for="sp-manual-days">Crew days on site</label>
+            <input class="sp-input" id="sp-manual-days" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 3" />
+            <div class="sp-hint">Needed for gross-per-day targets and scenario totals.</div>
+          </div>
+        </div>
+        <div class="sp-grid">
+          <div class="sp-field col-6">
+            <label class="sp-label" for="sp-manual-gross">Total gross</label>
+            <input class="sp-input" id="sp-manual-gross" type="text" readonly placeholder="$0.00" />
+          </div>
+          <div class="sp-field col-6">
+            <label class="sp-label" for="sp-manual-gross-day">Gross per crew day</label>
+            <input class="sp-input" id="sp-manual-gross-day" type="text" readonly placeholder="$0.00" />
+          </div>
+          <div class="sp-field col-6">
+            <label class="sp-label" for="sp-manual-commission">Commission</label>
+            <input class="sp-input" id="sp-manual-commission" type="text" readonly placeholder="$0.00" />
+          </div>
+          <div class="sp-field col-6">
+            <label class="sp-label" for="sp-manual-net">Net $</label>
+            <input class="sp-input" id="sp-manual-net" type="text" readonly placeholder="$0.00" />
+          </div>
+        </div>
+        <div class="sp-divider"></div>
+        <div class="sp-grid">
+          <div class="sp-field col-12">
+            <label class="sp-label">What to charge scenarios (target gross per day)</label>
+            <div class="sp-service-list">
+              <div class="sp-manual-scenario" data-manual-scenario data-target="700">
+                <span class="sp-chip is-info">$700 / day</span>
+                <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
+              </div>
+              <div class="sp-manual-scenario" data-manual-scenario data-target="800">
+                <span class="sp-chip is-info">$800 / day</span>
+                <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
+              </div>
+              <div class="sp-manual-scenario" data-manual-scenario data-target="900">
+                <span class="sp-chip is-info">$900 / day</span>
+                <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
+              </div>
+              <div class="sp-manual-scenario" data-manual-scenario data-target="1000">
+                <span class="sp-chip is-info">$1,000 / day</span>
+                <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -754,6 +818,12 @@ document.addEventListener('DOMContentLoaded', function(){
   const manualChargeOutput = document.getElementById('sp-manual-charge');
   const manualModeChip = document.getElementById('sp-manual-mode');
   const manualStatusEl = document.getElementById('sp-manual-status');
+  const manualDaysInput = document.getElementById('sp-manual-days');
+  const manualGrossOutput = document.getElementById('sp-manual-gross');
+  const manualGrossDayOutput = document.getElementById('sp-manual-gross-day');
+  const manualCommissionOutput = document.getElementById('sp-manual-commission');
+  const manualNetOutput = document.getElementById('sp-manual-net');
+  const manualScenarioRows = Array.from(document.querySelectorAll('[data-manual-scenario]'));
   const manualModal = document.getElementById('sp-manual-modal');
   const manualOpenBtn = document.getElementById('sp-open-manual');
   const manualCloseBtn = document.getElementById('sp-manual-close');
@@ -4925,6 +4995,17 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function clearManualMetrics(){
+    if(manualGrossOutput) manualGrossOutput.value = '';
+    if(manualGrossDayOutput) manualGrossDayOutput.value = '';
+    if(manualCommissionOutput) manualCommissionOutput.value = '';
+    if(manualNetOutput) manualNetOutput.value = '';
+    manualScenarioRows.forEach(row => {
+      const totalEl = row.querySelector('[data-manual-scenario-total]');
+      if(totalEl) totalEl.value = '';
+    });
+  }
+
   function updateManualQuote(){
     if(!manualCostInput || !manualChargeOutput || !manualStatusEl || !manualModeChip) return;
 
@@ -4934,6 +5015,7 @@ document.addEventListener('DOMContentLoaded', function(){
       manualModeChip.style.display = 'none';
       manualStatusEl.textContent = 'Enter total direct costs to compute the price to charge.';
       delete manualStatusEl.dataset.state;
+      clearManualMetrics();
       return;
     }
 
@@ -4943,6 +5025,7 @@ document.addEventListener('DOMContentLoaded', function(){
       manualModeChip.style.display = 'none';
       manualStatusEl.textContent = 'Enter a valid non-negative cost amount.';
       manualStatusEl.dataset.state = 'error';
+      clearManualMetrics();
       return;
     }
 
@@ -4952,10 +5035,12 @@ document.addEventListener('DOMContentLoaded', function(){
       manualModeChip.style.display = 'none';
       manualStatusEl.textContent = 'Pricing inputs produced an invalid result.';
       manualStatusEl.dataset.state = 'error';
+      clearManualMetrics();
       return;
     }
 
-    manualChargeOutput.value = '$' + money(pricing.revenue);
+    const revenue = pricing.revenue;
+    manualChargeOutput.value = '$' + money(revenue);
     manualModeChip.textContent = pricing.mode === 'capped' ? 'MCOR capped' : 'Standard %';
     manualModeChip.classList.toggle('is-warn', pricing.mode === 'capped');
     manualModeChip.classList.toggle('is-info', pricing.mode !== 'capped');
@@ -4964,6 +5049,36 @@ document.addEventListener('DOMContentLoaded', function(){
       ? 'Standard pricing formula with MCOR cap applied.'
       : 'Standard pricing formula applied.';
     manualStatusEl.dataset.state = 'success';
+
+    const revenueExcludingMcor = revenue * (1 - RATES.mcor);
+    const commissionValue = RATES.commission * (((1 - RATES.overhead) * revenueExcludingMcor) - totalCost);
+    const grossProfit = revenue - totalCost - (revenue * RATES.overhead);
+    const netProfit = grossProfit - commissionValue;
+
+    if(manualGrossOutput) manualGrossOutput.value = '$' + money(revenue);
+    if(manualCommissionOutput) manualCommissionOutput.value = '$' + money(commissionValue);
+    if(manualNetOutput) manualNetOutput.value = '$' + money(netProfit);
+
+    const rawDays = manualDaysInput ? (manualDaysInput.value || '').trim() : '';
+    const crewDays = rawDays ? parseCurrencyInput(rawDays) : NaN;
+    if(manualGrossDayOutput){
+      if(isFinite(crewDays) && crewDays > 0){
+        manualGrossDayOutput.value = '$' + money(revenue / crewDays);
+      } else {
+        manualGrossDayOutput.value = '';
+      }
+    }
+
+    manualScenarioRows.forEach(row => {
+      const totalEl = row.querySelector('[data-manual-scenario-total]');
+      if(!totalEl) return;
+      const target = parseFloat(row.dataset.target || '');
+      if(!isFinite(target) || !isFinite(crewDays) || crewDays <= 0){
+        totalEl.value = '';
+        return;
+      }
+      totalEl.value = '$' + money(target * crewDays);
+    });
   }
 
   async function generateNotes(eventOrOptions){
@@ -8033,6 +8148,9 @@ document.addEventListener('DOMContentLoaded', function(){
         updateManualQuote();
       }
     });
+  }
+  if(manualDaysInput){
+    manualDaysInput.addEventListener('input', ()=> updateManualQuote());
   }
 
   const quickAddBtn = document.getElementById('sp-quick-add');
