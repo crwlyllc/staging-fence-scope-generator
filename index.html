@@ -780,7 +780,7 @@ document.addEventListener('DOMContentLoaded', function(){
     wagePerHour: 20,
     minutesPerMile: 1,
   };
-  const HCP_ESTIMATE_BASE_URL = 'https://pro.housecallpro.com/estimates/';
+  const HCP_ESTIMATE_BASE_URL = 'https://pro.housecallpro.com/app/estimates/';
   const HCP_CALENDAR_URL = 'https://pro.housecallpro.com/app/calendar_new';
 
   const state = { sections: [], crew: DEFAULT_CREW_ID };
@@ -1200,6 +1200,20 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  function normalizeEstimateId(value){
+    if(value == null){
+      return '';
+    }
+    const text = String(value).trim();
+    if(!text){
+      return '';
+    }
+    if(/^\d+$/.test(text)){
+      return '';
+    }
+    return text;
+  }
+
   function extractEstimateId(payload){
     if(!payload){
       return '';
@@ -1224,26 +1238,39 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
 
-    for(const candidate of candidates){
-      if(!candidate || typeof candidate !== 'object'){
+    const pending = [...candidates];
+    const seen = new Set();
+
+    while(pending.length){
+      const candidate = pending.shift();
+      if(!candidate || typeof candidate !== 'object' || seen.has(candidate)){
         continue;
       }
+      seen.add(candidate);
+
       const idCandidate = candidate.id
         || candidate.estimateId
         || candidate.estimate_id
         || candidate.estimateID
         || candidate.estimateNumber
         || candidate.estimate_number;
-      if(idCandidate){
-        return String(idCandidate).trim();
+      const normalized = normalizeEstimateId(idCandidate);
+      if(normalized){
+        return normalized;
+      }
+
+      for(const value of Object.values(candidate)){
+        if(value && typeof value === 'object'){
+          pending.push(value);
+        }
       }
     }
 
     return '';
   }
 
-  function buildEstimateLink(payload, estimateNumber){
-    const estimateId = extractEstimateId(payload) || estimateNumber;
+  function buildEstimateLink(payload){
+    const estimateId = extractEstimateId(payload);
     if(!estimateId){
       return '';
     }
@@ -1439,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', function(){
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify({ estimateNumber }),
+      body: JSON.stringify({ estimateNumber, includeEstimateId: true }),
       signal,
     });
 
@@ -1482,7 +1509,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return;
       }
       const addressResult = extractEstimateAddressPayload(estimate);
-      const estimateLink = buildEstimateLink(estimate, estimateNumber);
+      const estimateLink = buildEstimateLink(estimate);
       if(addressResult.hasAddress){
         const formatted = addressResult.formatted;
         lastEstimateLookupNumber = estimateNumber;
