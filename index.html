@@ -444,9 +444,6 @@
           <select class="sp-select" id="sp-crew-select">
             <option value="in-house-2">In-House 2</option>
             <option value="in-house-4">In-House 4</option>
-            <option value="in-house-3">In-House 3</option>
-            <option value="in-house-3-4">In-House 3 &amp; 4</option>
-            <option value="robert">Robert</option>
             <option value="mark">Mark</option>
             <option value="jesus">Jesus</option>
             <option value="rodney">Rodney</option>
@@ -677,46 +674,6 @@ document.addEventListener('DOMContentLoaded', function(){
       dailyCost(count){
         if(!count || count <= 0) return 0;
         return 640;
-      }
-    },
-    'in-house-3': {
-      id: 'in-house-3',
-      label: 'In-House 3',
-      isInHouse: true,
-      maxCrew: 3,
-      maxWelders: 2,
-      minCrew: 3,
-      description: '3-man in-house crew (2 welders + 1 helper). $480/day (fixed).',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        return 480;
-      }
-    },
-    'in-house-3-4': {
-      id: 'in-house-3-4',
-      label: 'In-House 3 & 4',
-      isInHouse: true,
-      maxCrew: 7,
-      maxWelders: 4,
-      minCrew: 7,
-      description: 'Combined in-house crews (4 welders + 3 helpers). $1,120/day (fixed).',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        return 1120;
-      }
-    },
-    robert: {
-      id: 'robert',
-      label: 'Robert',
-      maxCrew: 7,
-      maxWelders: 2,
-      minCrew: 3,
-      description: 'Up to 7 guys (max 2 welders). $1,000/day for 3 crew; +$200 for each additional.',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        const baseRate = 1000;
-        if(count <= 3) return baseRate;
-        return baseRate + (count - 3) * 200;
       }
     },
     mark: {
@@ -2359,7 +2316,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-field col-3">
             <label class="sp-label">Retaining Wall Height (ft)</label>
             <input class="sp-input" data-field="retainingWallHeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 2.5" />
-            <div class="sp-hint">Robert's crew pours the wall only at $35/sq ft ($1,500 min) including wall materials & labor; Jesus' crew installs the fence. Posts in the wall are set during the pour (no extra concrete bags).</div>
+            <div class="sp-hint">In-House 4 pours the wall only at $35/sq ft ($1,500 min) including wall materials & labor; Jesus' crew installs the fence. Posts in the wall are set during the pour (no extra concrete bags).</div>
           </div>
         </div>
 
@@ -6197,7 +6154,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
         const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
         if(wallLength > 0 && wallHeight > 0){
-          lines.push(`- Retaining wall: ${wallLength}ft long × ${wallHeight}ft tall ($35/sq ft, $1,500 minimum). Robert's crew pours the wall only (includes wall materials & labor; post materials separate) and Jesus' crew installs the fence. Posts on the wall are set during the pour—no extra concrete bags needed.`);
+          lines.push(`- Retaining wall: ${wallLength}ft long × ${wallHeight}ft tall ($35/sq ft, $1,500 minimum). In-House 4 pours the wall only (includes wall materials & labor; post materials separate) and Jesus' crew installs the fence. Posts on the wall are set during the pour—no extra concrete bags needed.`);
         }
       }
 
@@ -7251,7 +7208,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     if(totals.retainingWallCost > 0){
       costMaterials += totals.retainingWallCost;
-      matBreak.push('  - Retaining wall installation (Robert only): $'+money(totals.retainingWallCost)+' ($35/sq ft, $1,500 minimum, includes wall materials & labor; post materials separate)');
+      matBreak.push('  - Retaining wall installation (In-House 4 only): $'+money(totals.retainingWallCost)+' ($35/sq ft, $1,500 minimum, includes wall materials & labor; post materials separate)');
     }
 
     // PRICE_MISC line-items
@@ -7689,7 +7646,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
     if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
     if (totals.panelsInstallCustom > 0) sub.push('- New custom panels: '+totals.panelsInstallCustom);
-    if (totals.retainingWallSqft > 0) sub.push(`- Retaining wall: ${totals.retainingWallSqft.toFixed(2)} sq ft ($${money(totals.retainingWallCost)}). Robert's crew pours the wall (wall materials & labor included; post materials separate) and Jesus' crew installs the fence. Posts on the wall set in the pour—no extra concrete bags.`);
+    if (totals.retainingWallSqft > 0) sub.push(`- Retaining wall: ${totals.retainingWallSqft.toFixed(2)} sq ft ($${money(totals.retainingWallCost)}). In-House 4 pours the wall (wall materials & labor included; post materials separate) and Jesus' crew installs the fence. Posts on the wall set in the pour—no extra concrete bags.`);
     if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then hand paint '+paintLenTotal+' ft of fence');
     if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
     if (totals.woodPicketReplace > 0) sub.push('- Wood pickets to replace: '+totals.woodPicketReplace);
@@ -7801,7 +7758,7 @@ document.addEventListener('DOMContentLoaded', function(){
       : lines;
     const fullNotes = [...outLines, '', ...cost];
 
-    const inHouseCrewIds = ['in-house-2', 'in-house-4', 'in-house-3', 'in-house-3-4'];
+    const inHouseCrewIds = ['in-house-2', 'in-house-4'];
     const inHouseScenarioLines = [];
     inHouseScenarioLines.push('IN-HOUSE CREW SCENARIOS (if selected for this scope)');
     for (const id of inHouseCrewIds){
