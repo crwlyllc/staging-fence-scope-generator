@@ -652,12 +652,12 @@ document.addEventListener('DOMContentLoaded', function(){
       label: 'In-House 2',
       isInHouse: true,
       maxCrew: 2,
-      maxWelders: 1,
+      maxWelders: 2,
       minCrew: 2,
-      description: '2-man in-house crew (1 welder + 1 helper). $320/day (fixed).',
+      description: '2-man in-house crew (any mix of welders/helpers). $200 per person per day.',
       dailyCost(count){
         if(!count || count <= 0) return 0;
-        return 320;
+        return 200 * count;
       }
     },
     'in-house-4': {
@@ -665,12 +665,12 @@ document.addEventListener('DOMContentLoaded', function(){
       label: 'In-House 4',
       isInHouse: true,
       maxCrew: 4,
-      maxWelders: 3,
+      maxWelders: 4,
       minCrew: 4,
-      description: '4-man in-house crew (3 welders + 1 helper). $640/day (fixed).',
+      description: '4-man in-house crew (any mix of welders/helpers). $200 per person per day.',
       dailyCost(count){
         if(!count || count <= 0) return 0;
-        return 640;
+        return 200 * count;
       }
     }
   };
@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const TRAVEL_SETTINGS = {
     dieselPrice: 3,
     mpg: 13,
-    wagePerHour: 20,
+    wagePerHour: 22.4,
     minutesPerMile: 1,
   };
 
@@ -7707,35 +7707,15 @@ document.addEventListener('DOMContentLoaded', function(){
       : lines;
     const fullNotes = [...outLines, '', ...cost];
 
-    const inHouseCrewIds = ['in-house-2', 'in-house-4'];
-    const inHouseScenarioLines = [];
-    inHouseScenarioLines.push('IN-HOUSE CREW SCENARIOS (if selected for this scope)');
-    for (const id of inHouseCrewIds){
-      const def = CREWS[id];
-      if (!def) continue;
-      const altTravel = await computeTravelCost({ crewDef: def, crewSchedule, jobAddress });
-      const altCrewCost = crewSchedule.reduce((acc, day) => acc + crewCostForCount(def, day.crew), 0);
-      const altDirectCosts = altCrewCost + (altTravel.cost || 0) + costMaterials + removalCost + consumablesCost;
-      const altRevenueRes = computeChargeRevenue(altDirectCosts);
-      const altRevenue = altRevenueRes && isFinite(altRevenueRes.revenue) ? altRevenueRes.revenue : NaN;
-      const revenueLabel = isFinite(altRevenue) ? `$${money(altRevenue)}` : 'Invalid pricing inputs';
-      const travelNote = altTravel.cost > 0
-        ? ` (includes $${money(altTravel.cost)} travel)`
-        : (altTravel.breakdown[0] ? ` (${altTravel.breakdown[0].replace(/^[-]\s*/, '')})` : '');
-      inHouseScenarioLines.push(`- ${def.label}: total cost $${money(altDirectCosts)}${travelNote}; total revenue ${revenueLabel}`);
-    }
-
-    const fullNotesWithScenarios = [...fullNotes, '', ...inHouseScenarioLines];
-
     const snapshot = snapshotForNotes();
     const encodedSnapshot = encodePayloadForNotes(snapshot);
     if(encodedSnapshot){
-      fullNotesWithScenarios.push('');
-      fullNotesWithScenarios.push('Reload key (for Scope Generator, do not edit)');
-      fullNotesWithScenarios.push(`${NOTES_DATA_START}${encodedSnapshot}${NOTES_DATA_END}`);
+      fullNotes.push('');
+      fullNotes.push('Reload key (for Scope Generator, do not edit)');
+      fullNotes.push(`${NOTES_DATA_START}${encodedSnapshot}${NOTES_DATA_END}`);
     }
 
-    notesEl.value = fullNotesWithScenarios.join('\n');
+    notesEl.value = fullNotes.join('\n');
     outputEl.style.display = 'grid';
     if (window.parentIFrame && typeof window.parentIFrame.size === 'function') {
       try { window.parentIFrame.size(); } catch(e){}
