@@ -5415,7 +5415,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const phraseParts = [heightLabel, `${styleLabel}${/fence/i.test(styleLabel)?'':' fence'}`].filter(Boolean);
           const postDetail = item.postSizes.size ? `posts: ${joinParts(Array.from(item.postSizes))}` : '';
           const picketDetail = item.picketSizes.size ? `pickets: ${joinParts(Array.from(item.picketSizes))}` : '';
-          const railDetail = item.railSizes.size ? `rails: ${joinParts(Array.from(item.railSizes).map(v=> `${v} stock`))}` : '';
+          const railDetail = item.railSizes.size ? `rails: ${joinParts(Array.from(item.railSizes).map(v=> `${v}`))}` : '';
           const detailParts = [postDetail, picketDetail, railDetail].filter(Boolean);
           const detailText = detailParts.length ? ` (${detailParts.join('; ')})` : '';
           return `${item.length}ft of ${phraseParts.join(' ')}${detailText}`;
@@ -5448,7 +5448,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       let railSentence = '';
       if(railSizeValues.length){
-        railSentence = `Rails will use ${joinParts(railSizeValues)} stock.`;
+        railSentence = `Rails will use ${joinParts(railSizeValues)}.`;
       }
 
       return [firstSentence, postsSentence, railSentence].filter(Boolean).join(' ');
@@ -5732,8 +5732,8 @@ document.addEventListener('DOMContentLoaded', function(){
           const rawSize = item?.size || '';
           const normalized = normalizeSize(rawSize);
           if(normalized) sectionGapSizes.add(normalized);
-          const label = normalized ? normalizeLabelText(normalized) : normalizeLabelText(rawSize) || rawSize || 'matching rail stock';
-          const displayLabel = label || 'matching rail stock';
+          const label = normalized ? normalizeLabelText(normalized) : normalizeLabelText(rawSize) || rawSize || 'matching rail material';
+          const displayLabel = label || 'matching rail material';
           gapCountByLabel.set(displayLabel, (gapCountByLabel.get(displayLabel)||0) + qty);
         });
       }
@@ -6603,7 +6603,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const gapCount = parseInt(totals.wiRailGaps, 10) || 0;
       const gapLabel = describeCount(gapCount, 'full rail gap filler', 'full rail gap fillers');
       const gapSizes = Array.from(totals.wiRailGapSizes || []).filter(Boolean);
-      const sizeText = gapSizes.length ? ` using ${joinParts(gapSizes)} rail stock` : ' using matching rail stock';
+      const sizeText = gapSizes.length ? ` using ${joinParts(gapSizes)} rail material` : ' using matching rail material';
       addServiceLine('Full Rail Gap Filler', `Add ${gapLabel}${sizeText} to close open spans and match the existing fence.`);
     }
     const replaceServiceCounts = totals.postsReplace || zeroPostCounts();
