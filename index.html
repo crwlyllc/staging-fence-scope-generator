@@ -4889,6 +4889,14 @@ document.addEventListener('DOMContentLoaded', function(){
     'Pair of Door Hinges': 5,
     'Pair of Bat Wing Hinges': 5,
     'Pair of Auto Close Hinges': 50,
+    'Wood 4x4 posts': 20,
+    'Round Steel posts': 35,
+    'Postmaster posts': 40,
+    'Dome cap post cap': 4,
+    'Flat cap post cap': 4,
+    'Simpson 1 piece ties': 3,
+    'Simpson 2 piece ties': 5,
+    'lag screws': 0.5,
     // NEW
     'replacement finial': 1.25,
     'puppy picket insert (1/2")': 62.59,
@@ -6726,7 +6734,7 @@ document.addEventListener('DOMContentLoaded', function(){
           addMat(materials, 'lag screws', totalTies * 4);
         }
         const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
-        addMat(materials, 'bags of Maximizer concrete', replaceCount * bagsPerPost);
+        addMat(materials, 'Maximizer bags of concrete', replaceCount * bagsPerPost);
       });
     }
 
