@@ -2248,7 +2248,7 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
 
-        <div class="sp-scope-group col-12 is-style">
+        <div class="sp-scope-group col-12 is-style" data-style-group>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Style, Finish & Patches</div>
             <div>
@@ -4358,6 +4358,18 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function updateStyleGroupVisibility(card){
+    const scopeSel = card.querySelector('[data-field="scopeType"]');
+    const scope = scopeSel ? scopeSel.value : 'repair';
+    const isRepair = scope !== 'install' && scope !== 'replace';
+    const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
+    const isWood = fenceType === 'wood';
+    const styleGroup = card.querySelector('[data-style-group]');
+    if(styleGroup){
+      styleGroup.style.display = (isWood && isRepair) ? 'none' : '';
+    }
+  }
+
   function updateInstallConditional(card){
     const scopeSel = card.querySelector('[data-field="scopeType"]');
     const scope = scopeSel ? scopeSel.value : 'repair';
@@ -4417,6 +4429,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     updatePaintingApplicationUI(card);
     updatePuppyPicketRepairFields(card);
+    updateStyleGroupVisibility(card);
   }
 
   function updateFenceTypeConditional(card){
@@ -4476,6 +4489,7 @@ document.addEventListener('DOMContentLoaded', function(){
     updateWoodAddonsConditional(card);
     updateWoodRepairControls(card);
     updatePuppyPicketRepairFields(card);
+    updateStyleGroupVisibility(card);
   }
 
   function resetSectionForFenceType(card, nextType){
@@ -5762,56 +5776,59 @@ document.addEventListener('DOMContentLoaded', function(){
         return post;
       };
 
-      lines.push(`- Style: ${isWood ? woodStyle : s.style}`);
-      lines.push(`- Height: ${isWood ? woodHeight : s.height}`);
-      lines.push(`- Rails: ${railsDesc}`);
-      lines.push(`- Picket: ${isWood ? (s.woodPicketWidth || '-') : picket}`);
-      lines.push(`- Puppy Pickets: ${isWood ? 'N/A' : s.puppy}`);
-      if(isWood){
-        const woodPosts = woodPostLabel(s.woodPost);
-        lines.push(`- Wood type: ${s.woodType || 'Cedar'}`);
-        lines.push(`- Finish: ${woodFinish}`);
-        lines.push(`- Posts: ${woodPosts}`);
-        const woodAddOns = [];
-        if(s.woodAddKickBoard){
-          const stackLabel = s.woodKickBoardStack ? `${s.woodKickBoardStack}×` : '';
-          const sizeLabel = s.woodKickBoardSize || '2x6';
-          woodAddOns.push(`Kick board (${stackLabel}${sizeLabel})`);
-        }
-        if(s.woodAddTopCap){
-          const sizeLabel = s.woodTopCapSize || '2x6';
-          woodAddOns.push(`Top cap (${sizeLabel})`);
-        }
-        if(s.woodAddTrim){
-          const trimLabel = s.woodTrimType || 'Trim';
-          woodAddOns.push(`Trim (${trimLabel})`);
-        }
-        if(woodAddOns.length){
-          lines.push(`- Wood add-ons: ${woodAddOns.join('; ')}`);
-        }
-        const woodSummaryParts = [
-          `Style: ${woodStyle || '-'}`,
-          `Height: ${woodHeight || '-'}`,
-          `Picket: ${s.woodPicketWidth || '-'}`,
-          `Rails: ${railsDesc}`,
-          `Wood type: ${s.woodType || 'Cedar'}`,
-          `Finish: ${woodFinish}`,
-          `Posts: ${woodPosts}`,
-          woodAddOns.length ? `Add-ons: ${woodAddOns.join('; ')}` : ''
-        ].filter(Boolean);
-        woodSectionSummaries.push(`- ${title}: ${woodSummaryParts.join('; ')}`);
-      } else {
-        const attachmentMethod = s.panelAttachment || (installInfo && installInfo.attachment) || 'Welding';
-        const paintingDefault = s.painting || 'Paint Section';
-        const paintingLabel = (scopeType === 'install' && attachmentMethod === 'Brackets')
-          ? 'None'
-          : paintingDefault;
-        lines.push(`- Painting: ${paintingLabel}`);
-        if(paintingLabel === 'Paint Section' || paintingLabel === 'Prime and Paint'){
-          const application = s.paintingApplication || 'By Hand';
-          lines.push(`- Paint application: ${application}`);
-          if(paintingLabel === 'Paint Section' && s.paintingPrepExtra){
-            lines.push('- Prep needs: More than usual prep');
+      const skipStyleDetails = isWood && isRepair;
+      if(!skipStyleDetails){
+        lines.push(`- Style: ${isWood ? woodStyle : s.style}`);
+        lines.push(`- Height: ${isWood ? woodHeight : s.height}`);
+        lines.push(`- Rails: ${railsDesc}`);
+        lines.push(`- Picket: ${isWood ? (s.woodPicketWidth || '-') : picket}`);
+        lines.push(`- Puppy Pickets: ${isWood ? 'N/A' : s.puppy}`);
+        if(isWood){
+          const woodPosts = woodPostLabel(s.woodPost);
+          lines.push(`- Wood type: ${s.woodType || 'Cedar'}`);
+          lines.push(`- Finish: ${woodFinish}`);
+          lines.push(`- Posts: ${woodPosts}`);
+          const woodAddOns = [];
+          if(s.woodAddKickBoard){
+            const stackLabel = s.woodKickBoardStack ? `${s.woodKickBoardStack}×` : '';
+            const sizeLabel = s.woodKickBoardSize || '2x6';
+            woodAddOns.push(`Kick board (${stackLabel}${sizeLabel})`);
+          }
+          if(s.woodAddTopCap){
+            const sizeLabel = s.woodTopCapSize || '2x6';
+            woodAddOns.push(`Top cap (${sizeLabel})`);
+          }
+          if(s.woodAddTrim){
+            const trimLabel = s.woodTrimType || 'Trim';
+            woodAddOns.push(`Trim (${trimLabel})`);
+          }
+          if(woodAddOns.length){
+            lines.push(`- Wood add-ons: ${woodAddOns.join('; ')}`);
+          }
+          const woodSummaryParts = [
+            `Style: ${woodStyle || '-'}`,
+            `Height: ${woodHeight || '-'}`,
+            `Picket: ${s.woodPicketWidth || '-'}`,
+            `Rails: ${railsDesc}`,
+            `Wood type: ${s.woodType || 'Cedar'}`,
+            `Finish: ${woodFinish}`,
+            `Posts: ${woodPosts}`,
+            woodAddOns.length ? `Add-ons: ${woodAddOns.join('; ')}` : ''
+          ].filter(Boolean);
+          woodSectionSummaries.push(`- ${title}: ${woodSummaryParts.join('; ')}`);
+        } else {
+          const attachmentMethod = s.panelAttachment || (installInfo && installInfo.attachment) || 'Welding';
+          const paintingDefault = s.painting || 'Paint Section';
+          const paintingLabel = (scopeType === 'install' && attachmentMethod === 'Brackets')
+            ? 'None'
+            : paintingDefault;
+          lines.push(`- Painting: ${paintingLabel}`);
+          if(paintingLabel === 'Paint Section' || paintingLabel === 'Prime and Paint'){
+            const application = s.paintingApplication || 'By Hand';
+            lines.push(`- Paint application: ${application}`);
+            if(paintingLabel === 'Paint Section' && s.paintingPrepExtra){
+              lines.push('- Prep needs: More than usual prep');
+            }
           }
         }
       }
