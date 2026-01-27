@@ -6566,6 +6566,13 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
 
+    if(hasWoodStaining){
+      const setupHours = 1;
+      woodStainHours += setupHours;
+      woodHelperHours += setupHours;
+      woodManHours += setupHours * 2;
+    }
+
     manHours += woodManHours;
     helperHours += woodHelperHours;
     welderHours += woodWelderHours;
