@@ -7423,7 +7423,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const crewDef = getCrewDefinition(state.crew);
     const primePaintScheduled = totalLenPrimePaint > 0;
-    const HOURS_PER_PERSON = 7;
+    const HOURS_PER_PERSON = 8.5;
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
     const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0) || woodRequiresTwoPerson || stainHours > 0;
     const minCrewBase = requiresTwoPersonCrew ? 2 : 1;
