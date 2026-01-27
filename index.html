@@ -6549,7 +6549,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const hasTopCap = !!s.woodAddTopCap || topCapLf > 0;
             const topCapHours = hasTopCap ? normalizedLengthFt * (0.5/60) : 0;
             const hours = baseHours + topCapHours;
-            woodManHours += hours;
+            woodManHours += hours * 2;
             woodHelperHours += hours;
             woodStainHours += hours;
             woodRequiresTwoPerson = true;
