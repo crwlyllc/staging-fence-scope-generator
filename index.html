@@ -4919,7 +4919,12 @@ document.addEventListener('DOMContentLoaded', function(){
     'picket plugs (5/8")': 0.11,
     'prefab gate panel': 0,
     'panel mount bracket': 1.27,
-    '5 gal wood stain bucket': 124.49
+    '5 gal wood stain bucket': 124.49,
+    'wood picket': 3.0,
+    'wood picket (3.5")': 2.5,
+    'wood picket (4")': 2.75,
+    'wood picket (5.5")': 3.25,
+    'wood picket (6")': 3.5
   };
 
   const PRICE = {
@@ -6756,6 +6761,26 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     addWoodPostReplacementMaterials();
+
+    function addWoodPicketMaterials(){
+      const picketCounts = {};
+      state.sections.forEach(s=>{
+        if((s.fenceType || '').toLowerCase() !== 'wood') return;
+        if((s.scopeType || 'repair') !== 'repair') return;
+        const replaceCount = parseInt(s.woodRepairPicketReplace || 0, 10) || 0;
+        const installCount = parseInt(s.woodRepairPicketInstall || 0, 10) || 0;
+        const total = replaceCount + installCount;
+        if(total <= 0) return;
+        const widthLabel = normalizeLabelText(s.woodPicketWidth || '') || 'wood picket';
+        const label = widthLabel === 'wood picket' ? widthLabel : `wood picket (${widthLabel})`;
+        picketCounts[label] = (picketCounts[label] || 0) + total;
+      });
+      Object.entries(picketCounts).forEach(([label, qty])=>{
+        addMat(materials, label, qty);
+      });
+    }
+
+    addWoodPicketMaterials();
 
     // ==== Materials aggregation ====
     let paintLenTotal = 0;
