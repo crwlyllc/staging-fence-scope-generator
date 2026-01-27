@@ -4905,6 +4905,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'Pair of Auto Close Hinges': 50,
     'Wood 4x4 posts': 20,
     'Round Steel posts': 23.61,
+    '12ft round steel posts': 31.82,
     'Postmaster posts': 50,
     'Dome cap post cap': 1.13,
     'Flat cap post cap': 1.13,
@@ -6746,7 +6747,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const hasKickBoard = !!s.woodAddKickBoard;
         const tiesPerPost = railsPerPost + (hasKickBoard ? 1 : 0);
         const totalTies = replaceCount * tiesPerPost;
-        const postLabel = normalizeLabelText(s.woodPost || 'Wood post');
+        const rawPostLabel = s.woodPost || 'Wood post';
+        const isRoundSteel = /round steel/i.test(rawPostLabel);
+        const isEightFoot = heightFt === 8;
+        const postLabel = isRoundSteel && isEightFoot
+          ? '12ft round steel'
+          : normalizeLabelText(rawPostLabel);
         addMat(materials, `${postLabel} posts`, replaceCount);
         const capLabel = normalizeLabelText(s.woodRepairPostReplaceCap || '');
         if(capLabel) addMat(materials, `${capLabel} post cap`, replaceCount);
