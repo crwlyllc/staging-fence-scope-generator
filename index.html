@@ -7514,8 +7514,9 @@ document.addEventListener('DOMContentLoaded', function(){
       if(crewCount > MAX_CREW_PER_DAY){
         crewCount = MAX_CREW_PER_DAY;
       }
-      washDays.push({ crew: crewCount, welderCount: 0, stainerCount: 0, helperCount: crewCount });
-      remainingWashHours = Math.max(0, remainingWashHours - washerCount * HOURS_PER_PERSON);
+      const usedWashHours = Math.min(remainingWashHours, washerCount * HOURS_PER_PERSON);
+      washDays.push({ crew: crewCount, welderCount: 0, stainerCount: 0, helperCount: crewCount, hours: usedWashHours });
+      remainingWashHours = Math.max(0, remainingWashHours - usedWashHours);
       if(washerCount === 0 && crewCount === 0){
         break;
       }
@@ -7561,11 +7562,21 @@ document.addEventListener('DOMContentLoaded', function(){
       if(welderCount + stainerCount + helperCount < crewCount){
         helperCount = crewCount - welderCount - stainerCount;
       }
-      baseDays.push({ crew: crewCount, welderCount, stainerCount, helperCount });
+      const usedWelderHours = Math.min(remainingWelderHours, welderCount * HOURS_PER_PERSON);
+      const usedStainerHours = Math.min(remainingStainHours, stainerCount * HOURS_PER_PERSON);
+      const usedHelperHours = Math.min(
+        remainingHelperHours,
+        helperHoursWelderCanCover + Math.max(0, helperCount - stainerCount) * HOURS_PER_PERSON
+      );
+      const usedHours = usedWelderHours + usedStainerHours + usedHelperHours;
+      baseDays.push({ crew: crewCount, welderCount, stainerCount, helperCount, hours: usedHours });
       remainingWelderHours = Math.max(0, remainingWelderHours - welderCount * HOURS_PER_PERSON);
-      const helperHoursHandledByWelders = Math.min(remainingHelperHours, helperHoursWelderCanCover);
+      const helperHoursHandledByWeldersFinal = Math.min(remainingHelperHours, helperHoursWelderCanCover);
       remainingStainHours = Math.max(0, remainingStainHours - stainerCount * HOURS_PER_PERSON);
-      remainingHelperHours = Math.max(0, remainingHelperHours - helperHoursHandledByWelders - Math.max(0, (helperCount - stainerCount)) * HOURS_PER_PERSON);
+      remainingHelperHours = Math.max(
+        0,
+        remainingHelperHours - helperHoursHandledByWeldersFinal - Math.max(0, (helperCount - stainerCount)) * HOURS_PER_PERSON
+      );
       if(welderCount === 0 && stainerCount === 0 && helperCount === 0){
         break;
       }
@@ -7611,6 +7622,20 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
 
+    if(washDays.length && baseDays.length){
+      const firstWash = washDays[0];
+      const firstBase = baseDays[0];
+      const washHoursToCombine = firstWash.hours || 0;
+      const baseHours = firstBase.hours || 0;
+      const baseCapacity = (firstBase.crew || 0) * HOURS_PER_PERSON;
+      if(washHoursToCombine > 0
+        && firstWash.crew <= firstBase.crew
+        && (baseHours + washHoursToCombine) <= baseCapacity){
+        baseDays[0] = { ...firstBase, hasWash: true, hours: baseHours + washHoursToCombine };
+        washDays.shift();
+      }
+    }
+
     const crewSchedule = [];
     washDays.forEach(day => crewSchedule.push({ ...day, kind: 'wash' }));
     baseDays.forEach(day => crewSchedule.push({ ...day, kind: primePaintScheduled ? 'prime' : 'base' }));
@@ -7632,7 +7657,9 @@ document.addEventListener('DOMContentLoaded', function(){
         ? ' (pressure wash)'
         : (day.kind === 'finish'
           ? returnSuffix
-          : (primePaintScheduled ? ' (prime/repairs)' : ''));
+          : (day.hasWash
+            ? (primePaintScheduled ? ' (prime/repairs, then pressure wash)' : ' (repairs, then pressure wash)')
+            : (primePaintScheduled ? ' (prime/repairs)' : '')));
       const cost = crewCostForCount(crewDef, day.crew);
       return {
         number: idx + 1,
