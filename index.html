@@ -622,6 +622,10 @@ document.addEventListener('DOMContentLoaded', function(){
     { value: 'cut-weld', label: 'Cut & Weld' },
     { value: 'dig-straighten', label: 'Dig, straighten, add concrete' }
   ];
+  const WOOD_POST_INSTALL_METHODS = [
+    { value: 'drive-posts', label: 'Drive the posts' },
+    { value: 'dig-set-concrete', label: 'Dig, set, add concrete' }
+  ];
 
   const POST_REALIGN_METHODS = [
     { value: 'concrete', label: 'Concrete' },
@@ -1545,7 +1549,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodRepairPostReplaceTie: SIMPSON_TIE_OPTIONS[0],
       woodRepairPostReplaceCap: '',
       woodRepairPostInstall: 0,
-      woodRepairPostInstallMethod: WOOD_POST_METHODS[1].value,
+      woodRepairPostInstallMethod: WOOD_POST_INSTALL_METHODS[1].value,
       woodRepairPostInstallTie: SIMPSON_TIE_OPTIONS[0],
       woodRepairPanelReplace: 0,
       woodRepairPanelWidth: 8,
@@ -2169,7 +2173,7 @@ document.addEventListener('DOMContentLoaded', function(){
               <label class="sp-label">Post Installation</label>
               ${numberControl('woodRepairPostInstall','0')}
               <div class="sp-row">
-                <select class="sp-select" data-field="woodRepairPostInstallMethod">${WOOD_POST_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select>
+                <select class="sp-select" data-field="woodRepairPostInstallMethod">${WOOD_POST_INSTALL_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select>
                 <select class="sp-select" data-field="woodRepairPostInstallTie">${createSelect(SIMPSON_TIE_OPTIONS)}</select>
               </div>
             </div>
@@ -3045,7 +3049,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodRepairPostReplaceTie', data.woodRepairPostReplaceTie || SIMPSON_TIE_OPTIONS[0]);
     set('woodRepairPostReplaceCap', data.woodRepairPostReplaceCap || '');
     set('woodRepairPostInstall', data.woodRepairPostInstall || '');
-    set('woodRepairPostInstallMethod', data.woodRepairPostInstallMethod || WOOD_POST_METHODS[1].value);
+    set('woodRepairPostInstallMethod', data.woodRepairPostInstallMethod || WOOD_POST_INSTALL_METHODS[1].value);
     set('woodRepairPostInstallTie', data.woodRepairPostInstallTie || SIMPSON_TIE_OPTIONS[0]);
     set('woodRepairPanelReplace', data.woodRepairPanelReplace || '');
     set('woodRepairPanelWidth', data.woodRepairPanelWidth || '');
@@ -4468,7 +4472,7 @@ document.addEventListener('DOMContentLoaded', function(){
         woodTopCapSize: '2x6',
         woodTrimType: '1x4',
         woodPostRealignments: [],
-        woodRepairPostInstallMethod: WOOD_POST_METHODS[1].value,
+        woodRepairPostInstallMethod: WOOD_POST_INSTALL_METHODS[1].value,
         woodRepairPostReplaceTie: SIMPSON_TIE_OPTIONS[0],
         woodRepairPostInstallTie: SIMPSON_TIE_OPTIONS[0],
         woodRepairTopCapReplaceSize: '2x6',
@@ -5495,13 +5499,13 @@ document.addEventListener('DOMContentLoaded', function(){
         return acc;
       }, { dig: 0, cutWeld: 0 });
     };
-    const zeroWoodMethodCounts = ()=>({ 'cut-weld': 0, 'dig-straighten': 0 });
+    const zeroWoodMethodCounts = ()=>({ 'drive-posts': 0, 'dig-set-concrete': 0 });
     const addWoodMethodCount = (bucket, method, count)=>{
       if(!bucket) return;
       const qty = parseInt(count, 10) || 0;
       if(qty <= 0) return;
       const normalized = String(method || '').toLowerCase();
-      const key = normalized === 'cut-weld' ? 'cut-weld' : 'dig-straighten';
+      const key = normalized === 'drive-posts' ? 'drive-posts' : 'dig-set-concrete';
       bucket[key] = (bucket[key] || 0) + qty;
     };
     const totals = {
@@ -6475,7 +6479,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         const postInstall = addCount(postInstallCount, 'post installation', 'post installations');
         if(postInstall){
-          const method = methodLabel(WOOD_POST_METHODS, s.woodRepairPostInstallMethod);
+          const method = methodLabel(WOOD_POST_INSTALL_METHODS, s.woodRepairPostInstallMethod);
           const tie = (s.woodRepairPostInstallTie || '').trim();
           const extras = [method, tie ? `Simpson ${tie}` : ''].filter(Boolean).join('; ');
           parts.push(`${postInstall}${extras ? ` (${extras})` : ''}`);
@@ -6821,6 +6825,39 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     addWoodPostReplacementMaterials();
+
+    function addWoodPostInstallMaterials(){
+      state.sections.forEach(s=>{
+        if((s.fenceType || '').toLowerCase() !== 'wood') return;
+        if((s.scopeType || 'repair') !== 'repair') return;
+        const installCount = parseInt(s.woodRepairPostInstall || 0, 10) || 0;
+        if(installCount <= 0) return;
+        const heightFt = Math.max(0, feetFromStr(s.woodHeight || s.height));
+        const railsPerPost = woodRailsForHeight(heightFt);
+        const hasKickBoard = !!s.woodAddKickBoard;
+        const tiesPerPost = railsPerPost + (hasKickBoard ? 1 : 0);
+        const totalTies = installCount * tiesPerPost;
+        const rawPostLabel = s.woodPost || 'Wood post';
+        const isRoundSteel = /round steel/i.test(rawPostLabel);
+        const isEightFoot = heightFt === 8;
+        const postLabel = isRoundSteel && isEightFoot
+          ? '12ft round steel'
+          : normalizeLabelText(rawPostLabel);
+        addMat(materials, `${postLabel} posts`, installCount);
+        const tieLabel = normalizeLabelText((s.woodRepairPostInstallTie || SIMPSON_TIE_OPTIONS[0]) || '');
+        if(totalTies > 0){
+          addMat(materials, `Simpson ${tieLabel}`, totalTies);
+          addMat(materials, 'lag screws', totalTies * 4);
+        }
+        const method = String(s.woodRepairPostInstallMethod || '').toLowerCase();
+        if(method !== 'drive-posts'){
+          const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
+          addMat(materials, 'Maximizer bags of concrete', installCount * bagsPerPost);
+        }
+      });
+    }
+
+    addWoodPostInstallMaterials();
 
     function addWoodPicketMaterials(){
       const picketCounts = {};
@@ -7781,7 +7818,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodRailReplace > 0) sub.push('- Wood rails to replace: '+totals.woodRailReplace);
     if (totals.woodRailInstall > 0) sub.push('- Wood rails to install: '+totals.woodRailInstall);
     const woodMethodLabel = (method)=>{
-      const match = WOOD_POST_METHODS.find(item=>item.value === method);
+      const match = WOOD_POST_INSTALL_METHODS.find(item=>item.value === method);
       return match ? match.label : method;
     };
     const pushWoodPostMethodLines = (label, counts)=>{
