@@ -5583,6 +5583,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let woodStainHours = 0;
     let woodWashHours = 0;
     let woodRequiresTwoPerson = false;
+    let hasConcretePostCure = false;
     const woodSectionSummaries = [];
     const parseWoodStainSelection = (value)=>{
       const raw = String(value || 'none').trim();
@@ -6449,13 +6450,14 @@ document.addEventListener('DOMContentLoaded', function(){
           const cap = (s.woodRepairPostReplaceCap || '').trim();
           const extras = [tie ? `Simpson ${tie}` : '', cap ? `cap: ${cap}` : ''].filter(Boolean).join(', ');
           parts.push(`Replace ${postReplace}${extras ? ` (${extras})` : ''}`);
-          const perPostHours = (woodHeightFt >= 8) ? 1.5 : 1;
-          const hours = postReplaceCount * perPostHours * 2; // two-person task
+          const perPostHours = 0.5;
+          const hours = postReplaceCount * perPostHours;
           if(woodHeightFt >= 8){ totals.woodPostReplace8 += postReplaceCount; }
           else { totals.woodPostReplace6 += postReplaceCount; }
           woodHelperHours += hours;
           woodManHours += hours;
           woodRequiresTwoPerson = woodRequiresTwoPerson || postReplaceCount > 0;
+          hasConcretePostCure = hasConcretePostCure || postReplaceCount > 0;
         }
         if(postRealignCounts.dig){
           const realign = addCount(postRealignCounts.dig, 'post realignment', 'post realignments');
@@ -6483,11 +6485,15 @@ document.addEventListener('DOMContentLoaded', function(){
           const tie = (s.woodRepairPostInstallTie || '').trim();
           const extras = [method, tie ? `Simpson ${tie}` : ''].filter(Boolean).join('; ');
           parts.push(`${postInstall}${extras ? ` (${extras})` : ''}`);
-          const hours = postInstallCount * (45/60);
+          const hours = postInstallCount * 0.5;
           totals.woodPostInstall += postInstallCount;
           addWoodMethodCount(totals.woodPostInstallMethods, s.woodRepairPostInstallMethod, postInstallCount);
           woodHelperHours += hours;
           woodManHours += hours;
+          const usesConcrete = String(s.woodRepairPostInstallMethod || '').toLowerCase() === 'dig-set-concrete';
+          if(usesConcrete && postInstallCount > 0){
+            hasConcretePostCure = true;
+          }
         }
         if(panels>0){
           const width = parseFloat(s.woodRepairPanelWidth||0) || 0;
@@ -7699,7 +7705,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const averageCrewSize = scheduleEntries.length
       ? crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0) / scheduleEntries.length
       : 0;
-    const estimatedOnsiteHours = averageCrewSize > 0 ? manHours / averageCrewSize : 0;
+    let estimatedOnsiteHours = averageCrewSize > 0 ? manHours / averageCrewSize : 0;
+    if(hasConcretePostCure){
+      estimatedOnsiteHours = Math.max(estimatedOnsiteHours, 2.5);
+    }
     const formatHours = (hours) => {
       if (!isFinite(hours) || hours <= 0) return '';
       const rounded = Math.round(hours * 10) / 10;
