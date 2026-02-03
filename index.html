@@ -652,6 +652,7 @@ document.addEventListener('DOMContentLoaded', function(){
     minCrew: 1,
     maxCrew: 4,
     maxWelders: 4,
+    maxDayHours: 10,
   };
 
   const NOTES_DATA_VERSION = 1;
@@ -1258,12 +1259,12 @@ document.addEventListener('DOMContentLoaded', function(){
     return meters / 1609.34;
   }
 
-  async function computeTravelCost({ crewSchedule, jobAddress }){
-    const result = { cost: 0, breakdown: [], hours: 0, included: false };
+  async function computeTravelDayInfo(jobAddress){
+    const result = { roundTripMiles: 0, hoursPerDay: 0, included: false, reason: '' };
 
     const normalizedAddress = normalizeAddressText(jobAddress);
     if(!normalizedAddress){
-      result.breakdown.push('- Travel: Address required to calculate fuel and drive time.');
+      result.reason = 'address';
       return result;
     }
 
@@ -1273,26 +1274,48 @@ document.addEventListener('DOMContentLoaded', function(){
     ]);
 
     if(!baseLoc || !jobLoc){
-      result.breakdown.push('- Travel: Unable to locate job address; travel cost not included.');
+      result.reason = 'geocode';
       return result;
     }
 
     const milesOneWay = milesBetween(baseLoc, jobLoc);
     if(!milesOneWay || !isFinite(milesOneWay)){
-      result.breakdown.push('- Travel: Unable to calculate distance; travel cost not included.');
+      result.reason = 'distance';
       return result;
     }
 
     const roundTripMiles = milesOneWay * 2;
+    const travelMinutesPerDay = roundTripMiles * TRAVEL_SETTINGS.minutesPerMile;
+    result.roundTripMiles = roundTripMiles;
+    result.hoursPerDay = travelMinutesPerDay / 60;
+    result.included = true;
+    return result;
+  }
+
+  async function computeTravelCost({ crewSchedule, jobAddress, travelDayInfo }){
+    const result = { cost: 0, breakdown: [], hours: 0, included: false };
+    const travelInfo = travelDayInfo || await computeTravelDayInfo(jobAddress);
+
+    if(!travelInfo.included){
+      if(travelInfo.reason === 'address'){
+        result.breakdown.push('- Travel: Address required to calculate fuel and drive time.');
+      }else if(travelInfo.reason === 'geocode'){
+        result.breakdown.push('- Travel: Unable to locate job address; travel cost not included.');
+      }else if(travelInfo.reason === 'distance'){
+        result.breakdown.push('- Travel: Unable to calculate distance; travel cost not included.');
+      }
+      return result;
+    }
+
     const travelDays = crewSchedule.filter(day => (day.crew||0) > 0).length;
     if(travelDays <= 0){
       return result;
     }
 
+    const roundTripMiles = travelInfo.roundTripMiles;
     const fuelPerDay = (roundTripMiles / TRAVEL_SETTINGS.mpg) * TRAVEL_SETTINGS.dieselPrice;
     const totalFuelCost = fuelPerDay * travelDays;
-    const travelMinutesPerDay = roundTripMiles * TRAVEL_SETTINGS.minutesPerMile;
-    const travelHours = (travelMinutesPerDay / 60) * travelDays;
+    const travelHours = travelInfo.hoursPerDay * travelDays;
     const travelLaborCost = travelHours * LABOR_RATE;
 
     const cost = totalFuelCost + travelLaborCost;
@@ -7434,8 +7457,16 @@ document.addEventListener('DOMContentLoaded', function(){
       return parts.join(' + ');
     }
 
+    const jobAddress = lastEstimateAddress || (mapAddressInput ? mapAddressInput.value : '');
+    const travelDayInfo = await computeTravelDayInfo(jobAddress);
+    const travelHoursPerDay = travelDayInfo.included && isFinite(travelDayInfo.hoursPerDay)
+      ? travelDayInfo.hoursPerDay
+      : 0;
+    const MAX_CREW_DAY_HOURS = CREW_SETTINGS.maxDayHours || 10;
+    const onsiteHoursPerPerson = MAX_CREW_DAY_HOURS - travelHoursPerDay;
+    // Guard against zero/negative onsite capacity if travel time exceeds the day cap.
+    const HOURS_PER_PERSON = Math.max(0.25, onsiteHoursPerPerson);
     const primePaintScheduled = totalLenPrimePaint > 0;
-    const HOURS_PER_PERSON = 8.5;
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
     const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0) || woodRequiresTwoPerson || stainHours > 0;
     const minCrewBase = requiresTwoPersonCrew ? 2 : 1;
@@ -7786,8 +7817,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const laborCost = laborHoursOnsite * LABOR_RATE;
     const consumablesCost = scheduleEntries.length * 50;
     const removalCost = totals.removalCost || 0;
-    const jobAddress = lastEstimateAddress || (mapAddressInput ? mapAddressInput.value : '');
-    const travelCostResult = await computeTravelCost({ crewSchedule, jobAddress });
+    const travelCostResult = await computeTravelCost({ crewSchedule, jobAddress, travelDayInfo });
     const travelCost = travelCostResult.cost || 0;
     const travelHours = isFinite(travelCostResult.hours) ? travelCostResult.hours : 0;
     const totalHours = laborHoursOnsite + travelHours;
