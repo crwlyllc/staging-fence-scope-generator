@@ -7631,6 +7631,7 @@ document.addEventListener('DOMContentLoaded', function(){
     };
     const estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
     const totalLaborHoursLabel = formatHours(manHours);
+    const onsiteFourManLabel = formatHours(manHours / 4);
 
     const materialEntries = Object.keys(materials)
       .filter(label => materials[label] > 0)
@@ -7647,19 +7648,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const sub = [];
     sub.push(`LABOR RATE: $${money(LABOR_RATE)}/hr (crew rate)`);
-    if (estimatedOnsiteLabel) {
-      const crewTimeDetail = totalLaborHoursLabel
-        ? `${estimatedOnsiteLabel} onsite (${totalLaborHoursLabel} of labor time)`
-        : `${estimatedOnsiteLabel} onsite`;
-      sub.push(`- Estimated time: ${crewTimeDetail}`);
+    if (totalLaborHoursLabel) {
+      sub.push(`- Total labor time: ${totalLaborHoursLabel}`);
     }
-    if(scheduleEntries.length){
-      scheduleEntries.forEach(entry => {
-        const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
-        sub.push(`- ${dayTitle}: ${entry.crewLabel}`);
-      });
-    } else {
-      sub.push('- Schedule: TBD');
+    if (onsiteFourManLabel) {
+      sub.push(`- Estimated onsite time (4-man crew): ${onsiteFourManLabel}`);
     }
     sub.push('');
     sub.push('SCOPE (Totals)');
