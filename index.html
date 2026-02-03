@@ -312,7 +312,7 @@
               <button class="sp-btn" id="sp-manual-calc" type="button">Calculate Charge</button>
             </div>
             <div class="sp-hint">Plug in the combined labor, travel, materials, and disposal costs.</div>
-            <div class="sp-hint" id="sp-manual-status">Uses the standard pricing formula.</div>
+            <div class="sp-hint" id="sp-manual-status">Targets $100 gross profit per hour of total time (onsite + travel).</div>
           </div>
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-charge">Recommended Charge</label>
@@ -326,9 +326,9 @@
         <div class="sp-divider"></div>
         <div class="sp-grid">
           <div class="sp-field col-6">
-            <label class="sp-label" for="sp-manual-days">Days on site</label>
-            <input class="sp-input" id="sp-manual-days" type="number" inputmode="numeric" step="1" min="0" pattern="[0-9]*" placeholder="e.g., 3" />
-            <div class="sp-hint">Needed for gross-per-day targets and scenario totals.</div>
+            <label class="sp-label" for="sp-manual-hours">Total hours (onsite + travel)</label>
+            <input class="sp-input" id="sp-manual-hours" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 6.5" />
+            <div class="sp-hint">Needed for gross-per-hour targets and scenario totals.</div>
           </div>
         </div>
         <div class="sp-grid">
@@ -337,8 +337,8 @@
             <input class="sp-input" id="sp-manual-gross" type="text" readonly placeholder="$0.00" />
           </div>
           <div class="sp-field col-6">
-            <label class="sp-label" for="sp-manual-gross-day">Gross per day</label>
-            <input class="sp-input" id="sp-manual-gross-day" type="text" readonly placeholder="$0.00" />
+            <label class="sp-label" for="sp-manual-gross-hour">Gross per hour</label>
+            <input class="sp-input" id="sp-manual-gross-hour" type="text" readonly placeholder="$0.00" />
           </div>
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-commission">Commission</label>
@@ -352,22 +352,22 @@
         <div class="sp-divider"></div>
         <div class="sp-grid">
           <div class="sp-field col-12">
-            <label class="sp-label">What to charge scenarios (target gross per day)</label>
+            <label class="sp-label">What to charge scenarios (target gross per hour)</label>
             <div class="sp-service-list">
-              <div class="sp-manual-scenario" data-manual-scenario data-target="700">
-                <span class="sp-chip is-info">$700 / day</span>
+              <div class="sp-manual-scenario" data-manual-scenario data-target="90">
+                <span class="sp-chip is-info">$90 / hr</span>
                 <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
               </div>
-              <div class="sp-manual-scenario" data-manual-scenario data-target="800">
-                <span class="sp-chip is-info">$800 / day</span>
+              <div class="sp-manual-scenario" data-manual-scenario data-target="100">
+                <span class="sp-chip is-info">$100 / hr</span>
                 <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
               </div>
-              <div class="sp-manual-scenario" data-manual-scenario data-target="900">
-                <span class="sp-chip is-info">$900 / day</span>
+              <div class="sp-manual-scenario" data-manual-scenario data-target="110">
+                <span class="sp-chip is-info">$110 / hr</span>
                 <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
               </div>
-              <div class="sp-manual-scenario" data-manual-scenario data-target="1000">
-                <span class="sp-chip is-info">$1,000 / day</span>
+              <div class="sp-manual-scenario" data-manual-scenario data-target="120">
+                <span class="sp-chip is-info">$120 / hr</span>
                 <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
               </div>
             </div>
@@ -703,9 +703,9 @@ document.addEventListener('DOMContentLoaded', function(){
   const manualChargeOutput = document.getElementById('sp-manual-charge');
   const manualModeChip = document.getElementById('sp-manual-mode');
   const manualStatusEl = document.getElementById('sp-manual-status');
-  const manualDaysInput = document.getElementById('sp-manual-days');
+  const manualHoursInput = document.getElementById('sp-manual-hours');
   const manualGrossOutput = document.getElementById('sp-manual-gross');
-  const manualGrossDayOutput = document.getElementById('sp-manual-gross-day');
+  const manualGrossHourOutput = document.getElementById('sp-manual-gross-hour');
   const manualCommissionOutput = document.getElementById('sp-manual-commission');
   const manualNetOutput = document.getElementById('sp-manual-net');
   const manualScenarioRows = Array.from(document.querySelectorAll('[data-manual-scenario]'));
@@ -1259,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   async function computeTravelCost({ crewSchedule, jobAddress }){
-    const result = { cost: 0, breakdown: [] };
+    const result = { cost: 0, breakdown: [], hours: 0, included: false };
 
     const normalizedAddress = normalizeAddressText(jobAddress);
     if(!normalizedAddress){
@@ -1297,6 +1297,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const cost = totalFuelCost + travelLaborCost;
     result.cost = cost;
+    result.hours = travelHours;
+    result.included = true;
     result.breakdown.push(`- Travel: ${roundTripMiles.toFixed(1)} miles round trip x ${travelDays} day(s) = $${money(cost)} (fuel $${money(totalFuelCost)}, travel labor $${money(travelLaborCost)} @ $${money(LABOR_RATE)}/hr)`);
     return result;
   }
@@ -4891,40 +4893,28 @@ document.addEventListener('DOMContentLoaded', function(){
     return isFinite(num) ? num : NaN;
   }
 
+  const PRICING = {
+    grossProfitTargetPerHour: 100
+  };
+
   const RATES = {
-    netTarget:  0.30,
     overhead:   0.20,
     commission: 0.25,
-    cac:        400.00,
     // Combined overhead + MCOR flat rate
     mcor:       0.00
   };
 
-  function computeChargeRevenue(B1_directCosts){
-    const B1 = B1_directCosts;
-    const B4 = RATES.netTarget;
-    const B5 = RATES.overhead;
-    const B6 = RATES.commission;
-    const B7 = RATES.cac;
-    const B8 = RATES.mcor;
+  function computeChargeRevenue(directCosts, totalHours){
+    const cost = Number(directCosts);
+    const hours = Number(totalHours);
+    if(!isFinite(cost) || cost < 0) return { revenue: NaN, mode: 'invalid' };
+    if(!isFinite(hours) || hours <= 0) return { revenue: NaN, mode: 'invalid-hours' };
+    const denom = 1 - RATES.overhead;
+    if(denom <= 0) return { revenue: NaN, mode: 'invalid' };
 
-    const denom1 = (1-B4)*(1-B6) - B8 - B5;
-    if (denom1 <= 0) return { revenue: NaN, mode: 'invalid' };
-
-    const candidateA = ((1-B4) * B1) / denom1;
-    const candidateB = (B1 + 100/B4) / (1 - B6);
-    const rev1 = Math.max(candidateA, candidateB);
-
-    if (B8 * rev1 <= B7){
-      return { revenue: rev1, mode: 'percent' };
-    } else {
-      const denom2 = (1-B4)*(1-B6) - B5;
-      if (denom2 <= 0) return { revenue: NaN, mode: 'invalid' };
-      const candidateC = (((1-B4) * B1) + B7) / denom2;
-      const candidateD = (B1 + 75/B4) / (1 - B6);
-      const rev2 = Math.max(candidateC, candidateD);
-      return { revenue: rev2, mode: 'capped' };
-    }
+    const targetGross = hours * PRICING.grossProfitTargetPerHour;
+    const revenue = (cost + targetGross) / denom;
+    return { revenue, mode: 'gross-per-hour', targetGross, hours };
   }
 
   function setManualModal(open){
@@ -4942,7 +4932,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function clearManualMetrics(){
     if(manualGrossOutput) manualGrossOutput.value = '';
-    if(manualGrossDayOutput) manualGrossDayOutput.value = '';
+    if(manualGrossHourOutput) manualGrossHourOutput.value = '';
     if(manualCommissionOutput) manualCommissionOutput.value = '';
     if(manualNetOutput) manualNetOutput.value = '';
     manualScenarioRows.forEach(row => {
@@ -4958,7 +4948,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!raw){
       manualChargeOutput.value = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = 'Enter total direct costs to compute the price to charge.';
+      manualStatusEl.textContent = `Enter total direct costs and total hours to compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit.`;
       delete manualStatusEl.dataset.state;
       clearManualMetrics();
       return;
@@ -4974,11 +4964,22 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
 
-    const pricing = computeChargeRevenue(totalCost);
+    const rawHours = manualHoursInput ? (manualHoursInput.value || '').trim() : '';
+    const totalHours = parseFloat(rawHours);
+    if(!isFinite(totalHours) || totalHours <= 0){
+      manualChargeOutput.value = '';
+      manualModeChip.style.display = 'none';
+      manualStatusEl.textContent = `Enter total hours (onsite + travel) to compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit.`;
+      manualStatusEl.dataset.state = 'error';
+      clearManualMetrics();
+      return;
+    }
+
+    const pricing = computeChargeRevenue(totalCost, totalHours);
     if(!pricing || !isFinite(pricing.revenue)){
       manualChargeOutput.value = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = 'Pricing inputs produced an invalid result.';
+      manualStatusEl.textContent = 'Pricing inputs produced an invalid result. Check overhead and hours.';
       manualStatusEl.dataset.state = 'error';
       clearManualMetrics();
       return;
@@ -4986,13 +4987,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const revenue = pricing.revenue;
     manualChargeOutput.value = '$' + money(revenue);
-    manualModeChip.textContent = pricing.mode === 'capped' ? 'MCOR capped' : 'Standard %';
-    manualModeChip.classList.toggle('is-warn', pricing.mode === 'capped');
-    manualModeChip.classList.toggle('is-info', pricing.mode !== 'capped');
+    manualModeChip.textContent = 'Gross/hr target';
+    manualModeChip.classList.remove('is-warn');
+    manualModeChip.classList.add('is-info');
     manualModeChip.style.display = 'inline-block';
-    manualStatusEl.textContent = pricing.mode === 'capped'
-      ? 'Standard pricing formula with MCOR cap applied.'
-      : 'Standard pricing formula applied.';
+    manualStatusEl.textContent = `Targets $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit on total time (onsite + travel).`;
     manualStatusEl.dataset.state = 'success';
 
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
@@ -5004,13 +5003,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(manualCommissionOutput) manualCommissionOutput.value = '$' + money(commissionValue);
     if(manualNetOutput) manualNetOutput.value = '$' + money(netProfit);
 
-    const rawDays = manualDaysInput ? (manualDaysInput.value || '').trim() : '';
-    const crewDays = rawDays && /^\d+$/.test(rawDays) ? parseInt(rawDays, 10) : NaN;
-    if(manualGrossDayOutput){
-      if(isFinite(crewDays) && crewDays > 0){
-        manualGrossDayOutput.value = '$' + money(grossProfit / crewDays);
+    if(manualGrossHourOutput){
+      if(isFinite(totalHours) && totalHours > 0){
+        manualGrossHourOutput.value = '$' + money(grossProfit / totalHours);
       } else {
-        manualGrossDayOutput.value = '';
+        manualGrossHourOutput.value = '';
       }
     }
 
@@ -5018,11 +5015,11 @@ document.addEventListener('DOMContentLoaded', function(){
       const totalEl = row.querySelector('[data-manual-scenario-total]');
       if(!totalEl) return;
       const target = parseFloat(row.dataset.target || '');
-      if(!isFinite(target) || !isFinite(crewDays) || crewDays <= 0){
+      if(!isFinite(target) || !isFinite(totalHours) || totalHours <= 0){
         totalEl.value = '';
         return;
       }
-      const targetGross = target * crewDays;
+      const targetGross = target * totalHours;
       const grossRevenue = (targetGross + totalCost) / (1 - RATES.overhead);
       if(!isFinite(grossRevenue)){
         totalEl.value = '';
@@ -7799,8 +7796,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const jobAddress = lastEstimateAddress || (mapAddressInput ? mapAddressInput.value : '');
     const travelCostResult = await computeTravelCost({ crewSchedule, jobAddress });
     const travelCost = travelCostResult.cost || 0;
+    const travelHours = isFinite(travelCostResult.hours) ? travelCostResult.hours : 0;
+    const totalHours = laborHoursOnsite + travelHours;
     const directCosts = laborCost + travelCost + costMaterials + removalCost + consumablesCost;
-    const revenueRes = computeChargeRevenue(directCosts);
+    const revenueRes = computeChargeRevenue(directCosts, totalHours);
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
     const commissionFormula$ = isFinite(revenue)
@@ -7816,11 +7815,22 @@ document.addEventListener('DOMContentLoaded', function(){
     const laborTimeDetail = estimatedOnsiteLabel || 'time TBD';
     const laborScheduleDetail = crewScheduleDetail.length ? `; ${crewScheduleDetail.join('; ')}` : '';
     cost.push(`- Labor ($${money(LABOR_RATE)}/hr, crew): $${money(laborCost)} (${laborTimeDetail}${laborScheduleDetail})`);
+    const travelHoursLabel = formatHours(travelHours);
+    const totalHoursLabel = formatHours(totalHours);
     if (estimatedOnsiteLabel) {
       const timeDetail = totalLaborHoursLabel
         ? `${estimatedOnsiteLabel} onsite (~${totalLaborHoursLabel} of labor time)`
         : estimatedOnsiteLabel;
       cost.push(`- Estimated time (onsite): ${timeDetail}`);
+    }
+    if (travelHoursLabel){
+      cost.push(`- Estimated time (travel): ${travelHoursLabel}`);
+    } else if (!travelCostResult.included){
+      cost.push('- Estimated time (travel): not included (missing address or schedule).');
+    }
+    if (totalHoursLabel){
+      const totalLabel = travelCostResult.included ? 'total' : 'total, travel excluded';
+      cost.push(`- Estimated time (${totalLabel}): ${totalHoursLabel}`);
     }
     travelCostResult.breakdown.forEach(line => cost.push(line));
     cost.push('- Consumables: $'+money(consumablesCost));
@@ -7833,13 +7843,17 @@ document.addEventListener('DOMContentLoaded', function(){
     cost.push('');
     cost.push('WHAT TO CHARGE');
     if (!isFinite(revenue)){
-      cost.push('⚠️ Pricing inputs produce an invalid result. Check RATES (commission, net target, overhead, MCOR, CAC).');
+      cost.push('⚠️ Pricing inputs produce an invalid result. Check overhead rate and ensure total hours > 0.');
     } else {
       const grossProfit = revenue - directCosts - (revenue * RATES.overhead);
       const netProfit = grossProfit - commissionFormula$;
       const netProfitPct = revenue !== 0 ? (netProfit / revenue) * 100 : NaN;
       cost.push('- Price to charge: $'+money(revenue));
       cost.push('- Total direct costs: $'+money(directCosts));
+      if(isFinite(revenueRes?.targetGross)){
+        const hoursLabel = totalHoursLabel || (isFinite(totalHours) && totalHours > 0 ? `${totalHours.toFixed(1)} hours` : 'time TBD');
+        cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}): $${money(revenueRes.targetGross)}`);
+      }
       cost.push('- Overhead amount: $'+money(revenue * RATES.overhead));
       cost.push('- Gross profit: $'+money(grossProfit));
       cost.push('- Commission (per formula): $'+money(commissionFormula$));
@@ -8256,11 +8270,16 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
   }
-  if(manualDaysInput){
-    manualDaysInput.addEventListener('input', ()=> {
-      const digitsOnly = (manualDaysInput.value || '').replace(/[^\d]/g, '');
-      if(manualDaysInput.value !== digitsOnly){
-        manualDaysInput.value = digitsOnly;
+  if(manualHoursInput){
+    manualHoursInput.addEventListener('input', ()=> {
+      const raw = manualHoursInput.value || '';
+      const cleaned = raw.replace(/[^0-9.]/g, '');
+      const parts = cleaned.split('.');
+      const normalized = parts.length > 1
+        ? `${parts[0]}.${parts.slice(1).join('')}`
+        : cleaned;
+      if(raw !== normalized){
+        manualHoursInput.value = normalized;
       }
       updateManualQuote();
     });
