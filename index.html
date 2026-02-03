@@ -654,6 +654,7 @@ document.addEventListener('DOMContentLoaded', function(){
     maxWelders: 4,
     maxDayHours: 10,
   };
+  const ONSITE_CREW_SIZE = 4;
 
   const NOTES_DATA_VERSION = 1;
   const NOTES_DATA_START = '[[SP_SCOPE_DATA_START]]';
@@ -7449,14 +7450,6 @@ document.addEventListener('DOMContentLoaded', function(){
     helperHours += paintingHours + primePaintReturnHours;
     welderHours += sprayBaseHours + sprayFinishHours;
 
-    function describeCrewSplit(welders, stainers, helpers){
-      const parts = [];
-      if(welders > 0){ parts.push(`${welders} ${welders === 1 ? 'welder' : 'welders'}`); }
-      if(stainers > 0){ parts.push(`${stainers} ${stainers === 1 ? 'stainer' : 'stainers'}`); }
-      if(helpers > 0){ parts.push(`${helpers} ${helpers === 1 ? 'helper' : 'helpers'}`); }
-      return parts.join(' + ');
-    }
-
     const jobAddress = lastEstimateAddress || (mapAddressInput ? mapAddressInput.value : '');
     const travelDayInfo = await computeTravelDayInfo(jobAddress);
     const travelHoursPerDay = travelDayInfo.included && isFinite(travelDayInfo.hoursPerDay)
@@ -7624,18 +7617,16 @@ document.addEventListener('DOMContentLoaded', function(){
     baseDays.forEach(day => crewSchedule.push({ ...day, kind: primePaintScheduled ? 'prime' : 'base' }));
     finishDays.forEach(day => crewSchedule.push({ ...day, kind: 'finish' }));
 
-    const crewLabelWithMix = (count, split) => {
+    const crewLabelWithMix = (count) => {
       if(count <= 0) return '';
-      const word = count === 1 ? 'guy' : 'guys';
-      return split ? `${count} ${word} (${split})` : `${count} ${word}`;
+      return `${ONSITE_CREW_SIZE}-man crew`;
     };
 
     const returnSuffix = primePaintScheduled && hasWoodWash
       ? ' (return for finish coat & staining)'
       : (primePaintScheduled ? ' (return for finish coat)' : (hasWoodWash ? ' (return for staining)' : ''));
     const scheduleEntries = crewSchedule.map((day, idx) => {
-      const split = describeCrewSplit(day.welderCount || 0, day.stainerCount || 0, day.helperCount || 0);
-      const crewLabel = crewLabelWithMix(day.crew, split);
+      const crewLabel = crewLabelWithMix(day.crew);
       const suffix = day.kind === 'wash'
         ? ' (pressure wash)'
         : (day.kind === 'finish'
@@ -7650,10 +7641,7 @@ document.addEventListener('DOMContentLoaded', function(){
       };
     });
 
-    const averageCrewSize = scheduleEntries.length
-      ? crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0) / scheduleEntries.length
-      : 0;
-    const estimatedOnsiteHours = averageCrewSize > 0 ? manHours / averageCrewSize : 0;
+    const estimatedOnsiteHours = ONSITE_CREW_SIZE > 0 ? manHours / ONSITE_CREW_SIZE : 0;
     const formatHours = (hours) => {
       if (!isFinite(hours) || hours <= 0) return '';
       const rounded = Math.round(hours * 10) / 10;
@@ -7662,7 +7650,7 @@ document.addEventListener('DOMContentLoaded', function(){
     };
     const estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
     const totalLaborHoursLabel = formatHours(manHours);
-    const onsiteFourManLabel = formatHours(manHours / 4);
+    const onsiteCrewLabel = `${ONSITE_CREW_SIZE}-man crew`;
 
     const materialEntries = Object.keys(materials)
       .filter(label => materials[label] > 0)
@@ -7682,8 +7670,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totalLaborHoursLabel) {
       sub.push(`- Total labor time: ${totalLaborHoursLabel}`);
     }
-    if (onsiteFourManLabel) {
-      sub.push(`- Estimated onsite time (4-man crew): ${onsiteFourManLabel}`);
+    if (estimatedOnsiteLabel) {
+      sub.push(`- Estimated onsite time (${onsiteCrewLabel}): ${estimatedOnsiteLabel}`);
     }
     sub.push('');
     sub.push('SCOPE (Totals)');
