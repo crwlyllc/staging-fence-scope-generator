@@ -655,6 +655,9 @@ document.addEventListener('DOMContentLoaded', function(){
     maxDayHours: 10,
   };
   const ONSITE_CREW_SIZE = 4;
+  const JOB_SETUP_HOURS = 0.25;
+  const JOB_TEARDOWN_HOURS = 0.25;
+  const JOB_SETUP_TEARDOWN_HOURS = JOB_SETUP_HOURS + JOB_TEARDOWN_HOURS;
 
   const NOTES_DATA_VERSION = 1;
   const NOTES_DATA_START = '[[SP_SCOPE_DATA_START]]';
@@ -7449,6 +7452,12 @@ document.addEventListener('DOMContentLoaded', function(){
     manHours += paintingHours + primePaintReturnHours;
     helperHours += paintingHours + primePaintReturnHours;
     welderHours += sprayBaseHours + sprayFinishHours;
+
+    if(JOB_SETUP_TEARDOWN_HOURS > 0){
+      const setupTeardownManHours = JOB_SETUP_TEARDOWN_HOURS * ONSITE_CREW_SIZE;
+      manHours += setupTeardownManHours;
+      helperHours += setupTeardownManHours;
+    }
 
     const jobAddress = lastEstimateAddress || (mapAddressInput ? mapAddressInput.value : '');
     const travelDayInfo = await computeTravelDayInfo(jobAddress);
