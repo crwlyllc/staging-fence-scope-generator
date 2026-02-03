@@ -326,7 +326,7 @@
         <div class="sp-divider"></div>
         <div class="sp-grid">
           <div class="sp-field col-6">
-            <label class="sp-label" for="sp-manual-days">Crew days on site</label>
+            <label class="sp-label" for="sp-manual-days">Days on site</label>
             <input class="sp-input" id="sp-manual-days" type="number" inputmode="numeric" step="1" min="0" pattern="[0-9]*" placeholder="e.g., 3" />
             <div class="sp-hint">Needed for gross-per-day targets and scenario totals.</div>
           </div>
@@ -337,7 +337,7 @@
             <input class="sp-input" id="sp-manual-gross" type="text" readonly placeholder="$0.00" />
           </div>
           <div class="sp-field col-6">
-            <label class="sp-label" for="sp-manual-gross-day">Gross per crew day</label>
+            <label class="sp-label" for="sp-manual-gross-day">Gross per day</label>
             <input class="sp-input" id="sp-manual-gross-day" type="text" readonly placeholder="$0.00" />
           </div>
           <div class="sp-field col-6">
@@ -405,7 +405,7 @@
         <div class="sp-grid">
           <div class="sp-field col-12">
             <label class="sp-label" for="sp-import-text">Paste saved notes</label>
-            <textarea class="sp-textarea" id="sp-import-text" placeholder="Paste previously generated notes to restore sections, crew, and map info..."></textarea>
+            <textarea class="sp-textarea" id="sp-import-text" placeholder="Paste previously generated notes to restore sections and map info..."></textarea>
             <div class="sp-hint" id="sp-import-status">Paste notes that include the embedded reload key added by this generator.</div>
           </div>
         </div>
@@ -436,16 +436,13 @@
 
     <div class="sp-card" id="sp-crew-card">
       <div class="sp-card-header">
-        <div class="sp-card-title">Crew &amp; Labor</div>
+        <div class="sp-card-title">Labor</div>
       </div>
       <div class="sp-grid">
         <div class="sp-field col-6">
-          <label class="sp-label" for="sp-crew-select">Crew Lead</label>
-          <select class="sp-select" id="sp-crew-select">
-            <option value="in-house-2">In-House 2</option>
-            <option value="in-house-4" selected>In-House 4</option>
-          </select>
-          <div class="sp-hint" id="sp-crew-details"></div>
+          <label class="sp-label">Labor Rate</label>
+          <input class="sp-input" id="sp-labor-rate" type="text" readonly />
+          <div class="sp-hint">Applies to total time on site and travel time.</div>
         </div>
       </div>
     </div>
@@ -650,36 +647,12 @@ document.addEventListener('DOMContentLoaded', function(){
     ]
   };
 
-  const CREWS = {
-    'in-house-2': {
-      id: 'in-house-2',
-      label: 'In-House 2',
-      isInHouse: true,
-      maxCrew: 2,
-      maxWelders: 2,
-      minCrew: 2,
-      description: '2-man in-house crew (any mix of welders/helpers). $200 per person per day.',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        return 200 * count;
-      }
-    },
-    'in-house-4': {
-      id: 'in-house-4',
-      label: 'In-House 4',
-      isInHouse: true,
-      maxCrew: 4,
-      maxWelders: 4,
-      minCrew: 4,
-      description: '4-man in-house crew (any mix of welders/helpers). $200 per person per day.',
-      dailyCost(count){
-        if(!count || count <= 0) return 0;
-        return 200 * count;
-      }
-    }
+  const LABOR_RATE = 100;
+  const CREW_SETTINGS = {
+    minCrew: 1,
+    maxCrew: 4,
+    maxWelders: 4,
   };
-
-  const DEFAULT_CREW_ID = 'in-house-4';
 
   const NOTES_DATA_VERSION = 1;
   const NOTES_DATA_START = '[[SP_SCOPE_DATA_START]]';
@@ -689,11 +662,10 @@ document.addEventListener('DOMContentLoaded', function(){
   const TRAVEL_SETTINGS = {
     dieselPrice: 3,
     mpg: 13,
-    wagePerHour: 22.4,
     minutesPerMile: 1,
   };
 
-  const state = { sections: [], crew: DEFAULT_CREW_ID };
+  const state = { sections: [] };
   const mapState = {
     map: null,
     drawingManager: null,
@@ -744,8 +716,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
   const serviceCopyAllBtn = $('#sp-copy-service');
-  const crewSelectEl = document.getElementById('sp-crew-select');
-  const crewDetailsEl = document.getElementById('sp-crew-details');
+  const laborRateInput = document.getElementById('sp-labor-rate');
   const estimateLookupBtnLabel = estimateLookupBtn ? estimateLookupBtn.textContent : '';
   let lastServiceLines = [];
   let autoGenerateTimer = null;
@@ -754,6 +725,10 @@ document.addEventListener('DOMContentLoaded', function(){
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
   let lastEstimateExists = false;
+
+  if(laborRateInput){
+    laborRateInput.value = `$${money(LABOR_RATE)}/hr (crew rate)`;
+  }
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
 
@@ -941,22 +916,11 @@ document.addEventListener('DOMContentLoaded', function(){
     return {
       version: NOTES_DATA_VERSION,
       generatedAt: new Date().toISOString(),
-      state: { crew: DEFAULT_CREW_ID, sections },
+      state: { sections },
       map: { address: '', polylines: [], nextPolylineId: 1 },
       estimate: { number: '', address: '' }
     };
   }
-
-  function updateCrewUI(){
-    const crewDef = getCrewDefinition(state.crew);
-    if(crewSelectEl && crewDef){
-      crewSelectEl.value = crewDef.id;
-    }
-    if(crewDetailsEl){
-      crewDetailsEl.textContent = crewDetailSummary(crewDef);
-    }
-  }
-  updateCrewUI();
 
   function updateEstimateStatus(message, state){
     if(!estimateStatusEl){
@@ -1294,15 +1258,8 @@ document.addEventListener('DOMContentLoaded', function(){
     return meters / 1609.34;
   }
 
-  function isInHouseCrew(crewDef){
-    return Boolean(crewDef && crewDef.isInHouse);
-  }
-
-  async function computeTravelCost({ crewDef, crewSchedule, jobAddress }){
+  async function computeTravelCost({ crewSchedule, jobAddress }){
     const result = { cost: 0, breakdown: [] };
-    if(!isInHouseCrew(crewDef)){
-      return result;
-    }
 
     const normalizedAddress = normalizeAddressText(jobAddress);
     if(!normalizedAddress){
@@ -1335,16 +1292,12 @@ document.addEventListener('DOMContentLoaded', function(){
     const fuelPerDay = (roundTripMiles / TRAVEL_SETTINGS.mpg) * TRAVEL_SETTINGS.dieselPrice;
     const totalFuelCost = fuelPerDay * travelDays;
     const travelMinutesPerDay = roundTripMiles * TRAVEL_SETTINGS.minutesPerMile;
-    const travelLaborCost = crewSchedule.reduce((acc, day)=>{
-      const crewCount = day.crew || 0;
-      if(crewCount <= 0) return acc;
-      const hours = (travelMinutesPerDay / 60) * crewCount;
-      return acc + (hours * TRAVEL_SETTINGS.wagePerHour);
-    }, 0);
+    const travelHours = (travelMinutesPerDay / 60) * travelDays;
+    const travelLaborCost = travelHours * LABOR_RATE;
 
     const cost = totalFuelCost + travelLaborCost;
     result.cost = cost;
-    result.breakdown.push(`- Travel: ${roundTripMiles.toFixed(1)} miles round trip x ${travelDays} day(s) = $${money(cost)} (fuel $${money(totalFuelCost)}, travel labor $${money(travelLaborCost)})`);
+    result.breakdown.push(`- Travel: ${roundTripMiles.toFixed(1)} miles round trip x ${travelDays} day(s) = $${money(cost)} (fuel $${money(totalFuelCost)}, travel labor $${money(travelLaborCost)} @ $${money(LABOR_RATE)}/hr)`);
     return result;
   }
 
@@ -2959,10 +2912,6 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function syncStateFromDOM(){
-    if(crewSelectEl){
-      const val = crewSelectEl.value || DEFAULT_CREW_ID;
-      state.crew = val in CREWS ? val : DEFAULT_CREW_ID;
-    }
     const cards = $$('.sp-card', sectionsEl);
     if(!cards.length) return;
     const newSections = cards.map(readSectionFromDOM);
@@ -4683,7 +4632,6 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function render(){
-    updateCrewUI();
     const sectionsEl = document.getElementById('sp-sections');
     sectionsEl.innerHTML = '';
     state.sections.forEach((s, idx)=>{
@@ -4835,12 +4783,11 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function snapshotForNotes(){
-    const crewId = (state.crew && CREWS[state.crew]) ? state.crew : DEFAULT_CREW_ID;
     const sections = JSON.parse(JSON.stringify(state.sections || []));
     return {
       version: NOTES_DATA_VERSION,
       generatedAt: new Date().toISOString(),
-      state: { crew: crewId, sections },
+      state: { sections },
       map: serializeMapDrawing(),
       estimate: {
         number: lastEstimateLookupNumber || '',
@@ -4860,7 +4807,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     state.sections = nextSections;
-    state.crew = (payload.state.crew && CREWS[payload.state.crew]) ? payload.state.crew : DEFAULT_CREW_ID;
 
     const importAddress = (payload.map && payload.map.address) || (payload.estimate && payload.estimate.address) || '';
     if(mapAddressInput){
@@ -4875,7 +4821,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     render();
-    updateCrewUI();
     renderServiceLineNotes([]);
     generateNotes({ skipScroll: true });
   }
@@ -4939,22 +4884,6 @@ document.addEventListener('DOMContentLoaded', function(){
     concrete: 12,
     post2x2: { 8:18, 9:24 }
   };
-  function getCrewDefinition(id){
-    return CREWS[id] || CREWS[DEFAULT_CREW_ID];
-  }
-  function crewCostForCount(crewDef, count){
-    if(!crewDef || typeof crewDef.dailyCost !== 'function') return 0;
-    return crewDef.dailyCost(count);
-  }
-  function crewSummary(crewDef){
-    if(!crewDef) return 'TBD';
-    return `${crewDef.label}`;
-  }
-
-  function crewDetailSummary(crewDef){
-    if(!crewDef) return 'TBD';
-    return `${crewDef.label} – ${crewDef.description}`;
-  }
   function money(n){ return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
   function parseCurrencyInput(value){
     const cleaned = String(value || '').replace(/,/g, '');
@@ -7508,15 +7437,14 @@ document.addEventListener('DOMContentLoaded', function(){
       return parts.join(' + ');
     }
 
-    const crewDef = getCrewDefinition(state.crew);
     const primePaintScheduled = totalLenPrimePaint > 0;
     const HOURS_PER_PERSON = 8.5;
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
     const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0) || woodRequiresTwoPerson || stainHours > 0;
     const minCrewBase = requiresTwoPersonCrew ? 2 : 1;
-    const MIN_CREW_PER_DAY = Math.max(minCrewBase, crewDef && typeof crewDef.minCrew === 'number' ? crewDef.minCrew : 1);
-    const MAX_CREW_PER_DAY = crewDef && typeof crewDef.maxCrew === 'number' ? crewDef.maxCrew : 7;
-    const MAX_WELDERS = Math.max(0, crewDef && typeof crewDef.maxWelders === 'number' ? crewDef.maxWelders : MAX_CREW_PER_DAY);
+    const MIN_CREW_PER_DAY = Math.max(minCrewBase, CREW_SETTINGS.minCrew);
+    const MAX_CREW_PER_DAY = CREW_SETTINGS.maxCrew;
+    const MAX_WELDERS = Math.max(0, CREW_SETTINGS.maxWelders || MAX_CREW_PER_DAY);
     const stainReturnHours = hasWoodWash ? stainHours : 0;
     const day2Hours = primePaintReturnHours + stainReturnHours;
     const helperHoursDay2 = day2Hours;
@@ -7687,12 +7615,10 @@ document.addEventListener('DOMContentLoaded', function(){
           : (day.hasWash
             ? (primePaintScheduled ? ' (prime/repairs, then pressure wash)' : ' (repairs, then pressure wash)')
             : (primePaintScheduled ? ' (prime/repairs)' : '')));
-      const cost = crewCostForCount(crewDef, day.crew);
       return {
         number: idx + 1,
         crewLabel,
         suffix,
-        cost,
       };
     });
 
@@ -7707,7 +7633,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return isWhole ? `${Math.round(rounded)} hours` : `${rounded.toFixed(1)} hours`;
     };
     const estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
-    const totalCrewHoursLabel = formatHours(manHours);
+    const totalLaborHoursLabel = formatHours(manHours);
 
     const materialEntries = Object.keys(materials)
       .filter(label => materials[label] > 0)
@@ -7723,18 +7649,17 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const sub = [];
-    sub.push(`CREW: ${crewSummary(crewDef)}`);
+    sub.push(`LABOR RATE: $${money(LABOR_RATE)}/hr (crew rate)`);
     if (estimatedOnsiteLabel) {
-      const crewTimeDetail = totalCrewHoursLabel
-        ? `${estimatedOnsiteLabel} onsite (${totalCrewHoursLabel} of crew time)`
+      const crewTimeDetail = totalLaborHoursLabel
+        ? `${estimatedOnsiteLabel} onsite (${totalLaborHoursLabel} of labor time)`
         : `${estimatedOnsiteLabel} onsite`;
       sub.push(`- Estimated time: ${crewTimeDetail}`);
     }
     if(scheduleEntries.length){
       scheduleEntries.forEach(entry => {
         const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
-        const costPart = entry.cost > 0 ? ` ($${money(entry.cost)})` : '';
-        sub.push(`- ${dayTitle}: ${entry.crewLabel}${costPart}`);
+        sub.push(`- ${dayTitle}: ${entry.crewLabel}`);
       });
     } else {
       sub.push('- Schedule: TBD');
@@ -7867,14 +7792,14 @@ document.addEventListener('DOMContentLoaded', function(){
     });
     if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
 
-    const totalCrewCount = crewSchedule.reduce((acc, day) => acc + (day.crew || 0), 0);
-    const crewCost = crewSchedule.reduce((acc, day) => acc + crewCostForCount(crewDef, day.crew), 0);
+    const laborHoursOnsite = isFinite(estimatedOnsiteHours) ? estimatedOnsiteHours : 0;
+    const laborCost = laborHoursOnsite * LABOR_RATE;
     const consumablesCost = scheduleEntries.length * 50;
     const removalCost = totals.removalCost || 0;
     const jobAddress = lastEstimateAddress || (mapAddressInput ? mapAddressInput.value : '');
-    const travelCostResult = await computeTravelCost({ crewDef, crewSchedule, jobAddress });
+    const travelCostResult = await computeTravelCost({ crewSchedule, jobAddress });
     const travelCost = travelCostResult.cost || 0;
-    const directCosts = crewCost + travelCost + costMaterials + removalCost + consumablesCost;
+    const directCosts = laborCost + travelCost + costMaterials + removalCost + consumablesCost;
     const revenueRes = computeChargeRevenue(directCosts);
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
@@ -7886,26 +7811,23 @@ document.addEventListener('DOMContentLoaded', function(){
     cost.push('ESTIMATED COST');
     const crewScheduleDetail = scheduleEntries.map(entry => {
       const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
-      const costPart = entry.cost > 0 ? ` ($${money(entry.cost)})` : '';
-      return `${dayTitle}: ${entry.crewLabel}${costPart}`;
+      return `${dayTitle}: ${entry.crewLabel}`;
     });
-    const laborDetailWithDays = crewScheduleDetail.length
-      ? `${crewScheduleDetail.join('; ')}; total crew-equivalent: ${totalCrewCount}`
-      : 'TBD';
-    const laborLabel = crewDef ? `${crewDef.label}` : 'Crew';
-    cost.push(`- Labor (${laborLabel}): $${money(crewCost)} (${laborDetailWithDays})`);
+    const laborTimeDetail = estimatedOnsiteLabel || 'time TBD';
+    const laborScheduleDetail = crewScheduleDetail.length ? `; ${crewScheduleDetail.join('; ')}` : '';
+    cost.push(`- Labor ($${money(LABOR_RATE)}/hr, crew): $${money(laborCost)} (${laborTimeDetail}${laborScheduleDetail})`);
     if (estimatedOnsiteLabel) {
-      const timeDetail = totalCrewHoursLabel
-        ? `${estimatedOnsiteLabel} onsite (~${totalCrewHoursLabel} of crew time)`
+      const timeDetail = totalLaborHoursLabel
+        ? `${estimatedOnsiteLabel} onsite (~${totalLaborHoursLabel} of labor time)`
         : estimatedOnsiteLabel;
-      cost.push(`- Estimated time (${laborLabel}): ${timeDetail}`);
+      cost.push(`- Estimated time (onsite): ${timeDetail}`);
     }
     travelCostResult.breakdown.forEach(line => cost.push(line));
     cost.push('- Consumables: $'+money(consumablesCost));
     cost.push('- Materials: $'+money(costMaterials));
     if(removalCost>0){ cost.push('- Removal & disposal (paid to sub): $'+money(removalCost)); }
     matBreak.forEach(line=> cost.push(line));
-    cost.push('- Total: $'+money(crewCost + travelCost + costMaterials + removalCost + consumablesCost));
+    cost.push('- Total: $'+money(laborCost + travelCost + costMaterials + removalCost + consumablesCost));
     if (unpriced) cost.push('  - Note: Some sizes have no price mapping and were counted as $0.');
 
     cost.push('');
@@ -8275,7 +8197,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!confirm('Clear all sections?')) return;
     clearMapDrawing({ skipSections: true });
     state.sections = [];
-    state.crew = DEFAULT_CREW_ID;
     localStorage.removeItem(KEY);
     render();
     outputEl.style.display='none';
@@ -8303,15 +8224,6 @@ document.addEventListener('DOMContentLoaded', function(){
     mapToggleBtn.addEventListener('click', ()=>{
       const next = !mapCardEl.classList.contains('is-collapsed');
       setMapCollapsed(next);
-    });
-  }
-
-  if(crewSelectEl){
-    crewSelectEl.addEventListener('change', ()=>{
-      state.crew = crewSelectEl.value || DEFAULT_CREW_ID;
-      if(!(state.crew in CREWS)){ state.crew = DEFAULT_CREW_ID; }
-      updateCrewUI();
-      persist();
     });
   }
 
