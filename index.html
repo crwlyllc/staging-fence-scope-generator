@@ -7646,6 +7646,25 @@ document.addEventListener('DOMContentLoaded', function(){
       helperHours += setupTeardownManHours;
     }
 
+    const hasPostReplacements = (()=>{
+      const replaceCounts = totals.postsReplace || zeroPostCounts();
+      const hasMetalPosts = (replaceCounts.posts1p5 || 0) > 0
+        || (replaceCounts.posts2x2 || 0) > 0
+        || (replaceCounts.posts3x3 || 0) > 0
+        || (replaceCounts.posts4x4 || 0) > 0;
+      const hasWoodPosts = (totals.woodPostReplace6 || 0) > 0 || (totals.woodPostReplace8 || 0) > 0;
+      return hasMetalPosts || hasWoodPosts;
+    })();
+    if(hasPostReplacements){
+      const minCrewHours = 2;
+      const minManHours = minCrewHours * ONSITE_CREW_SIZE;
+      if(manHours < minManHours){
+        const addedHours = minManHours - manHours;
+        manHours += addedHours;
+        helperHours += addedHours;
+      }
+    }
+
     const jobAddress = mapAddressInput ? (mapAddressInput.value || '').trim() : lastEstimateAddress;
     const travelDayInfo = await computeTravelDayInfo(jobAddress);
     const travelHoursPerDay = travelDayInfo.included && isFinite(travelDayInfo.hoursPerDay)
