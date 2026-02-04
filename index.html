@@ -1164,6 +1164,9 @@ document.addEventListener('DOMContentLoaded', function(){
       updateMapAddressMarker(null);
       return;
     }
+    if(!addressesMatch(mapState.pendingAddress, value)){
+      mapState.addressLocation = null;
+    }
     mapState.pendingAddress = value;
     if(!mapState.map || !mapState.geocoder){
       return;
@@ -1201,6 +1204,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     setMapCollapsed(false);
     focusMapOnAddress(address);
+    persist();
   }
 
   function normalizeAddressText(addr){
@@ -1889,6 +1893,8 @@ document.addEventListener('DOMContentLoaded', function(){
             zoomMapToMax(loc);
             updateMapAddressMarker(loc);
           }
+          mapState.pendingAddress = mapAddressInput.value.trim();
+          persist();
         }
       });
       mapAddressInput.addEventListener('keydown', evt=>{
@@ -1897,6 +1903,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const value = mapAddressInput.value.trim();
           if(!value || !mapState.geocoder) return;
           mapState.geocoder.geocode({ address: value }, (results, status)=>{
+            let hasLocation = false;
             if(status === 'OK' && results && results[0]){
               const geometry = results[0].geometry || {};
               const viewport = geometry.viewport;
@@ -1913,20 +1920,29 @@ document.addEventListener('DOMContentLoaded', function(){
               if(loc){
                 zoomMapToMax(loc);
                 updateMapAddressMarker(loc);
+                hasLocation = true;
               }else if(viewport && typeof viewport.getCenter === 'function'){
                 const center = viewport.getCenter();
                 if(center){
                   zoomMapToMax(center);
                   updateMapAddressMarker(center);
+                  hasLocation = true;
                 }
               }
             }
+            mapState.pendingAddress = value;
+            if(!hasLocation){
+              mapState.addressLocation = null;
+            }
+            persist();
           });
         }
       });
       mapAddressInput.addEventListener('input', ()=>{
         if(!mapAddressInput.value.trim()){
           updateMapAddressMarker(null);
+          mapState.pendingAddress = '';
+          persist();
         }
       });
     }
@@ -7459,7 +7475,7 @@ document.addEventListener('DOMContentLoaded', function(){
       helperHours += setupTeardownManHours;
     }
 
-    const jobAddress = lastEstimateAddress || (mapAddressInput ? mapAddressInput.value : '');
+    const jobAddress = mapAddressInput ? (mapAddressInput.value || '').trim() : lastEstimateAddress;
     const travelDayInfo = await computeTravelDayInfo(jobAddress);
     const travelHoursPerDay = travelDayInfo.included && isFinite(travelDayInfo.hoursPerDay)
       ? travelDayInfo.hoursPerDay
