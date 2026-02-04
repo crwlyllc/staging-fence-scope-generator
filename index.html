@@ -7890,6 +7890,24 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     sub.push('');
     sub.push('SCOPE (Totals)');
+    const pushPostLinesSub = (label, counts)=>{
+      const parts = [];
+      const addIfPresent = (key, label)=>{
+        const qty = parseInt(counts?.[key], 10) || 0;
+        if(qty > 0) parts.push(`${qty} × ${label}`);
+      };
+      addIfPresent('posts1p5', '1 1/2" x 1 1/2"');
+      addIfPresent('posts2x2', '2x2');
+      addIfPresent('posts3x3', '3x3');
+      addIfPresent('posts4x4', '4x4');
+      if(parts.length) sub.push(`- ${label}: ${parts.join(', ')}`);
+    };
+    pushPostLinesSub('Posts to replace', totals.postsReplace || zeroPostCounts());
+    if (totals.postsRealign2x2 > 0) sub.push('- 2x2 posts to realign: '+totals.postsRealign2x2);
+    if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
+    if (totals.postsRealignCutWeld > 0) sub.push('- Posts to realign (cut & weld): '+totals.postsRealignCutWeld);
+    if (totals.woodPostRealignCutWeld > 0) sub.push('- Wood posts to realign (cut & weld): '+totals.woodPostRealignCutWeld);
+    if (totals.woodPostRealignDig > 0) sub.push('- Wood posts to realign (dig): '+totals.woodPostRealignDig);
     if (totals.replaceSections > 0) sub.push('- Sections to replace: '+totals.replaceSections);
     if (totals.installSections > 0) sub.push('- New sections to install: '+totals.installSections);
     if (totals.removalLf > 0)       sub.push(`- Removal & haul away: ${totals.removalLf} lf (sub paid $${money(totals.removalCost)})`);
@@ -7908,23 +7926,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
     if (totals.wiRailGaps > 0)      sub.push('- Full rail gap fillers: '+totals.wiRailGaps);
-    const pushPostLinesSub = (label, counts)=>{
-      const parts = [];
-      const addIfPresent = (key, label)=>{
-        const qty = parseInt(counts?.[key], 10) || 0;
-        if(qty > 0) parts.push(`${qty} × ${label}`);
-      };
-      addIfPresent('posts1p5', '1 1/2" x 1 1/2"');
-      addIfPresent('posts2x2', '2x2');
-      addIfPresent('posts3x3', '3x3');
-      addIfPresent('posts4x4', '4x4');
-      if(parts.length) sub.push(`- ${label}: ${parts.join(', ')}`);
-    };
-    pushPostLinesSub('Posts to replace', totals.postsReplace || zeroPostCounts());
     pushPostLinesSub('Posts to set (new sections)', totals.postsInstall || zeroPostCounts());
-    if (totals.postsRealign2x2 > 0) sub.push('- 2x2 posts to realign: '+totals.postsRealign2x2);
-    if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
-    if (totals.postsRealignCutWeld > 0) sub.push('- Posts to realign (cut & weld): '+totals.postsRealignCutWeld);
     if (totals.walkGates > 0)       sub.push('- Walk gates: '+totals.walkGates);
     if (totals.walkRealign > 0)     sub.push('- Walk gates to realign: '+totals.walkRealign);
     if (walkHardwareSummary.total > 0) {
@@ -7979,8 +7981,6 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     };
     pushWoodPostMethodLines('Wood posts to install', totals.woodPostInstallMethods);
-    if (totals.woodPostRealignCutWeld > 0) sub.push('- Wood posts to realign (cut & weld): '+totals.woodPostRealignCutWeld);
-    if (totals.woodPostRealignDig > 0) sub.push('- Wood posts to realign (dig): '+totals.woodPostRealignDig);
     if (totals.woodPanels > 0) sub.push('- Wood panels to replace: '+totals.woodPanels);
     if (totals.woodGateRepair > 0) sub.push('- Wood walk gates to repair: '+totals.woodGateRepair);
     if (totals.woodGateStrengthen > 0) sub.push('- Wood gates to strengthen: '+totals.woodGateStrengthen);
