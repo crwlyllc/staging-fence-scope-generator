@@ -4875,6 +4875,20 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!parts.length) return 'wood picket';
     return `wood picket (${parts.join(', ')})`;
   }
+  function woodRailMaterialLabel(section){
+    if(!section) return 'wood rail';
+    const sizeLabel = normalizeLabelText(section.woodRailSize || '');
+    const typeLabel = normalizeLabelText(section.woodType || '');
+    const parts = [sizeLabel, typeLabel].filter(Boolean);
+    return `wood rail${parts.length ? ` (${parts.join(', ')})` : ''}`;
+  }
+  function woodRailDescriptor(section){
+    if(!section) return 'rail';
+    const sizeLabel = normalizeLabelText(section.woodRailSize || '');
+    const typeLabel = normalizeLabelText(section.woodType || '');
+    const parts = [sizeLabel, typeLabel].filter(Boolean);
+    return parts.length ? `${parts.join(' ')} rail` : 'rail';
+  }
   function woodPicketUnitPriceFromLabel(label){
     const raw = String(label||'');
     if(!/^wood picket/i.test(raw)) return null;
@@ -4888,6 +4902,22 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if(Object.prototype.hasOwnProperty.call(PRICE_MISC, 'wood picket')){
       return PRICE_MISC['wood picket'] || 0;
+    }
+    return null;
+  }
+  function woodRailUnitPriceFromLabel(label){
+    const raw = String(label||'');
+    if(!/^wood rail/i.test(raw)) return null;
+    const match = raw.match(/wood rail \(([^,)]+)/i);
+    const sizeLabel = match ? normalizeLabelText(match[1]) : '';
+    if(sizeLabel){
+      const key = `wood rail (${sizeLabel})`;
+      if(Object.prototype.hasOwnProperty.call(PRICE_MISC, key)){
+        return PRICE_MISC[key] || 0;
+      }
+    }
+    if(Object.prototype.hasOwnProperty.call(PRICE_MISC, 'wood rail')){
+      return PRICE_MISC['wood rail'] || 0;
     }
     return null;
   }
@@ -5015,7 +5045,10 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood picket (3.5")': 2.5,
     'wood picket (4")': 2.75,
     'wood picket (5.5")': 3.25,
-    'wood picket (6")': 3.5
+    'wood picket (6")': 3.5,
+    'wood rail (2x3)': 0,
+    'wood rail (2x4)': 0,
+    'wood rail': 0
   };
 
   const PRICE = {
@@ -5260,6 +5293,7 @@ document.addEventListener('DOMContentLoaded', function(){
       replacement: 'Wrought Iron Replacement',
       repairs: 'Wrought Iron Repairs',
       painting: 'Wrought Iron Painting',
+      railReplacement: 'Rail Replacement',
       woodRepairs: 'Wood Fence Repairs',
       woodStain: 'Wood Fence Staining'
     };
@@ -5291,6 +5325,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Rebuild Walk Gates': 'repairs',
       'Add Diagonal Braces': 'repairs',
       'Install Puppy Picket Inserts': 'repairs',
+      'Rail Replacement': 'railReplacement',
       'Wood Fence Repairs': 'woodRepairs',
       'Wood Fence Staining': 'woodStain',
       'Wood Fence Wash & Stain': 'woodStain',
@@ -6493,9 +6528,11 @@ document.addEventListener('DOMContentLoaded', function(){
           woodHelperHours += hours;
           woodManHours += hours;
         }
-        const railReplace = addCount(railReplaceCount, railSize ? `${railSize} rail` : 'rail', railSize ? `${railSize} rails` : 'rails');
+        const railDescriptor = woodRailDescriptor(s);
+        const railReplace = addCount(railReplaceCount, railDescriptor, `${railDescriptor}s`);
         if(railReplace){
-          parts.push(`Replace ${railReplace}`);
+          addServiceLine('Rail Replacement', `${labelPrefix}Replace ${railReplace}`);
+          addMat(materials, woodRailMaterialLabel(s), railReplaceCount);
           const hours = (railReplaceCount * 20) / 60;
           totals.woodRailReplace += railReplaceCount;
           woodHelperHours += hours;
@@ -7390,6 +7427,20 @@ document.addEventListener('DOMContentLoaded', function(){
         const c = qty * woodPicketUnit;
         costMaterials += c;
         matBreak.push(`  - ${label}: ${qty} x $${money(woodPicketUnit)} = $${money(c)}`);
+        return;
+      }
+      const woodRailUnit = woodRailUnitPriceFromLabel(label);
+      if(woodRailUnit !== null){
+        const unit = woodRailUnit || 0;
+        if(unit <= 0) unpriced = true;
+        const c = qty * unit;
+        costMaterials += c;
+        matBreak.push(`  - ${label}: ${qty} x $${money(unit)} = $${money(c)}`);
+        return;
+      }
+      if(/^wood rail/i.test(label)){
+        unpriced = true;
+        matBreak.push(`  - ${label}: ${qty} x $${money(0)} = $${money(0)}`);
       }
     });
 
