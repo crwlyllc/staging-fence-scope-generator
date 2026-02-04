@@ -4878,16 +4878,26 @@ document.addEventListener('DOMContentLoaded', function(){
   function woodRailMaterialLabel(section){
     if(!section) return 'wood rail';
     const sizeLabel = normalizeLabelText(section.woodRailSize || '');
-    const typeLabel = normalizeLabelText(section.woodType || '');
+    const typeLabel = woodRailTypeLabel(section);
     const parts = [sizeLabel, typeLabel].filter(Boolean);
     return `wood rail${parts.length ? ` (${parts.join(', ')})` : ''}`;
   }
   function woodRailDescriptor(section){
     if(!section) return 'rail';
     const sizeLabel = normalizeLabelText(section.woodRailSize || '');
-    const typeLabel = normalizeLabelText(section.woodType || '');
+    const typeLabel = woodRailTypeLabel(section);
     const parts = [sizeLabel, typeLabel].filter(Boolean);
     return parts.length ? `${parts.join(' ')} rail` : 'rail';
+  }
+  function woodRailTypeLabel(section){
+    if(!section) return '';
+    const typeLabel = normalizeLabelText(section.woodType || '');
+    if(!typeLabel) return '';
+    const finishLabel = String(section.woodFinish || '');
+    if(/stain/i.test(finishLabel) && /cedar/i.test(typeLabel)){
+      return 'Stained Cedar';
+    }
+    return typeLabel;
   }
   function woodPicketUnitPriceFromLabel(label){
     const raw = String(label||'');
@@ -5046,6 +5056,9 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood picket (4")': 2.75,
     'wood picket (5.5")': 3.25,
     'wood picket (6")': 3.5,
+    'wood rail (2x3, Pressure Treated)': 3.23,
+    'wood rail (2x4, Cedar)': 9.33,
+    'wood rail (2x4, Stained Cedar)': 10.81,
     'wood rail (2x3)': 0,
     'wood rail (2x4)': 0,
     'wood rail': 0
