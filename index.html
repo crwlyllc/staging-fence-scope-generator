@@ -8469,20 +8469,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
   if(manualOpenBtn && manualModal){
     manualOpenBtn.addEventListener('click', ()=> setManualModal(true));
-    manualModal.addEventListener('click', evt=>{
-      if(evt.target === manualModal){
-        setManualModal(false);
-      }
-    });
   }
   if(manualCloseBtn){
     manualCloseBtn.addEventListener('click', ()=> setManualModal(false));
   }
-  document.addEventListener('keydown', evt=>{
-    if(evt.key === 'Escape' && manualModal && manualModal.classList.contains('is-open')){
-      setManualModal(false);
-    }
-  });
 
   if(manualCalcBtn){
     manualCalcBtn.addEventListener('click', updateManualQuote);
