@@ -311,7 +311,7 @@
               <input class="sp-input" id="sp-manual-cost" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Enter materials &amp; equipment (e.g., 4500)" />
             </div>
             <div class="sp-hint">Materials &amp; equipment only. Labor is added from total hours, plus a flat $50 travel cost.</div>
-            <div class="sp-hint" id="sp-manual-status">Targets $100 gross profit per hour of total time (onsite + travel). Labor is added from total hours, plus a flat $50 travel cost.</div>
+            <div class="sp-hint" id="sp-manual-status">Targets $100 gross profit per onsite hour ($350 minimum). Labor is added from total hours, plus a flat $50 travel cost.</div>
           </div>
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-charge">Recommended Charge</label>
@@ -349,7 +349,7 @@
         <div class="sp-divider"></div>
         <div class="sp-grid">
           <div class="sp-field col-12">
-            <label class="sp-label">What to charge scenarios (target gross per hour)</label>
+            <label class="sp-label">What to charge scenarios (target gross per hour, $350 min)</label>
             <div class="sp-service-list">
               <div class="sp-manual-scenario" data-manual-scenario data-target="90">
                 <span class="sp-chip is-info">$90 / hr</span>
@@ -5077,7 +5077,8 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   const PRICING = {
-    grossProfitTargetPerHour: 100
+    grossProfitTargetPerHour: 100,
+    grossProfitMinimum: 350
   };
   const MANUAL_TRAVEL_FLAT = 50;
 
@@ -5088,6 +5089,14 @@ document.addEventListener('DOMContentLoaded', function(){
     mcor:       0.00
   };
 
+  function computeTargetGross(hours, targetPerHour = PRICING.grossProfitTargetPerHour){
+    const h = Number(hours);
+    const rate = Number(targetPerHour);
+    if(!isFinite(h) || h <= 0) return NaN;
+    if(!isFinite(rate) || rate < 0) return NaN;
+    return Math.max(h * rate, PRICING.grossProfitMinimum);
+  }
+
   function computeChargeRevenue(directCosts, totalHours){
     const cost = Number(directCosts);
     const hours = Number(totalHours);
@@ -5096,7 +5105,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const denom = 1 - RATES.overhead;
     if(denom <= 0) return { revenue: NaN, mode: 'invalid' };
 
-    const targetGross = hours * PRICING.grossProfitTargetPerHour;
+    const targetGross = computeTargetGross(hours);
     const revenue = (cost + targetGross) / denom;
     return { revenue, mode: 'gross-per-hour', targetGross, hours };
   }
@@ -5132,7 +5141,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!raw){
       manualChargeOutput.value = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = `Enter materials & equipment costs and total hours to compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit.`;
+      manualStatusEl.textContent = `Enter materials & equipment costs and total hours to compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit ($${money(PRICING.grossProfitMinimum)} minimum).`;
       delete manualStatusEl.dataset.state;
       clearManualMetrics();
       return;
@@ -5153,7 +5162,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!isFinite(totalHours) || totalHours <= 0){
       manualChargeOutput.value = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = `Enter total hours (onsite) to add labor and a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost, then compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit.`;
+      manualStatusEl.textContent = `Enter total hours (onsite) to add labor and a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost, then compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit ($${money(PRICING.grossProfitMinimum)} minimum).`;
       manualStatusEl.dataset.state = 'error';
       clearManualMetrics();
       return;
@@ -5178,7 +5187,7 @@ document.addEventListener('DOMContentLoaded', function(){
     manualModeChip.classList.remove('is-warn');
     manualModeChip.classList.add('is-info');
     manualModeChip.style.display = 'inline-block';
-    manualStatusEl.textContent = `Targets $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit on total time (onsite + travel). Labor is added from total hours plus a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost.`;
+    manualStatusEl.textContent = `Targets $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit on total time (onsite), $${money(PRICING.grossProfitMinimum)} minimum. Labor is added from total hours plus a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost.`;
     manualStatusEl.dataset.state = 'success';
 
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
@@ -5206,7 +5215,11 @@ document.addEventListener('DOMContentLoaded', function(){
         totalEl.value = '';
         return;
       }
-      const targetGross = target * totalHours;
+      const targetGross = computeTargetGross(totalHours, target);
+      if(!isFinite(targetGross)){
+        totalEl.value = '';
+        return;
+      }
       const grossRevenue = (targetGross + totalCost) / (1 - RATES.overhead);
       if(!isFinite(grossRevenue)){
         totalEl.value = '';
@@ -8079,7 +8092,7 @@ document.addEventListener('DOMContentLoaded', function(){
       cost.push('- Total direct costs: $'+money(directCosts));
       if(isFinite(revenueRes?.targetGross)){
         const hoursLabel = totalHoursLabel || (isFinite(totalHours) && totalHours > 0 ? `${totalHours.toFixed(1)} hours` : 'time TBD');
-        cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}): $${money(revenueRes.targetGross)}`);
+        cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}, $${money(PRICING.grossProfitMinimum)} min): $${money(revenueRes.targetGross)}`);
       }
       cost.push('- Overhead amount: $'+money(revenue * RATES.overhead));
       cost.push('- Gross profit: $'+money(grossProfit));
