@@ -662,6 +662,8 @@ document.addEventListener('DOMContentLoaded', function(){
       'Auto Close Hinges'
     ]
   };
+  const DRIVE_GATE_OPERATOR_TYPES = ['Single Swing','Double Swing','Sliding'];
+  const DRIVE_GATE_POWER_TYPES = ['Existing Wiring','New Wiring','Solar'];
 
   const LABOR_RATE = 100;
   const CREW_SETTINGS = {
@@ -1519,6 +1521,9 @@ document.addEventListener('DOMContentLoaded', function(){
       walkAddPicketSize: SEED.picketSize[0],
       walkAddLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
       walkAddHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      driveGateOperatorReplace: 0,
+      driveGateOperatorType: DRIVE_GATE_OPERATOR_TYPES[0],
+      driveGateOperatorPower: DRIVE_GATE_POWER_TYPES[0],
       scopeType: 'repair',
       postSpacing: '8',
       panelAttachment: 'Welding',
@@ -1602,6 +1607,7 @@ document.addEventListener('DOMContentLoaded', function(){
       Number(section.digOut||0) === 0 &&
       Number(section.puppyPicketReplace||0) === 0 &&
       Number(section.walkGates||0) === 0 &&
+      Number(section.driveGateOperatorReplace||0) === 0 &&
       clean(section.notes) === '' &&
       (!section.postReplacements || section.postReplacements.length === 0) &&
       (!section.postRealignments || section.postRealignments.length === 0) &&
@@ -2623,6 +2629,25 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-hint">Single swing: adds 2 labor hours, 1 post, 1 bag concrete, and 2× 12ft rails per rail size. Double swing: adds 3 labor hours, 1 post, 1 bag concrete, and 4× 12ft rails per rail size.</div>
         </div>
 
+        <!-- NEW: Replace Drive Gate Operator -->
+        <div class="sp-field col-3">
+          <label class="sp-label"># Drive Gate Operators to Replace</label>
+          ${numberControl('driveGateOperatorReplace','0')}
+        </div>
+        <div class="sp-field col-12" data-drive-operator-wrap style="display:none">
+          <div class="sp-grid">
+            <div class="sp-field col-3">
+              <label class="sp-label">Drive Gate Type</label>
+              <select class="sp-select" data-field="driveGateOperatorType">${createSelect(DRIVE_GATE_OPERATOR_TYPES)}</select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Power Type</label>
+              <select class="sp-select" data-field="driveGateOperatorPower">${createSelect(DRIVE_GATE_POWER_TYPES)}</select>
+            </div>
+          </div>
+          <div class="sp-hint">Includes removal, haul away, and disposal of the old operator. LiftMaster only.</div>
+        </div>
+
         </div>
 
           </div>
@@ -2661,7 +2686,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
-    'walkAddPicketSize','walkAddLatch','walkAddHinges','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
+    'walkAddPicketSize','walkAddLatch','walkAddHinges','driveGateOperatorReplace','driveGateOperatorType',
+    'driveGateOperatorPower','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
     'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie'
   ];
 
@@ -2967,6 +2993,9 @@ document.addEventListener('DOMContentLoaded', function(){
       walkAddPicketSize: val('walkAddPicketSize'),
       walkAddLatch: val('walkAddLatch'),
       walkAddHinges: val('walkAddHinges'),
+      driveGateOperatorReplace: val('driveGateOperatorReplace'),
+      driveGateOperatorType: val('driveGateOperatorType'),
+      driveGateOperatorPower: val('driveGateOperatorPower'),
 
       // NEW: finials
       finials,
@@ -3123,6 +3152,9 @@ document.addEventListener('DOMContentLoaded', function(){
     set('walkAddPicketSize', data.walkAddPicketSize || SEED.picketSize[0]);
     set('walkAddLatch', data.walkAddLatch || (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
     set('walkAddHinges', data.walkAddHinges || (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+    set('driveGateOperatorReplace', data.driveGateOperatorReplace || '');
+    set('driveGateOperatorType', data.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0]);
+    set('driveGateOperatorPower', data.driveGateOperatorPower || DRIVE_GATE_POWER_TYPES[0]);
 
     set('notes', data.notes||'');
 
@@ -4294,6 +4326,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(cond) cond.style.display = t.checked ? 'block' : 'none';
       }
       updateWalkGateConditional(card);
+      updateDriveGateOperatorConditional(card);
       updateWoodAddonsConditional(card);
       updateWoodRepairControls(card);
       updateInstallConditional(card);
@@ -4318,6 +4351,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const next = Math.max(min, current + dir);
       input.value = next;
       updateWalkGateConditional(card);
+      updateDriveGateOperatorConditional(card);
       updateInstallConditional(card);
       persist();
     });
@@ -4329,6 +4363,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const min = parseInt(input.getAttribute('min')||'0',10)||0;
       input.value = Math.max(min, val);
       updateWalkGateConditional(card);
+      updateDriveGateOperatorConditional(card);
       updateInstallConditional(card);
       persist();
     });
@@ -4555,6 +4590,7 @@ document.addEventListener('DOMContentLoaded', function(){
     updateFenceTypeConditional(card);
     updateInstallConditional(card);
     updateWalkGateConditional(card);
+    updateDriveGateOperatorConditional(card);
     persist();
   }
 
@@ -4623,6 +4659,13 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const addWrap = card.querySelector('[data-wg-add-wrap]');
     if(addWrap){ addWrap.style.display = add>0 ? 'block' : 'none'; }
+  }
+
+  function updateDriveGateOperatorConditional(card){
+    const box = card.querySelector('.sp-number[data-field="driveGateOperatorReplace"] input');
+    const count = parseInt((box && box.value) || '0',10) || 0;
+    const wrap = card.querySelector('[data-drive-operator-wrap]');
+    if(wrap){ wrap.style.display = count>0 ? 'block' : 'none'; }
   }
 
   function applyMapLinkedStateToCard(card, sectionData){
@@ -4733,6 +4776,7 @@ document.addEventListener('DOMContentLoaded', function(){
       attachNumberHandlers(card);
       attachRailsHandlers(card);
       updateWalkGateConditional(card);
+      updateDriveGateOperatorConditional(card);
       updateInstallConditional(card);
       applyMapLinkedStateToCard(card, s);
 
@@ -4801,6 +4845,7 @@ document.addEventListener('DOMContentLoaded', function(){
           }
           updateFenceTypeConditional(card);
           updateWalkGateConditional(card);
+          updateDriveGateOperatorConditional(card);
           updateInstallConditional(card);
           persist();
         });
@@ -5078,6 +5123,9 @@ document.addEventListener('DOMContentLoaded', function(){
     'picket plugs (1/2")': 0.10,
     'picket plugs (5/8")': 0.11,
     'prefab gate panel': 0,
+    'LiftMaster drive gate operator': 2000,
+    'Drive gate power run (new wiring)': 2000,
+    'Solar gate power kit': 500,
     'panel mount bracket': 1.27,
     '5 gal wood stain bucket': 124.49,
     'wood picket': 3.0,
@@ -5420,6 +5468,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Realign Walk Gates': 'repairs',
       'Replace Walk Gate Hardware': 'repairs',
       'Rebuild Walk Gates': 'repairs',
+      'Drive Gate Operator Replacement': 'repairs',
       'Add Diagonal Braces': 'repairs',
       'Install Puppy Picket Inserts': 'repairs',
       'Rail Replacement': 'railReplacement',
@@ -5731,6 +5780,9 @@ document.addEventListener('DOMContentLoaded', function(){
       walkGateAddsDouble:0,
       walkGateAddsRepair:0,
       walkGateAddsInstall:0,
+      driveGateOperators:0,
+      driveGateOperatorTypes: new Map(),
+      driveGateOperatorPowers: new Map(),
       retainingWallSqft:0,
       retainingWallCost:0,
       panelsPrefab:0, panelsCustom:0,
@@ -6349,6 +6401,40 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`  - Post: ${s.walkAddPostSize}; Frame: ${s.walkAddFrameSize}; Pickets: ${s.walkAddPicketSize}; Latch: ${s.walkAddLatch}; Hinges: ${s.walkAddHinges}`);
       }
 
+      // Drive gate operator replacement
+      const dgo = i(s.driveGateOperatorReplace);
+      if(dgo){
+        const rawType = (s.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
+        const rawPower = (s.driveGateOperatorPower || DRIVE_GATE_POWER_TYPES[0] || '').trim();
+        const typeLabel = rawType || 'Drive';
+        const gateLabel = typeLabel === 'Drive'
+          ? `drive gate${dgo===1?'':'s'}`
+          : `${typeLabel} gate${dgo===1?'':'s'}`;
+        lines.push(`- Drive gate operator replacement: ${dgo} — ${gateLabel}`);
+        if(rawPower){ lines.push(`  - Power: ${rawPower}`); }
+        totals.driveGateOperators += dgo;
+        const prevTypeCount = totals.driveGateOperatorTypes.get(typeLabel) || 0;
+        totals.driveGateOperatorTypes.set(typeLabel, prevTypeCount + dgo);
+        if(rawPower){
+          const prevPowerCount = totals.driveGateOperatorPowers.get(rawPower) || 0;
+          totals.driveGateOperatorPowers.set(rawPower, prevPowerCount + dgo);
+        }
+        addMat(materials, 'LiftMaster drive gate operator', dgo);
+        if(rawPower === 'New Wiring'){
+          addMat(materials, 'Drive gate power run (new wiring)', dgo);
+        } else if(rawPower === 'Solar'){
+          addMat(materials, 'Solar gate power kit', dgo);
+        }
+        const labelPrefix = s.label ? `${s.label}: ` : '';
+        const operatorLabel = describeCount(dgo, 'drive gate operator', 'drive gate operators');
+        const powerSentence = rawPower ? `Power: ${rawPower}.` : '';
+        let desc = `${labelPrefix}Replace ${operatorLabel} (LiftMaster) for ${gateLabel}. Include removal, haul away, and disposal of the old operator. ${powerSentence}`.trim();
+        if(rawPower === 'Existing Wiring'){
+          desc += ' Price includes reuse of existing wiring currently connected to the gate operator. Existing wiring is assumed to be in good working condition. Any troubleshooting, repair, or replacement/rerouting of wiring (including new wire pulls/trenching/conduit) is not included and will be quoted as an additional service if required.';
+        }
+        addServiceLine('Drive Gate Operator Replacement', desc);
+      }
+
       if(isInstall && (fenceType === 'wrought iron' || fenceType === 'wood')){
         const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
         const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
@@ -6495,6 +6581,25 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.walkGateAdds)  lines.push(`- Walk gates to add: ${t.walkGateAdds}`);
       if (t.walkGateAddsSingle) lines.push(`- Single swing walk gates to add: ${t.walkGateAddsSingle}`);
       if (t.walkGateAddsDouble) lines.push(`- Double swing gates to add: ${t.walkGateAddsDouble}`);
+      if (t.driveGateOperators){
+        const typeParts = [];
+        if(t.driveGateOperatorTypes && typeof t.driveGateOperatorTypes.forEach === 'function'){
+          t.driveGateOperatorTypes.forEach((count, label)=>{
+            if(count>0){ typeParts.push(`${label}: ${count}`); }
+          });
+        }
+        const typeDetail = typeParts.length ? ` (${typeParts.join('; ')})` : '';
+        lines.push(`- Drive gate operators to replace: ${t.driveGateOperators}${typeDetail}`);
+        const powerParts = [];
+        if(t.driveGateOperatorPowers && typeof t.driveGateOperatorPowers.forEach === 'function'){
+          t.driveGateOperatorPowers.forEach((count, label)=>{
+            if(count>0){ powerParts.push(`${label}: ${count}`); }
+          });
+        }
+        if(powerParts.length){
+          lines.push(`- Drive gate power types: ${powerParts.join('; ')}`);
+        }
+      }
       if (prefabReplacementCount) {
         const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
         lines.push(`- Prefab panel replacements: ${prefabReplacementCount}${detailSuffix}`);
@@ -7137,6 +7242,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const addedGateHours = (totals.walkGateAddsSingle * 2) + (totals.walkGateAddsDouble * 3);
     manHours += addedGateHours;
     welderHours += addedGateHours;
+    const driveGateOperatorHours = totals.driveGateOperators * 4;
+    manHours += driveGateOperatorHours;
 
     // posts (1.5" x 1.5" raw sticks)
     let raw1p5Total = 0;
@@ -8020,6 +8127,9 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.walkRebuild > 0)     sub.push('- Walk gates to rebuild: '+totals.walkRebuild);
     if (totals.walkGateAddsSingle > 0) sub.push('- Single swing walk gates to add: '+totals.walkGateAddsSingle);
     if (totals.walkGateAddsDouble > 0) sub.push('- Double swing gates to add: '+totals.walkGateAddsDouble);
+    if (totals.driveGateOperators > 0){
+      sub.push('- Drive gate operators to replace: '+totals.driveGateOperators);
+    }
     if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
     if (totals.puppyInserts > 0)    sub.push('- Puppy picket inserts: '+totals.puppyInserts);
     if (totals.caps > 0)            sub.push('- Post caps to replace: '+totals.caps);
