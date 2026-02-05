@@ -7249,7 +7249,18 @@ document.addEventListener('DOMContentLoaded', function(){
     const addedGateHours = (totals.walkGateAddsSingle * 2) + (totals.walkGateAddsDouble * 3);
     manHours += addedGateHours;
     welderHours += addedGateHours;
-    const driveGateOperatorHours = totals.driveGateOperators * 4;
+    let driveGateOperatorHours = 0;
+    if(totals.driveGateOperatorTypes && typeof totals.driveGateOperatorTypes.forEach === 'function'){
+      totals.driveGateOperatorTypes.forEach((count, label)=>{
+        const qty = parseInt(count,10) || 0;
+        if(qty <= 0) return;
+        const normalized = String(label||'').toLowerCase();
+        const perHours = normalized.includes('double') ? 5 : 3;
+        driveGateOperatorHours += qty * perHours;
+      });
+    } else {
+      driveGateOperatorHours = totals.driveGateOperators * 3;
+    }
     manHours += driveGateOperatorHours;
 
     // posts (1.5" x 1.5" raw sticks)
