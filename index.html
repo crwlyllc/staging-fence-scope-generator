@@ -5124,6 +5124,9 @@ document.addEventListener('DOMContentLoaded', function(){
     'picket plugs (5/8")': 0.11,
     'prefab gate panel': 0,
     'LiftMaster drive gate operator': 2000,
+    'LiftMaster Single Swing Gate Operator': 2000,
+    'LiftMaster Double Swing Gate Operator': 2000,
+    'LiftMaster Sliding Gate Operator': 2000,
     'Drive gate power run (new wiring)': 2000,
     'Solar gate power kit': 500,
     'panel mount bracket': 1.27,
@@ -5437,6 +5440,7 @@ document.addEventListener('DOMContentLoaded', function(){
       installation: 'Wrought Iron Installation',
       replacement: 'Wrought Iron Replacement',
       repairs: 'Wrought Iron Repairs',
+      driveGateOperator: 'Drive Gate Operator Replacement',
       painting: 'Wrought Iron Painting',
       railReplacement: 'Rail Replacement',
       woodRepairs: 'Wood Fence Repairs',
@@ -5468,7 +5472,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Realign Walk Gates': 'repairs',
       'Replace Walk Gate Hardware': 'repairs',
       'Rebuild Walk Gates': 'repairs',
-      'Drive Gate Operator Replacement': 'repairs',
+      'Drive Gate Operator Replacement': 'driveGateOperator',
       'Add Diagonal Braces': 'repairs',
       'Install Puppy Picket Inserts': 'repairs',
       'Rail Replacement': 'railReplacement',
@@ -5783,6 +5787,7 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperators:0,
       driveGateOperatorTypes: new Map(),
       driveGateOperatorPowers: new Map(),
+      driveGateOperatorCombos: new Map(),
       retainingWallSqft:0,
       retainingWallCost:0,
       panelsPrefab:0, panelsCustom:0,
@@ -6406,30 +6411,37 @@ document.addEventListener('DOMContentLoaded', function(){
       if(dgo){
         const rawType = (s.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
         const rawPower = (s.driveGateOperatorPower || DRIVE_GATE_POWER_TYPES[0] || '').trim();
-        const typeLabel = rawType || 'Drive';
+        const typeLabel = rawType || DRIVE_GATE_OPERATOR_TYPES[0] || 'Drive';
+        const powerLabel = rawPower || DRIVE_GATE_POWER_TYPES[0] || '';
         const gateLabel = typeLabel === 'Drive'
           ? `drive gate${dgo===1?'':'s'}`
           : `${typeLabel} gate${dgo===1?'':'s'}`;
         lines.push(`- Drive gate operator replacement: ${dgo} — ${gateLabel}`);
-        if(rawPower){ lines.push(`  - Power: ${rawPower}`); }
+        if(powerLabel){ lines.push(`  - Power: ${powerLabel}`); }
         totals.driveGateOperators += dgo;
         const prevTypeCount = totals.driveGateOperatorTypes.get(typeLabel) || 0;
         totals.driveGateOperatorTypes.set(typeLabel, prevTypeCount + dgo);
-        if(rawPower){
-          const prevPowerCount = totals.driveGateOperatorPowers.get(rawPower) || 0;
-          totals.driveGateOperatorPowers.set(rawPower, prevPowerCount + dgo);
+        if(powerLabel){
+          const prevPowerCount = totals.driveGateOperatorPowers.get(powerLabel) || 0;
+          totals.driveGateOperatorPowers.set(powerLabel, prevPowerCount + dgo);
         }
-        addMat(materials, 'LiftMaster drive gate operator', dgo);
-        if(rawPower === 'New Wiring'){
+        const comboKey = `${typeLabel}|||${powerLabel}`;
+        const prevCombo = totals.driveGateOperatorCombos.get(comboKey) || 0;
+        totals.driveGateOperatorCombos.set(comboKey, prevCombo + dgo);
+        const operatorMatLabel = typeLabel && typeLabel !== 'Drive'
+          ? `LiftMaster ${typeLabel} Gate Operator`
+          : 'LiftMaster Drive Gate Operator';
+        addMat(materials, operatorMatLabel, dgo);
+        if(powerLabel === 'New Wiring'){
           addMat(materials, 'Drive gate power run (new wiring)', dgo);
-        } else if(rawPower === 'Solar'){
+        } else if(powerLabel === 'Solar'){
           addMat(materials, 'Solar gate power kit', dgo);
         }
         const labelPrefix = s.label ? `${s.label}: ` : '';
         const operatorLabel = describeCount(dgo, 'drive gate operator', 'drive gate operators');
-        const powerSentence = rawPower ? `Power: ${rawPower}.` : '';
+        const powerSentence = powerLabel ? `Power: ${powerLabel}.` : '';
         let desc = `${labelPrefix}Replace ${operatorLabel} (LiftMaster) for ${gateLabel}. Include removal, haul away, and disposal of the old operator. ${powerSentence}`.trim();
-        if(rawPower === 'Existing Wiring'){
+        if(powerLabel === 'Existing Wiring'){
           desc += ' Price includes reuse of existing wiring currently connected to the gate operator. Existing wiring is assumed to be in good working condition. Any troubleshooting, repair, or replacement/rerouting of wiring (including new wire pulls/trenching/conduit) is not included and will be quoted as an additional service if required.';
         }
         addServiceLine('Drive Gate Operator Replacement', desc);
@@ -6582,23 +6594,18 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.walkGateAddsSingle) lines.push(`- Single swing walk gates to add: ${t.walkGateAddsSingle}`);
       if (t.walkGateAddsDouble) lines.push(`- Double swing gates to add: ${t.walkGateAddsDouble}`);
       if (t.driveGateOperators){
-        const typeParts = [];
-        if(t.driveGateOperatorTypes && typeof t.driveGateOperatorTypes.forEach === 'function'){
-          t.driveGateOperatorTypes.forEach((count, label)=>{
-            if(count>0){ typeParts.push(`${label}: ${count}`); }
+        const comboParts = [];
+        if(t.driveGateOperatorCombos && typeof t.driveGateOperatorCombos.forEach === 'function'){
+          t.driveGateOperatorCombos.forEach((count, key)=>{
+            if(count<=0) return;
+            const [type, power] = String(key||'').split('|||');
+            const typeLabel = (type || 'Drive').trim() || 'Drive';
+            const powerLabel = (power || 'Power TBD').trim() || 'Power TBD';
+            comboParts.push(`${typeLabel} / ${powerLabel}: ${count}`);
           });
         }
-        const typeDetail = typeParts.length ? ` (${typeParts.join('; ')})` : '';
-        lines.push(`- Drive gate operators to replace: ${t.driveGateOperators}${typeDetail}`);
-        const powerParts = [];
-        if(t.driveGateOperatorPowers && typeof t.driveGateOperatorPowers.forEach === 'function'){
-          t.driveGateOperatorPowers.forEach((count, label)=>{
-            if(count>0){ powerParts.push(`${label}: ${count}`); }
-          });
-        }
-        if(powerParts.length){
-          lines.push(`- Drive gate power types: ${powerParts.join('; ')}`);
-        }
+        const comboDetail = comboParts.length ? ` (${comboParts.join('; ')})` : '';
+        lines.push(`- Drive gate operators to replace: ${t.driveGateOperators}${comboDetail}`);
       }
       if (prefabReplacementCount) {
         const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
@@ -8128,7 +8135,23 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.walkGateAddsSingle > 0) sub.push('- Single swing walk gates to add: '+totals.walkGateAddsSingle);
     if (totals.walkGateAddsDouble > 0) sub.push('- Double swing gates to add: '+totals.walkGateAddsDouble);
     if (totals.driveGateOperators > 0){
-      sub.push('- Drive gate operators to replace: '+totals.driveGateOperators);
+      const comboLines = [];
+      if(totals.driveGateOperatorCombos && typeof totals.driveGateOperatorCombos.forEach === 'function'){
+        totals.driveGateOperatorCombos.forEach((count, key)=>{
+          if(count<=0) return;
+          const [type, power] = String(key||'').split('|||');
+          const typeLabel = (type || 'drive').trim().toLowerCase() || 'drive';
+          const powerLabel = (power || '').trim().toLowerCase();
+          const operatorLabel = count === 1 ? 'gate operator' : 'gate operators';
+          const powerSuffix = powerLabel ? `, using ${powerLabel}` : '';
+          comboLines.push(`- Replace ${count} ${typeLabel} ${operatorLabel}${powerSuffix}`);
+        });
+      }
+      if(comboLines.length){
+        comboLines.forEach(line=> sub.push(line));
+      } else {
+        sub.push('- Drive gate operators to replace: '+totals.driveGateOperators);
+      }
     }
     if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
     if (totals.puppyInserts > 0)    sub.push('- Puppy picket inserts: '+totals.puppyInserts);
