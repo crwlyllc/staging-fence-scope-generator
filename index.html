@@ -664,6 +664,7 @@ document.addEventListener('DOMContentLoaded', function(){
   };
   const DRIVE_GATE_OPERATOR_TYPES = ['Single Swing','Double Swing','Sliding'];
   const DRIVE_GATE_POWER_TYPES = ['Existing Wiring','New Wiring','Solar'];
+  const DRIVE_GATE_POWER_TYPES_INSTALL = DRIVE_GATE_POWER_TYPES.filter(t=> t !== 'Existing Wiring');
 
   const LABOR_RATE = 100;
   const CREW_SETTINGS = {
@@ -1524,6 +1525,10 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorReplace: 0,
       driveGateOperatorType: DRIVE_GATE_OPERATOR_TYPES[0],
       driveGateOperatorPower: DRIVE_GATE_POWER_TYPES[0],
+      driveGateOperatorInstall: 0,
+      driveGateOperatorInstallType: DRIVE_GATE_OPERATOR_TYPES[0],
+      driveGateOperatorInstallPower: DRIVE_GATE_POWER_TYPES_INSTALL[0],
+      driveGateOperatorInstallPlatform: false,
       scopeType: 'repair',
       postSpacing: '8',
       panelAttachment: 'Welding',
@@ -1608,6 +1613,7 @@ document.addEventListener('DOMContentLoaded', function(){
       Number(section.puppyPicketReplace||0) === 0 &&
       Number(section.walkGates||0) === 0 &&
       Number(section.driveGateOperatorReplace||0) === 0 &&
+      Number(section.driveGateOperatorInstall||0) === 0 &&
       clean(section.notes) === '' &&
       (!section.postReplacements || section.postReplacements.length === 0) &&
       (!section.postRealignments || section.postRealignments.length === 0) &&
@@ -2648,6 +2654,32 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-hint">Includes removal, haul away, and disposal of the old operator. LiftMaster only.</div>
         </div>
 
+        <!-- NEW: Install Drive Gate Operator -->
+        <div class="sp-field col-3">
+          <label class="sp-label"># Drive Gate Operators to Install</label>
+          ${numberControl('driveGateOperatorInstall','0')}
+        </div>
+        <div class="sp-field col-12" data-drive-operator-install-wrap style="display:none">
+          <div class="sp-grid">
+            <div class="sp-field col-3">
+              <label class="sp-label">Drive Gate Type</label>
+              <select class="sp-select" data-field="driveGateOperatorInstallType">${createSelect(DRIVE_GATE_OPERATOR_TYPES)}</select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Power Type</label>
+              <select class="sp-select" data-field="driveGateOperatorInstallPower">${createSelect(DRIVE_GATE_POWER_TYPES_INSTALL)}</select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Platform Needed</label>
+              <label class="sp-row" style="gap:6px">
+                <input type="checkbox" data-field="driveGateOperatorInstallPlatform" />
+                Build operator platform
+              </label>
+            </div>
+          </div>
+          <div class="sp-hint">LiftMaster only. No existing wiring option for installs.</div>
+        </div>
+
         </div>
 
           </div>
@@ -2687,7 +2719,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
     'walkAddPicketSize','walkAddLatch','walkAddHinges','driveGateOperatorReplace','driveGateOperatorType',
-    'driveGateOperatorPower','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
+    'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
+    'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
     'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie'
   ];
 
@@ -2996,6 +3029,10 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorReplace: val('driveGateOperatorReplace'),
       driveGateOperatorType: val('driveGateOperatorType'),
       driveGateOperatorPower: val('driveGateOperatorPower'),
+      driveGateOperatorInstall: val('driveGateOperatorInstall'),
+      driveGateOperatorInstallType: val('driveGateOperatorInstallType'),
+      driveGateOperatorInstallPower: val('driveGateOperatorInstallPower'),
+      driveGateOperatorInstallPlatform: val('driveGateOperatorInstallPlatform'),
 
       // NEW: finials
       finials,
@@ -3155,6 +3192,13 @@ document.addEventListener('DOMContentLoaded', function(){
     set('driveGateOperatorReplace', data.driveGateOperatorReplace || '');
     set('driveGateOperatorType', data.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0]);
     set('driveGateOperatorPower', data.driveGateOperatorPower || DRIVE_GATE_POWER_TYPES[0]);
+    set('driveGateOperatorInstall', data.driveGateOperatorInstall || '');
+    set('driveGateOperatorInstallType', data.driveGateOperatorInstallType || DRIVE_GATE_OPERATOR_TYPES[0]);
+    const installPower = DRIVE_GATE_POWER_TYPES_INSTALL.includes(data.driveGateOperatorInstallPower)
+      ? data.driveGateOperatorInstallPower
+      : DRIVE_GATE_POWER_TYPES_INSTALL[0];
+    set('driveGateOperatorInstallPower', installPower);
+    set('driveGateOperatorInstallPlatform', Boolean(data.driveGateOperatorInstallPlatform));
 
     set('notes', data.notes||'');
 
@@ -4662,10 +4706,15 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function updateDriveGateOperatorConditional(card){
-    const box = card.querySelector('.sp-number[data-field="driveGateOperatorReplace"] input');
-    const count = parseInt((box && box.value) || '0',10) || 0;
-    const wrap = card.querySelector('[data-drive-operator-wrap]');
-    if(wrap){ wrap.style.display = count>0 ? 'block' : 'none'; }
+    const replBox = card.querySelector('.sp-number[data-field="driveGateOperatorReplace"] input');
+    const replCount = parseInt((replBox && replBox.value) || '0',10) || 0;
+    const replWrap = card.querySelector('[data-drive-operator-wrap]');
+    if(replWrap){ replWrap.style.display = replCount>0 ? 'block' : 'none'; }
+
+    const installBox = card.querySelector('.sp-number[data-field="driveGateOperatorInstall"] input');
+    const installCount = parseInt((installBox && installBox.value) || '0',10) || 0;
+    const installWrap = card.querySelector('[data-drive-operator-install-wrap]');
+    if(installWrap){ installWrap.style.display = installCount>0 ? 'block' : 'none'; }
   }
 
   function applyMapLinkedStateToCard(card, sectionData){
@@ -5441,6 +5490,7 @@ document.addEventListener('DOMContentLoaded', function(){
       replacement: 'Wrought Iron Replacement',
       repairs: 'Wrought Iron Repairs',
       driveGateOperator: 'Drive Gate Operator Replacement',
+      driveGateOperatorInstall: 'Drive Gate Operator Installation',
       painting: 'Wrought Iron Painting',
       railReplacement: 'Rail Replacement',
       woodRepairs: 'Wood Fence Repairs',
@@ -5473,6 +5523,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Replace Walk Gate Hardware': 'repairs',
       'Rebuild Walk Gates': 'repairs',
       'Drive Gate Operator Replacement': 'driveGateOperator',
+      'Drive Gate Operator Installation': 'driveGateOperatorInstall',
       'Add Diagonal Braces': 'repairs',
       'Install Puppy Picket Inserts': 'repairs',
       'Rail Replacement': 'railReplacement',
@@ -5788,6 +5839,11 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorTypes: new Map(),
       driveGateOperatorPowers: new Map(),
       driveGateOperatorCombos: new Map(),
+      driveGateOperatorInstalls:0,
+      driveGateOperatorInstallTypes: new Map(),
+      driveGateOperatorInstallPowers: new Map(),
+      driveGateOperatorInstallCombos: new Map(),
+      driveGateOperatorInstallPlatforms:0,
       retainingWallSqft:0,
       retainingWallCost:0,
       panelsPrefab:0, panelsCustom:0,
@@ -6430,7 +6486,7 @@ document.addEventListener('DOMContentLoaded', function(){
         totals.driveGateOperatorCombos.set(comboKey, prevCombo + dgo);
         const operatorMatLabel = typeLabel && typeLabel !== 'Drive'
           ? `LiftMaster ${typeLabel} Gate Operator`
-          : 'LiftMaster Drive Gate Operator';
+          : 'LiftMaster drive gate operator';
         addMat(materials, operatorMatLabel, dgo);
         if(powerLabel === 'New Wiring'){
           addMat(materials, 'Drive gate power run (new wiring)', dgo);
@@ -6445,6 +6501,54 @@ document.addEventListener('DOMContentLoaded', function(){
           desc += ' Price includes reuse of existing wiring currently connected to the gate operator. Existing wiring is assumed to be in good working condition. Any troubleshooting, repair, or replacement/rerouting of wiring (including new wire pulls/trenching/conduit) is not included and will be quoted as an additional service if required.';
         }
         addServiceLine('Drive Gate Operator Replacement', desc);
+      }
+
+      // Drive gate operator installation
+      const dgi = i(s.driveGateOperatorInstall);
+      if(dgi){
+        const rawType = (s.driveGateOperatorInstallType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
+        const rawPower = (s.driveGateOperatorInstallPower || DRIVE_GATE_POWER_TYPES_INSTALL[0] || '').trim();
+        const typeLabel = rawType || DRIVE_GATE_OPERATOR_TYPES[0] || 'Drive';
+        const powerLabel = rawPower || DRIVE_GATE_POWER_TYPES_INSTALL[0] || '';
+        const platformNeeded = !!s.driveGateOperatorInstallPlatform;
+        const gateLabel = typeLabel === 'Drive'
+          ? `drive gate${dgi===1?'':'s'}`
+          : `${typeLabel} gate${dgi===1?'':'s'}`;
+        lines.push(`- Drive gate operator installation: ${dgi} — ${gateLabel}`);
+        if(powerLabel){ lines.push(`  - Power: ${powerLabel}`); }
+        if(platformNeeded){ lines.push(`  - Platform: build operator platform`); }
+        totals.driveGateOperatorInstalls += dgi;
+        const prevTypeCount = totals.driveGateOperatorInstallTypes.get(typeLabel) || 0;
+        totals.driveGateOperatorInstallTypes.set(typeLabel, prevTypeCount + dgi);
+        if(powerLabel){
+          const prevPowerCount = totals.driveGateOperatorInstallPowers.get(powerLabel) || 0;
+          totals.driveGateOperatorInstallPowers.set(powerLabel, prevPowerCount + dgi);
+        }
+        const comboKey = `${typeLabel}|||${powerLabel}|||${platformNeeded ? 'platform' : 'no-platform'}`;
+        const prevCombo = totals.driveGateOperatorInstallCombos.get(comboKey) || 0;
+        totals.driveGateOperatorInstallCombos.set(comboKey, prevCombo + dgi);
+        if(platformNeeded){
+          totals.driveGateOperatorInstallPlatforms += dgi;
+        }
+        const operatorMatLabel = typeLabel && typeLabel !== 'Drive'
+          ? `LiftMaster ${typeLabel} Gate Operator`
+          : 'LiftMaster drive gate operator';
+        addMat(materials, operatorMatLabel, dgi);
+        if(powerLabel === 'New Wiring'){
+          addMat(materials, 'Drive gate power run (new wiring)', dgi);
+        } else if(powerLabel === 'Solar'){
+          addMat(materials, 'Solar gate power kit', dgi);
+        }
+        if(platformNeeded){
+          addRailSticks('2x2"', dgi);
+          addMat(materials, 'Maximizer bags of concrete', dgi);
+        }
+        const labelPrefix = s.label ? `${s.label}: ` : '';
+        const operatorLabel = describeCount(dgi, 'drive gate operator', 'drive gate operators');
+        const powerSentence = powerLabel ? `Power: ${powerLabel}.` : '';
+        const platformSentence = platformNeeded ? 'Include fabrication of a 2x2 steel operator platform set in concrete.' : '';
+        const desc = `${labelPrefix}Install ${operatorLabel} (LiftMaster) for ${gateLabel}. ${powerSentence} ${platformSentence}`.trim();
+        addServiceLine('Drive Gate Operator Installation', desc);
       }
 
       if(isInstall && (fenceType === 'wrought iron' || fenceType === 'wood')){
@@ -6606,6 +6710,21 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         const comboDetail = comboParts.length ? ` (${comboParts.join('; ')})` : '';
         lines.push(`- Drive gate operators to replace: ${t.driveGateOperators}${comboDetail}`);
+      }
+      if (t.driveGateOperatorInstalls){
+        const comboParts = [];
+        if(t.driveGateOperatorInstallCombos && typeof t.driveGateOperatorInstallCombos.forEach === 'function'){
+          t.driveGateOperatorInstallCombos.forEach((count, key)=>{
+            if(count<=0) return;
+            const [type, power, platform] = String(key||'').split('|||');
+            const typeLabel = (type || 'Drive').trim() || 'Drive';
+            const powerLabel = (power || 'Power TBD').trim() || 'Power TBD';
+            const platformLabel = platform === 'platform' ? 'platform' : '';
+            comboParts.push(`${typeLabel} / ${powerLabel}${platformLabel ? ` / ${platformLabel}` : ''}: ${count}`);
+          });
+        }
+        const comboDetail = comboParts.length ? ` (${comboParts.join('; ')})` : '';
+        lines.push(`- Drive gate operators to install: ${t.driveGateOperatorInstalls}${comboDetail}`);
       }
       if (prefabReplacementCount) {
         const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
@@ -7262,6 +7381,23 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorHours = totals.driveGateOperators * 3;
     }
     manHours += driveGateOperatorHours;
+
+    let driveGateOperatorInstallHours = 0;
+    if(totals.driveGateOperatorInstallTypes && typeof totals.driveGateOperatorInstallTypes.forEach === 'function'){
+      totals.driveGateOperatorInstallTypes.forEach((count, label)=>{
+        const qty = parseInt(count,10) || 0;
+        if(qty <= 0) return;
+        const normalized = String(label||'').toLowerCase();
+        const perHours = normalized.includes('double') ? 5 : 3;
+        driveGateOperatorInstallHours += qty * perHours;
+      });
+    } else {
+      driveGateOperatorInstallHours = totals.driveGateOperatorInstalls * 3;
+    }
+    if(totals.driveGateOperatorInstallPlatforms > 0){
+      driveGateOperatorInstallHours += totals.driveGateOperatorInstallPlatforms * 2;
+    }
+    manHours += driveGateOperatorInstallHours;
 
     // posts (1.5" x 1.5" raw sticks)
     let raw1p5Total = 0;
@@ -8162,6 +8298,26 @@ document.addEventListener('DOMContentLoaded', function(){
         comboLines.forEach(line=> sub.push(line));
       } else {
         sub.push('- Drive gate operators to replace: '+totals.driveGateOperators);
+      }
+    }
+    if (totals.driveGateOperatorInstalls > 0){
+      const comboLines = [];
+      if(totals.driveGateOperatorInstallCombos && typeof totals.driveGateOperatorInstallCombos.forEach === 'function'){
+        totals.driveGateOperatorInstallCombos.forEach((count, key)=>{
+          if(count<=0) return;
+          const [type, power, platform] = String(key||'').split('|||');
+          const typeLabel = (type || 'drive').trim().toLowerCase() || 'drive';
+          const powerLabel = (power || '').trim().toLowerCase();
+          const operatorLabel = count === 1 ? 'gate operator' : 'gate operators';
+          const powerSuffix = powerLabel ? `, using ${powerLabel}` : '';
+          const platformSuffix = platform === 'platform' ? ', with platform' : '';
+          comboLines.push(`- Install ${count} ${typeLabel} ${operatorLabel}${powerSuffix}${platformSuffix}`);
+        });
+      }
+      if(comboLines.length){
+        comboLines.forEach(line=> sub.push(line));
+      } else {
+        sub.push('- Drive gate operators to install: '+totals.driveGateOperatorInstalls);
       }
     }
     if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
