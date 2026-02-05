@@ -349,7 +349,7 @@
         <div class="sp-divider"></div>
         <div class="sp-grid">
           <div class="sp-field col-12">
-            <label class="sp-label">What to charge scenarios (target gross per hour, $350 min)</label>
+            <label class="sp-label" id="sp-manual-scenario-label">What to charge scenarios (target gross per hour, $350 min)</label>
             <div class="sp-service-list">
               <div class="sp-manual-scenario" data-manual-scenario data-target="90">
                 <span class="sp-chip is-info">$90 / hr</span>
@@ -404,6 +404,23 @@
             <label class="sp-label" for="sp-import-text">Paste saved notes</label>
             <textarea class="sp-textarea" id="sp-import-text" placeholder="Paste previously generated notes to restore sections and map info..."></textarea>
             <div class="sp-hint" id="sp-import-status">Paste notes that include the embedded reload key added by this generator.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-card" id="sp-customer-card">
+        <div class="sp-card-header">
+          <div class="sp-card-title">Customer Type</div>
+        </div>
+        <div class="sp-grid">
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-customer-type">Customer Type</label>
+            <select class="sp-select" id="sp-customer-type">
+              <option value="Residential">Residential</option>
+              <option value="Commercial">Commercial</option>
+              <option value="City">City</option>
+            </select>
+            <div class="sp-hint" id="sp-customer-min-hint">Minimum charge: $350</div>
           </div>
         </div>
       </div>
@@ -629,6 +646,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const PUPPY_INSERT_SIZES = ['1/2"','5/8"'];
   const PANEL_REPLACEMENT_STYLES = [...SEED.style, 'Flat Top w/ Puppy Picket Insert'];
+  const CUSTOMER_TYPES = ['Residential','Commercial','City'];
 
   const GATE = {
     latchTypes: [
@@ -668,7 +686,7 @@ document.addEventListener('DOMContentLoaded', function(){
     minutesPerMile: 1,
   };
 
-  const state = { sections: [] };
+  const state = { sections: [], customerType: 'Residential' };
   const mapState = {
     map: null,
     drawingManager: null,
@@ -712,6 +730,9 @@ document.addEventListener('DOMContentLoaded', function(){
   const manualCommissionOutput = document.getElementById('sp-manual-commission');
   const manualNetOutput = document.getElementById('sp-manual-net');
   const manualScenarioRows = Array.from(document.querySelectorAll('[data-manual-scenario]'));
+  const manualScenarioLabel = document.getElementById('sp-manual-scenario-label');
+  const customerTypeSelect = document.getElementById('sp-customer-type');
+  const customerMinHint = document.getElementById('sp-customer-min-hint');
   const manualModal = document.getElementById('sp-manual-modal');
   const manualOpenBtn = document.getElementById('sp-open-manual');
   const manualCloseBtn = document.getElementById('sp-manual-close');
@@ -919,7 +940,7 @@ document.addEventListener('DOMContentLoaded', function(){
     return {
       version: NOTES_DATA_VERSION,
       generatedAt: new Date().toISOString(),
-      state: { sections },
+      state: { sections, customerType: getCustomerType() },
       map: { address: '', polylines: [], nextPolylineId: 1 },
       estimate: { number: '', address: '' }
     };
@@ -4987,6 +5008,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
     state.sections = nextSections;
 
+    const snapshotCustomerType = payload.state && payload.state.customerType ? normalizeCustomerType(payload.state.customerType) : '';
+    if(snapshotCustomerType){
+      if(customerTypeSelect){
+        customerTypeSelect.value = snapshotCustomerType;
+      }
+      state.customerType = snapshotCustomerType;
+    }else if(customerTypeSelect){
+      state.customerType = normalizeCustomerType(customerTypeSelect.value);
+    }
+    updatePricingMinimumUI();
+
     const importAddress = (payload.map && payload.map.address) || (payload.estimate && payload.estimate.address) || '';
     if(mapAddressInput){
       mapAddressInput.value = importAddress || '';
@@ -5078,9 +5110,43 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const PRICING = {
     grossProfitTargetPerHour: 100,
-    grossProfitMinimum: 350
+    grossProfitMinimumResidential: 350,
+    grossProfitMinimumCommercial: 2500
   };
   const MANUAL_TRAVEL_FLAT = 50;
+
+  function normalizeCustomerType(value){
+    const raw = String(value || '').trim();
+    if(!raw) return CUSTOMER_TYPES[0];
+    const match = CUSTOMER_TYPES.find(option => option.toLowerCase() === raw.toLowerCase());
+    return match || CUSTOMER_TYPES[0];
+  }
+
+  function getCustomerType(){
+    if(customerTypeSelect){
+      return normalizeCustomerType(customerTypeSelect.value);
+    }
+    return normalizeCustomerType(state.customerType);
+  }
+
+  function getGrossProfitMinimum(){
+    const type = getCustomerType();
+    if(type === 'Commercial' || type === 'City'){
+      return PRICING.grossProfitMinimumCommercial;
+    }
+    return PRICING.grossProfitMinimumResidential;
+  }
+
+  function updatePricingMinimumUI(){
+    const minValue = getGrossProfitMinimum();
+    if(customerMinHint){
+      customerMinHint.textContent = `Minimum charge: $${money(minValue)}`;
+    }
+    if(manualScenarioLabel){
+      manualScenarioLabel.textContent = `What to charge scenarios (target gross per hour, $${money(minValue)} min)`;
+    }
+    updateManualQuote();
+  }
 
   const RATES = {
     overhead:   0.30,
@@ -5089,12 +5155,15 @@ document.addEventListener('DOMContentLoaded', function(){
     mcor:       0.00
   };
 
-  function computeTargetGross(hours, targetPerHour = PRICING.grossProfitTargetPerHour){
+  function computeTargetGross(hours, targetPerHour = PRICING.grossProfitTargetPerHour, minimum = getGrossProfitMinimum()){
     const h = Number(hours);
     const rate = Number(targetPerHour);
     if(!isFinite(h) || h <= 0) return NaN;
     if(!isFinite(rate) || rate < 0) return NaN;
-    return Math.max(h * rate, PRICING.grossProfitMinimum);
+    const minValue = (isFinite(minimum) && minimum >= 0)
+      ? Number(minimum)
+      : PRICING.grossProfitMinimumResidential;
+    return Math.max(h * rate, minValue);
   }
 
   function computeChargeRevenue(directCosts, totalHours){
@@ -5137,11 +5206,12 @@ document.addEventListener('DOMContentLoaded', function(){
   function updateManualQuote(){
     if(!manualCostInput || !manualChargeOutput || !manualStatusEl || !manualModeChip) return;
 
+    const minGross = getGrossProfitMinimum();
     const raw = (manualCostInput.value || '').trim();
     if(!raw){
       manualChargeOutput.value = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = `Enter materials & equipment costs and total hours to compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit ($${money(PRICING.grossProfitMinimum)} minimum).`;
+      manualStatusEl.textContent = `Enter materials & equipment costs and total hours to compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit ($${money(minGross)} minimum).`;
       delete manualStatusEl.dataset.state;
       clearManualMetrics();
       return;
@@ -5162,7 +5232,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!isFinite(totalHours) || totalHours <= 0){
       manualChargeOutput.value = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = `Enter total hours (onsite) to add labor and a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost, then compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit ($${money(PRICING.grossProfitMinimum)} minimum).`;
+      manualStatusEl.textContent = `Enter total hours (onsite) to add labor and a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost, then compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit ($${money(minGross)} minimum).`;
       manualStatusEl.dataset.state = 'error';
       clearManualMetrics();
       return;
@@ -5187,7 +5257,7 @@ document.addEventListener('DOMContentLoaded', function(){
     manualModeChip.classList.remove('is-warn');
     manualModeChip.classList.add('is-info');
     manualModeChip.style.display = 'inline-block';
-    manualStatusEl.textContent = `Targets $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit on total time (onsite), $${money(PRICING.grossProfitMinimum)} minimum. Labor is added from total hours plus a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost.`;
+    manualStatusEl.textContent = `Targets $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit on total time (onsite), $${money(minGross)} minimum. Labor is added from total hours plus a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost.`;
     manualStatusEl.dataset.state = 'success';
 
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
@@ -8092,7 +8162,7 @@ document.addEventListener('DOMContentLoaded', function(){
       cost.push('- Total direct costs: $'+money(directCosts));
       if(isFinite(revenueRes?.targetGross)){
         const hoursLabel = totalHoursLabel || (isFinite(totalHours) && totalHours > 0 ? `${totalHours.toFixed(1)} hours` : 'time TBD');
-        cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}, $${money(PRICING.grossProfitMinimum)} min): $${money(revenueRes.targetGross)}`);
+        cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}, $${money(getGrossProfitMinimum())} min): $${money(revenueRes.targetGross)}`);
       }
       cost.push('- Overhead amount: $'+money(revenue * RATES.overhead));
       cost.push('- Gross profit: $'+money(grossProfit));
@@ -8514,6 +8584,20 @@ document.addEventListener('DOMContentLoaded', function(){
       updateManualQuote();
     });
   }
+
+  if(customerTypeSelect){
+    customerTypeSelect.addEventListener('change', ()=>{
+      customerTypeSelect.value = normalizeCustomerType(customerTypeSelect.value);
+      state.customerType = customerTypeSelect.value;
+      updatePricingMinimumUI();
+      persist();
+    });
+  }
+  if(customerTypeSelect){
+    customerTypeSelect.value = normalizeCustomerType(customerTypeSelect.value);
+    state.customerType = customerTypeSelect.value;
+  }
+  updatePricingMinimumUI();
 
   const quickAddBtn = document.getElementById('sp-quick-add');
   if(quickAddBtn){ quickAddBtn.addEventListener('click', ()=>{ addSection(); persist(); }); }
