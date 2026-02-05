@@ -309,7 +309,6 @@
             <label class="sp-label" for="sp-manual-cost">Total Material &amp; Equipment Costs</label>
             <div class="sp-row">
               <input class="sp-input" id="sp-manual-cost" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Enter materials &amp; equipment (e.g., 4500)" />
-              <button class="sp-btn" id="sp-manual-calc" type="button">Calculate Charge</button>
             </div>
             <div class="sp-hint">Materials &amp; equipment only. Labor is added from total hours, plus a flat $50 travel cost.</div>
             <div class="sp-hint" id="sp-manual-status">Targets $100 gross profit per hour of total time (onsite + travel). Labor is added from total hours, plus a flat $50 travel cost.</div>
@@ -322,15 +321,13 @@
             </div>
             <div class="sp-hint">Calculated from materials &amp; equipment, labor, and a flat $50 travel cost.</div>
           </div>
-        </div>
-        <div class="sp-divider"></div>
-        <div class="sp-grid">
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-hours">Total hours (onsite)</label>
             <input class="sp-input" id="sp-manual-hours" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 6.5" />
             <div class="sp-hint">Used to add labor and compute gross-per-hour targets and scenarios.</div>
           </div>
         </div>
+        <div class="sp-divider"></div>
         <div class="sp-grid">
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-gross">Total gross</label>
