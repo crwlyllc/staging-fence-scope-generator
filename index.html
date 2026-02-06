@@ -2661,7 +2661,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="sp-field col-3" data-repair-only>
           <label class="sp-label"># Sliding Drive Gate Chains to Replace</label>
           ${numberControl('driveGateChainReplace','0')}
-          <div class="sp-hint">Adds $150 materials and 2 crew hours per chain.</div>
+          <div class="sp-hint">Adds $150 materials and 1 crew hour per chain.</div>
         </div>
 
         <!-- NEW: Replace Drive Gate Operator -->
@@ -7264,7 +7264,7 @@ document.addEventListener('DOMContentLoaded', function(){
     renderServiceLineNotes(serviceLines);
 
     const woodStainBuckets = totals.woodStainSqft > 0
-      ? Math.ceil(totals.woodStainSqft / 500)
+      ? Math.ceil(totals.woodStainSqft / 750)
       : 0;
     if(woodStainBuckets > 0){
       addMat(materials, '5 gal wood stain bucket', woodStainBuckets);
@@ -7415,8 +7415,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const addedGateHours = (totals.walkGateAddsSingle * 2) + (totals.walkGateAddsDouble * 3);
     manHours += addedGateHours;
     welderHours += addedGateHours;
-    // Sliding drive gate chain replacement: 2 crew hours each
-    const driveGateChainCrewHours = totals.driveGateChainReplacements * 2;
+    // Sliding drive gate chain replacement: 1 crew hour each
+    const driveGateChainCrewHours = totals.driveGateChainReplacements * 1;
     if(driveGateChainCrewHours > 0){
       const driveGateChainManHours = driveGateChainCrewHours * ONSITE_CREW_SIZE;
       manHours += driveGateChainManHours;
