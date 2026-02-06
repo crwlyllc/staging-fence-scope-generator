@@ -7096,6 +7096,13 @@ document.addEventListener('DOMContentLoaded', function(){
       woodStainHours += setupHours;
       woodHelperHours += setupHours;
       woodManHours += setupHours * 2;
+      const minCrewHours = 2;
+      if(woodStainHours < minCrewHours){
+        const addedHours = minCrewHours - woodStainHours;
+        woodStainHours += addedHours;
+        woodHelperHours += addedHours;
+        woodManHours += addedHours * 2;
+      }
     }
 
     manHours += woodManHours;
