@@ -1542,6 +1542,7 @@ document.addEventListener('DOMContentLoaded', function(){
       walkAddPicketSize: SEED.picketSize[0],
       walkAddLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
       walkAddHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      driveGateChainReplace: 0,
       driveGateOperatorReplace: 0,
       driveGateOperatorType: DRIVE_GATE_OPERATOR_TYPES[0],
       driveGateOperatorPower: DRIVE_GATE_POWER_TYPES[0],
@@ -1632,6 +1633,7 @@ document.addEventListener('DOMContentLoaded', function(){
       Number(section.digOut||0) === 0 &&
       Number(section.puppyPicketReplace||0) === 0 &&
       Number(section.walkGates||0) === 0 &&
+      Number(section.driveGateChainReplace||0) === 0 &&
       Number(section.driveGateOperatorReplace||0) === 0 &&
       Number(section.driveGateOperatorInstall||0) === 0 &&
       clean(section.notes) === '' &&
@@ -2655,6 +2657,13 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-hint">Single swing: adds 2 labor hours, 1 post, 1 bag concrete, and 2× 12ft rails per rail size. Double swing: adds 3 labor hours, 1 post, 1 bag concrete, and 4× 12ft rails per rail size.</div>
         </div>
 
+        <!-- NEW: Replace Sliding Drive Gate Chain -->
+        <div class="sp-field col-3" data-repair-only>
+          <label class="sp-label"># Sliding Drive Gate Chains to Replace</label>
+          ${numberControl('driveGateChainReplace','0')}
+          <div class="sp-hint">Adds $150 materials and 2 crew hours per chain.</div>
+        </div>
+
         <!-- NEW: Replace Drive Gate Operator -->
         <div class="sp-field col-3">
           <label class="sp-label"># Drive Gate Operators to Replace</label>
@@ -2738,7 +2747,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
-    'walkAddPicketSize','walkAddLatch','walkAddHinges','driveGateOperatorReplace','driveGateOperatorType',
+    'walkAddPicketSize','walkAddLatch','walkAddHinges','driveGateChainReplace','driveGateOperatorReplace','driveGateOperatorType',
     'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
     'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
     'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie'
@@ -3046,6 +3055,7 @@ document.addEventListener('DOMContentLoaded', function(){
       walkAddPicketSize: val('walkAddPicketSize'),
       walkAddLatch: val('walkAddLatch'),
       walkAddHinges: val('walkAddHinges'),
+      driveGateChainReplace: val('driveGateChainReplace'),
       driveGateOperatorReplace: val('driveGateOperatorReplace'),
       driveGateOperatorType: val('driveGateOperatorType'),
       driveGateOperatorPower: val('driveGateOperatorPower'),
@@ -3209,6 +3219,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('walkAddPicketSize', data.walkAddPicketSize || SEED.picketSize[0]);
     set('walkAddLatch', data.walkAddLatch || (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
     set('walkAddHinges', data.walkAddHinges || (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+    set('driveGateChainReplace', data.driveGateChainReplace || '');
     set('driveGateOperatorReplace', data.driveGateOperatorReplace || '');
     set('driveGateOperatorType', data.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0]);
     set('driveGateOperatorPower', data.driveGateOperatorPower || DRIVE_GATE_POWER_TYPES[0]);
@@ -5198,6 +5209,7 @@ document.addEventListener('DOMContentLoaded', function(){
     [DRIVE_GATE_OPERATOR_DETAILS['Sliding'].label]: DRIVE_GATE_OPERATOR_DETAILS['Sliding'].unitCost,
     'Drive gate power run (new wiring)': 2000,
     'Solar gate power kit': 500,
+    'Sliding drive gate chain': 150,
     'panel mount bracket': 1.27,
     '5 gal wood stain bucket': 124.49,
     'wood picket': 3.0,
@@ -5511,6 +5523,7 @@ document.addEventListener('DOMContentLoaded', function(){
       repairs: 'Wrought Iron Repairs',
       driveGateOperator: 'Drive Gate Operator Replacement',
       driveGateOperatorInstall: 'Drive Gate Operator Installation',
+      slidingDriveGateRepairs: 'Sliding Drive Gate Repairs',
       painting: 'Wrought Iron Painting',
       railReplacement: 'Rail Replacement',
       woodRepairs: 'Wood Fence Repairs',
@@ -5544,6 +5557,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Rebuild Walk Gates': 'repairs',
       'Drive Gate Operator Replacement': 'driveGateOperator',
       'Drive Gate Operator Installation': 'driveGateOperatorInstall',
+      'Sliding Drive Gate Repairs': 'slidingDriveGateRepairs',
       'Add Diagonal Braces': 'repairs',
       'Install Puppy Picket Inserts': 'repairs',
       'Rail Replacement': 'railReplacement',
@@ -5855,6 +5869,7 @@ document.addEventListener('DOMContentLoaded', function(){
       walkGateAddsDouble:0,
       walkGateAddsRepair:0,
       walkGateAddsInstall:0,
+      driveGateChainReplacements:0,
       driveGateOperators:0,
       driveGateOperatorTypes: new Map(),
       driveGateOperatorPowers: new Map(),
@@ -6482,6 +6497,17 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`  - Post: ${s.walkAddPostSize}; Frame: ${s.walkAddFrameSize}; Pickets: ${s.walkAddPicketSize}; Latch: ${s.walkAddLatch}; Hinges: ${s.walkAddHinges}`);
       }
 
+      const driveGateChainReplace = isRepair ? i(s.driveGateChainReplace) : 0;
+      if(driveGateChainReplace){
+        lines.push(`- Sliding drive gate chains to replace: ${driveGateChainReplace}`);
+        totals.driveGateChainReplacements += driveGateChainReplace;
+        addMat(materials, 'Sliding drive gate chain', driveGateChainReplace);
+        const labelPrefix = s.label ? `${s.label}: ` : '';
+        const qtySentence = driveGateChainReplace > 1 ? ` Quantity: ${driveGateChainReplace}.` : '';
+        const desc = `${labelPrefix}Replace sliding drive gate chain.${qtySentence}`;
+        addServiceLine('Sliding Drive Gate Repairs', desc);
+      }
+
       // Drive gate operator replacement
       const dgo = i(s.driveGateOperatorReplace);
       if(dgo){
@@ -6743,6 +6769,9 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         const comboDetail = comboParts.length ? ` (${comboParts.join('; ')})` : '';
         lines.push(`- Drive gate operators to install: ${t.driveGateOperatorInstalls}${comboDetail}`);
+      }
+      if (t.driveGateChainReplacements){
+        lines.push(`- Sliding drive gate chains to replace: ${t.driveGateChainReplacements}`);
       }
       if (prefabReplacementCount) {
         const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
@@ -7386,6 +7415,13 @@ document.addEventListener('DOMContentLoaded', function(){
     const addedGateHours = (totals.walkGateAddsSingle * 2) + (totals.walkGateAddsDouble * 3);
     manHours += addedGateHours;
     welderHours += addedGateHours;
+    // Sliding drive gate chain replacement: 2 crew hours each
+    const driveGateChainCrewHours = totals.driveGateChainReplacements * 2;
+    if(driveGateChainCrewHours > 0){
+      const driveGateChainManHours = driveGateChainCrewHours * ONSITE_CREW_SIZE;
+      manHours += driveGateChainManHours;
+      helperHours += driveGateChainManHours;
+    }
     let driveGateOperatorHours = 0;
     if(totals.driveGateOperatorTypes && typeof totals.driveGateOperatorTypes.forEach === 'function'){
       totals.driveGateOperatorTypes.forEach((count, label)=>{
@@ -8343,6 +8379,9 @@ document.addEventListener('DOMContentLoaded', function(){
       } else {
         sub.push('- Drive gate operators to install: '+totals.driveGateOperatorInstalls);
       }
+    }
+    if (totals.driveGateChainReplacements > 0){
+      sub.push('- Sliding drive gate chains to replace: '+totals.driveGateChainReplacements);
     }
     if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
     if (totals.puppyInserts > 0)    sub.push('- Puppy picket inserts: '+totals.puppyInserts);
