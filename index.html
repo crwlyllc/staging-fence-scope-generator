@@ -5588,7 +5588,12 @@ document.addEventListener('DOMContentLoaded', function(){
         .map(([key, label])=>{
           const parts = serviceBuckets[key] || [];
           if(!parts.length) return null;
-          return { name: label, desc: parts.join(' ') };
+          let desc = parts.join(' ');
+          if(key === 'repairs'){
+            const disclaimer = 'The listed repairs are what was found and attributed to this estimate option. There could be more repairs needed that were not found/seen. If our crew finds additional repairs when on site, we will present them to you for approval at an additional cost.';
+            desc = desc ? `${desc}\n\n${disclaimer}` : disclaimer;
+          }
+          return { name: label, desc };
         })
         .filter(Boolean);
     }
