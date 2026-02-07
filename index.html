@@ -6,7 +6,7 @@
   <title>Scope Generator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/jpeg" sizes="32x32" href="https://cdn.prod.website-files.com/6594928d27a68dfdb6474334/66e8a1e05c9e00dea43e9a1b_Strong-Perimeter-Logo-32.jpg" />
   <style>
   :root{
@@ -285,30 +285,33 @@
     }
   }
 
-  /* === Redesign overrides === */
+  /* === Strong Perimeter redesign (matches mockup) === */
   :root{
-    --sp-green:#0f3d2e;
-    --sp-ink:#14211b;
-    --sp-muted:#5f6b63;
-    --sp-border:#e2d9cc;
-    --sp-bg:#f4efe6;
-    --sp-card:#fffaf1;
+    --sp-green:#2e4335;
+    --sp-green-dark:#1f2f26;
+    --sp-ink:#f4f0e6;
+    --sp-muted:#d2c4ad;
+    --sp-border:#3c4a3f;
+    --sp-bg:#2a3a31;
+    --sp-card:#2a3a31;
     --sp-radius:18px;
-    --sp-stage-bg:#f2ede2;
-    --sp-accent:#f59e0b;
-    --sp-accent-strong:#d97706;
-    --sp-shadow:0 12px 30px rgba(15,61,46,0.10);
+    --sp-stage-bg:#1b2922;
+    --sp-accent:#d9772a;
+    --sp-accent-strong:#c05f1e;
+    --sp-input-bg:#f4ead8;
+    --sp-input-text:#1f2a23;
+    --sp-shadow:0 16px 30px rgba(10,18,14,0.35);
     --sp-floating-offset:112px;
   }
   body{
     background:var(--sp-stage-bg);
     background-image:
-      radial-gradient(1200px 700px at 10% -10%, #fff4da 0%, rgba(255,244,218,0) 60%),
-      radial-gradient(1000px 650px at 95% 0%, #e6f5ee 0%, rgba(230,245,238,0) 55%),
-      repeating-linear-gradient(135deg, rgba(15,61,46,0.03) 0px, rgba(15,61,46,0.03) 2px, transparent 2px, transparent 10px);
+      radial-gradient(1200px 700px at 10% -20%, rgba(217,119,42,0.18) 0%, rgba(217,119,42,0) 60%),
+      radial-gradient(900px 600px at 85% -10%, rgba(58,92,73,0.45) 0%, rgba(58,92,73,0) 55%),
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 2px, transparent 2px, transparent 10px);
   }
   #sp-scope{
-    font-family:"Space Grotesk","Segoe UI","Helvetica Neue",sans-serif;
+    font-family:"Work Sans","Segoe UI","Helvetica Neue",sans-serif;
     color:var(--sp-ink);
   }
   .sp-container{
@@ -316,35 +319,55 @@
     padding:28px 24px calc(52px + var(--sp-floating-offset, 0px));
   }
   .sp-header{
-    background:var(--sp-card);
-    border:1px solid var(--sp-border);
+    background:var(--sp-green-dark);
+    border:1px solid #223429;
     border-radius:var(--sp-radius);
-    padding:16px 18px;
+    padding:18px 20px;
     box-shadow:var(--sp-shadow);
     gap:16px;
+    position:relative;
+    overflow:hidden;
+  }
+  .sp-header::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(360px 120px at 10% 0%, rgba(217,119,42,0.12), transparent 70%),
+      radial-gradient(420px 140px at 90% 10%, rgba(255,255,255,0.06), transparent 75%);
+    pointer-events:none;
   }
   .sp-brand{
     display:flex;
     flex-direction:column;
     gap:6px;
-    min-width:200px;
+    min-width:220px;
+    position:relative;
+    z-index:1;
   }
   .sp-title{
-    font-family:"Fraunces","Times New Roman",serif;
+    font-family:"Cinzel","Times New Roman",serif;
     font-size:28px;
-    letter-spacing:0.2px;
+    letter-spacing:0.5px;
   }
   .sp-subtitle{
-    font-size:14px;
+    font-size:13px;
     color:var(--sp-muted);
     max-width:560px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
   }
   .sp-badge{
-    background:var(--sp-green);
-    color:#fff;
-    letter-spacing:0.6px;
+    background:var(--sp-accent);
+    color:#1f1206;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
   }
-  .sp-actions{ gap:8px; }
+  .sp-actions{
+    gap:8px;
+    position:relative;
+    z-index:1;
+  }
   .sp-layout{
     display:grid;
     gap:20px;
@@ -364,7 +387,7 @@
   }
   @media(max-width:719px){
     .sp-container{ padding:20px 16px calc(44px + var(--sp-floating-offset, 0px)); }
-    .sp-header{ padding:14px 14px; }
+    .sp-header{ padding:16px 14px; }
     .sp-title{ font-size:24px; }
   }
   .sp-inline-cards{
@@ -373,7 +396,7 @@
   .sp-card{
     padding:18px;
     border-radius:var(--sp-radius);
-    background:linear-gradient(180deg,#fffdf6 0%, #fff6e8 100%);
+    background:linear-gradient(180deg, rgba(46,67,53,0.92) 0%, rgba(34,50,40,0.98) 100%);
     border:1px solid var(--sp-border);
     box-shadow:var(--sp-shadow);
     position:relative;
@@ -384,70 +407,87 @@
     inset:0;
     border-radius:inherit;
     pointer-events:none;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);
   }
   .sp-card-header{
     margin-bottom:12px;
     padding-bottom:10px;
-    border-bottom:1px dashed var(--sp-border);
+    border-bottom:1px solid rgba(255,255,255,0.08);
   }
   .sp-card-title{
-    font-family:"Fraunces","Times New Roman",serif;
+    font-family:"Cinzel","Times New Roman",serif;
     font-size:18px;
+    color:#f6f2e8;
   }
   .sp-card.is-collapsed .sp-card-header{ margin-bottom:0; }
   .sp-field{ gap:8px; }
   .sp-label{
     font-size:11px;
-    letter-spacing:0.08em;
+    letter-spacing:0.18em;
     color:var(--sp-muted);
+    text-transform:uppercase;
   }
   .sp-input,.sp-select,.sp-textarea{
-    border:1px solid #d8cfbf;
-    background:#fff;
-    border-radius:12px;
+    border:1px solid #c8b79f;
+    background:var(--sp-input-bg);
+    color:var(--sp-input-text);
+    border-radius:10px;
     padding:11px 12px;
     font-size:14px;
     transition:border-color .2s ease, box-shadow .2s ease;
   }
+  .sp-input::placeholder,.sp-textarea::placeholder{
+    color:#8a7a66;
+  }
   .sp-input:focus,.sp-select:focus,.sp-textarea:focus{
     outline:none;
     border-color:var(--sp-accent);
-    box-shadow:0 0 0 3px rgba(245,158,11,0.18);
+    box-shadow:0 0 0 3px rgba(217,119,42,0.25);
   }
   .sp-number{
-    border-radius:14px;
-    border:1px solid #d8cfbf;
-    background:#fff;
+    border-radius:12px;
+    border:1px solid #c8b79f;
+    background:var(--sp-input-bg);
+  }
+  .sp-number input{
+    background:transparent;
+    color:var(--sp-input-text);
   }
   .sp-step{
-    background:var(--sp-bg);
+    background:#e7dcc7;
+    color:#1f2a23;
+  }
+  .sp-hint{
+    color:#cbbba3;
   }
   .sp-btn{
     border-radius:999px;
-    padding:10px 16px;
+    padding:10px 18px;
     font-weight:700;
-    border:1px solid var(--sp-border);
-    background:#fff;
-    box-shadow:0 4px 10px rgba(15,61,46,0.08);
+    border:1px solid #4b5b4f;
+    background:#324235;
+    color:#f5efe6;
+    box-shadow:0 6px 12px rgba(10,18,14,0.35);
   }
   .sp-btn.primary{
-    background:var(--sp-green);
-    border-color:var(--sp-green);
-    color:#fff;
-    box-shadow:0 10px 18px rgba(15,61,46,0.2);
+    background:var(--sp-accent);
+    border-color:var(--sp-accent-strong);
+    color:#1f1206;
+    box-shadow:0 10px 18px rgba(217,119,42,0.35);
   }
   .sp-btn.sp-btn-schedule{
     background:var(--sp-accent);
     border-color:var(--sp-accent-strong);
-    color:#2c1b00;
+    color:#1f1206;
   }
   .sp-btn.ghost{
     background:transparent;
+    border-color:#5a6a5d;
   }
   .sp-btn.danger{
-    background:#fff;
-    color:#b91c1c;
+    background:#3a2c2c;
+    color:#f9d1d1;
+    border-color:#6b3a3a;
   }
   .sp-btn.danger.is-confirm{
     background:#b91c1c;
@@ -455,50 +495,56 @@
     color:#fff;
   }
   .sp-chip{
-    border:1px dashed var(--sp-border);
-    background:#fff7e6;
-    color:#7a5b18;
+    border:1px solid #4c5a50;
+    background:#2f3f34;
+    color:#f2e7d4;
   }
   .sp-chip.is-info{
-    background:#e9f1ff;
-    color:#1d4ed8;
-    border-color:#bfdbfe;
+    background:#2a3850;
+    color:#cfe0ff;
+    border-color:#394e6b;
   }
   .sp-chip.is-success{
-    background:#e7f7ef;
-    color:#0f7b4d;
-    border-color:#b7ebcf;
+    background:#2c3f34;
+    color:#ccebd9;
+    border-color:#3e5b4c;
   }
   .sp-chip.is-warn{
-    background:#fff4dc;
-    color:#9a5a06;
-    border-color:#f5d08d;
+    background:#4a3b25;
+    color:#f5d39b;
+    border-color:#6a512e;
   }
   .sp-chip.is-error{
-    background:#ffecec;
-    color:#b91c1c;
-    border-color:#fecaca;
+    background:#4a2a2a;
+    color:#f7c7c7;
+    border-color:#6a3939;
   }
   .sp-scope-group{
-    border-radius:16px;
-    background:#fffdf6;
-    border:1px solid var(--sp-border);
+    border-radius:14px;
+    background:#2d3b32;
+    border:1px solid #3b4b40;
   }
   .sp-scope-pill{
-    letter-spacing:0.12em;
+    letter-spacing:0.16em;
   }
-  .sp-scope-group.is-basics{ --accent:#0f766e; background:#eaf6f2; }
-  .sp-scope-group.is-wood{ --accent:#a16207; background:#fff2df; }
-  .sp-scope-group.is-style{ --accent:#1d4ed8; background:#e8f0ff; }
-  .sp-scope-group.is-repair{ --accent:#b91c1c; background:#fff1f2; }
-  .sp-scope-group.is-gates{ --accent:#0284c7; background:#e0f2fe; }
+  .sp-scope-group.is-basics{ --accent:#6fb28f; background:#2b3b33; }
+  .sp-scope-group.is-wood{ --accent:#d0893a; background:#3a2f24; }
+  .sp-scope-group.is-style{ --accent:#8aa3ff; background:#2a3344; }
+  .sp-scope-group.is-repair{ --accent:#f36a6a; background:#3a2a2a; }
+  .sp-scope-group.is-gates{ --accent:#68b7d8; background:#253642; }
+
+  #sp-map{
+    border:1px solid #566256;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06);
+  }
 
   .sp-output{
     margin-top:0;
   }
   .sp-output textarea{
     min-height:180px;
-    background:#fff;
+    background:#f7efdf;
+    color:#1f2a23;
   }
 
   .sp-guide{
@@ -515,8 +561,8 @@
     width:32px;
     height:32px;
     border-radius:10px;
-    background:var(--sp-green);
-    color:#fff;
+    background:var(--sp-accent);
+    color:#1f1206;
     font-weight:800;
     display:grid;
     place-items:center;
@@ -535,42 +581,54 @@
   }
   .sp-jump-link{
     text-decoration:none;
-    color:var(--sp-ink);
-    background:#fff;
-    border:1px solid var(--sp-border);
+    color:#f4f0e6;
+    background:#2a3a31;
+    border:1px solid #4c5a50;
     border-radius:999px;
     padding:6px 10px;
     font-size:12px;
     font-weight:700;
   }
   .sp-jump-link:hover{
-    border-color:var(--sp-green);
+    border-color:var(--sp-accent);
   }
 
   .sp-floating-actions{
-    background:rgba(255,250,240,0.95);
+    background:rgba(30,44,36,0.95);
     backdrop-filter:blur(6px);
-    border-top:1px solid var(--sp-border);
-    box-shadow:0 -10px 20px rgba(15,61,46,0.08);
+    border-top:1px solid #2f3f34;
+    box-shadow:0 -10px 20px rgba(8,14,11,0.45);
   }
   .sp-floating-actions .sp-fab{
     border-radius:999px;
-    background:#fff;
+    background:#2b3a31;
+    border-color:#415146;
+    color:#f4f0e6;
   }
   .sp-floating-actions .sp-fab-icon{
-    background:var(--sp-green);
+    background:var(--sp-accent);
+    color:#1f1206;
   }
   .sp-floating-actions .sp-fab.danger{
-    background:#ffecec;
-    color:#b91c1c;
-    border-color:#fecaca;
+    background:#3a2c2c;
+    color:#f7c7c7;
+    border-color:#6a3939;
   }
   .sp-floating-actions .sp-fab.danger .sp-fab-icon{
     background:#b91c1c;
+    color:#fff;
+  }
+
+  .sp-modal{
+    background:rgba(10,16,12,0.7);
+  }
+  .sp-modal-card{
+    background:linear-gradient(180deg, rgba(46,67,53,0.95) 0%, rgba(32,45,36,0.98) 100%);
+    border:1px solid #3b4b40;
   }
 
   @keyframes sp-fade-up{
-    from{ opacity:0; transform:translateY(8px); }
+    from{ opacity:0; transform:translateY(10px); }
     to{ opacity:1; transform:translateY(0); }
   }
   .sp-card,
@@ -594,8 +652,8 @@
     <div class="sp-container">
       <div class="sp-header">
         <div class="sp-brand">
-          <div class="sp-title"><span class="sp-badge">Staging</span> Scope Generator</div>
-          <div class="sp-subtitle">Estimate, map, and generate notes in one flow for faster, more consistent scopes.</div>
+          <div class="sp-title"><span class="sp-badge">Strong Perimeter</span> Scope Generator</div>
+          <div class="sp-subtitle">Residential &amp; commercial fence experts • internal scope builder</div>
         </div>
         <div class="sp-actions">
           <a class="sp-btn ghost sp-btn-schedule" href="https://pro.housecallpro.com/app/calendar_new" target="_blank" rel="noopener noreferrer">Schedule</a>
