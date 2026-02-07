@@ -6,7 +6,7 @@
   <title>Scope Generator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/jpeg" sizes="32x32" href="https://cdn.prod.website-files.com/6594928d27a68dfdb6474334/66e8a1e05c9e00dea43e9a1b_Strong-Perimeter-Logo-32.jpg" />
   <style>
   :root{
@@ -673,6 +673,215 @@
     }
   }
 
+  /* === Brand palette refresh (clear separation) === */
+  :root{
+    --sp-green:#004B3D;
+    --sp-green-dark:#003328;
+    --sp-ink:#1b2a23;
+    --sp-muted:#586F61;
+    --sp-border:#cfdad3;
+    --sp-bg:#f5f7f5;
+    --sp-card:#ffffff;
+    --sp-radius:16px;
+    --sp-stage-bg:#f4f7f5;
+    --sp-accent:#C04F23;
+    --sp-accent-strong:#A8441D;
+    --sp-input-bg:#ffffff;
+    --sp-input-text:#1b2a23;
+    --sp-shadow:0 10px 22px rgba(0,0,0,0.08);
+    --sp-floating-offset:112px;
+  }
+  body{
+    background:var(--sp-stage-bg);
+    background-image:
+      radial-gradient(900px 480px at 10% -10%, rgba(0,75,61,0.08) 0%, rgba(0,75,61,0) 60%),
+      radial-gradient(820px 520px at 90% -20%, rgba(88,111,97,0.18) 0%, rgba(88,111,97,0) 55%),
+      repeating-linear-gradient(135deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 10px);
+  }
+  #sp-scope{
+    font-family:"Open Sans","Segoe UI","Helvetica Neue",sans-serif;
+    color:var(--sp-ink);
+  }
+  .sp-header{
+    background:var(--sp-green);
+    border-color:var(--sp-green-dark);
+    color:#f4f7f5;
+  }
+  .sp-title,
+  .sp-card-title{
+    font-family:"Open Sans","Segoe UI","Helvetica Neue",sans-serif;
+    letter-spacing:0.2px;
+    color:inherit;
+  }
+  .sp-title-text{
+    font-size:24px;
+    font-weight:700;
+    color:#ffffff;
+  }
+  .sp-subtitle{
+    color:#d8e5df;
+    text-transform:none;
+    letter-spacing:0.02em;
+  }
+  .sp-header .sp-btn{
+    background:rgba(255,255,255,0.12);
+    border-color:rgba(255,255,255,0.35);
+    color:#ffffff;
+  }
+  .sp-header .sp-btn.sp-btn-schedule,
+  .sp-header .sp-btn.primary{
+    background:var(--sp-accent);
+    border-color:var(--sp-accent-strong);
+    color:#1f1206;
+  }
+  .sp-card{
+    background:var(--sp-card);
+    border-color:var(--sp-border);
+    box-shadow:var(--sp-shadow);
+  }
+  .sp-card::before{
+    box-shadow:none;
+  }
+  .sp-card-header{
+    background:#f1f5f3;
+    border:1px solid var(--sp-border);
+    border-radius:12px;
+    padding:12px 14px;
+    margin-bottom:14px;
+  }
+  .sp-card-title{
+    color:var(--sp-ink);
+    font-weight:700;
+  }
+  .sp-label{
+    color:var(--sp-muted);
+    letter-spacing:0.12em;
+  }
+  .sp-input,.sp-select,.sp-textarea{
+    border:1px solid #c3d0c9;
+    background:var(--sp-input-bg);
+    color:var(--sp-input-text);
+  }
+  .sp-input::placeholder,.sp-textarea::placeholder{
+    color:#7b8a82;
+  }
+  .sp-input:focus,.sp-select:focus,.sp-textarea:focus{
+    border-color:var(--sp-accent);
+    box-shadow:0 0 0 3px rgba(192,79,35,0.18);
+  }
+  .sp-number{
+    background:#fff;
+    border-color:#c3d0c9;
+  }
+  .sp-step{
+    background:#eef3f1;
+    color:#1b2a23;
+  }
+  .sp-hint{
+    color:var(--sp-muted);
+  }
+  .sp-btn{
+    background:#ffffff;
+    color:var(--sp-green);
+    border-color:var(--sp-green);
+    box-shadow:0 6px 12px rgba(0,0,0,0.08);
+  }
+  .sp-btn.primary{
+    background:var(--sp-accent);
+    border-color:var(--sp-accent-strong);
+    color:#1f1206;
+  }
+  .sp-btn.ghost{
+    background:transparent;
+    border-color:#c3d0c9;
+    color:var(--sp-green);
+  }
+  .sp-chip{
+    background:#f1f5f3;
+    border-color:#d6dfd8;
+    color:var(--sp-green);
+  }
+  .sp-chip.is-info{
+    background:#edf4ff;
+    color:#1d4ed8;
+    border-color:#cfe0ff;
+  }
+  .sp-chip.is-success{
+    background:#e9f6ef;
+    color:#0f7b4d;
+    border-color:#cbe9d8;
+  }
+  .sp-chip.is-warn{
+    background:#fff3e8;
+    color:#a3541c;
+    border-color:#f5d4be;
+  }
+  .sp-chip.is-error{
+    background:#ffecec;
+    color:#b91c1c;
+    border-color:#fecaca;
+  }
+  .sp-scope-group{
+    background:#f6f9f7;
+    border-color:#d6dfd8;
+  }
+  .sp-scope-group.is-basics{ --accent:#0f766e; background:#eef6f3; }
+  .sp-scope-group.is-wood{ --accent:#c27b2f; background:#fbf2ea; }
+  .sp-scope-group.is-style{ --accent:#1d4ed8; background:#eef2ff; }
+  .sp-scope-group.is-repair{ --accent:#b91c1c; background:#fff1f2; }
+  .sp-scope-group.is-gates{ --accent:#0284c7; background:#e6f4fb; }
+  #sp-map{
+    border-color:#c3d0c9;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.04);
+  }
+  .sp-output textarea{
+    background:#ffffff;
+    color:var(--sp-ink);
+  }
+  .sp-guide-step{
+    background:var(--sp-accent);
+    color:#1f1206;
+  }
+  .sp-jump-link{
+    background:#ffffff;
+    border-color:#d6dfd8;
+    color:var(--sp-green);
+  }
+  .sp-floating-actions{
+    background:rgba(255,255,255,0.95);
+    border-top:1px solid #d6dfd8;
+    box-shadow:0 -8px 18px rgba(0,0,0,0.08);
+  }
+  .sp-floating-actions .sp-fab{
+    background:#ffffff;
+    border-color:#d6dfd8;
+    color:var(--sp-green);
+  }
+  .sp-floating-actions .sp-fab-icon{
+    background:var(--sp-green);
+    color:#ffffff;
+  }
+  .sp-floating-actions .sp-fab.danger{
+    background:#ffecec;
+    border-color:#fecaca;
+    color:#b91c1c;
+  }
+  .sp-floating-actions .sp-fab.danger .sp-fab-icon{
+    background:#b91c1c;
+    color:#ffffff;
+  }
+  .sp-modal{
+    background:rgba(0,0,0,0.45);
+  }
+  .sp-modal-card{
+    background:#ffffff;
+    border:1px solid #d6dfd8;
+    color:var(--sp-ink);
+  }
+  .sp-logo-panel{
+    background:#ffffff;
+    border-color:#d6dfd8;
+  }
   </style>
 </head>
 <body>
