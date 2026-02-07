@@ -6826,6 +6826,29 @@ document.addEventListener('DOMContentLoaded', function(){
     }, { full: { len: 0, hardscape: 0, trim: 0 }, primePaint: { len: 0, hardscape: 0, trim: 0 }, spot: 0 });
 
     if (paintingSummary.full.len || paintingSummary.primePaint.len || paintingSummary.spot){
+      const paintingMethodSet = new Set();
+      state.sections.forEach(s=>{
+        const fenceType = (s.fenceType || '').toLowerCase();
+        if(fenceType && fenceType !== 'wrought iron') return;
+        if(s.painting === 'Paint Section' || s.painting === 'Prime and Paint' || s.painting === 'Spot Paint Welds'){
+          const method = String(s.paintingApplication || 'By Hand').trim();
+          if(method) paintingMethodSet.add(method);
+        }
+      });
+      const methodOrder = ['By Hand', 'Spray'];
+      const methodLabels = methodOrder.filter(m => paintingMethodSet.has(m));
+      paintingMethodSet.forEach(m=>{
+        if(!methodLabels.includes(m)) methodLabels.push(m);
+      });
+      let methodNote = '';
+      if(methodLabels.length){
+        const methodText = methodLabels.length === 1 ? methodLabels[0] : methodLabels.join(' and ');
+        methodNote = `Paint application method${methodLabels.length > 1 ? 's' : ''}: ${methodText}.`;
+        if(methodLabels.includes('By Hand')){
+          methodNote += ' By hand allows a thicker coat of paint to be applied, which is great for protection, and leaves a more textured finish from the gloves.';
+        }
+      }
+
       const segments = [];
       if(paintingSummary.full.len){
         let detail = `Scrape and brush off loose rust and debris, then apply gloss black oil-based paint to approximately ${paintingSummary.full.len} linear feet of fence`;
@@ -6847,7 +6870,11 @@ document.addEventListener('DOMContentLoaded', function(){
       if(paintingSummary.spot){
         segments.push(`Spot prep and apply gloss black oil-based paint to weld areas along ${paintingSummary.spot} linear feet`);
       }
-      addServiceLine('Surface Preparation & Painting', segments.join('; ') + '.');
+      let desc = segments.join('; ') + '.';
+      if(methodNote){
+        desc += ` ${methodNote}`;
+      }
+      addServiceLine('Surface Preparation & Painting', desc);
     }
 
     const woodRepairSections = state.sections.filter(s=> ((s.fenceType||'').toLowerCase() === 'wood') && ((s.scopeType||'repair') === 'repair'));
