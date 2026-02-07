@@ -287,17 +287,17 @@
 
   /* === Strong Perimeter redesign (matches mockup) === */
   :root{
-    --sp-green:#2e4335;
-    --sp-green-dark:#1f2f26;
+    --sp-green:#004B3D;
+    --sp-green-dark:#003428;
     --sp-ink:#f4f0e6;
-    --sp-muted:#d2c4ad;
-    --sp-border:#3c4a3f;
-    --sp-bg:#2a3a31;
-    --sp-card:#2a3a31;
+    --sp-muted:#c9d2ca;
+    --sp-border:#586F61;
+    --sp-bg:#0f3a31;
+    --sp-card:#0f3a31;
     --sp-radius:18px;
-    --sp-stage-bg:#1b2922;
-    --sp-accent:#d9772a;
-    --sp-accent-strong:#c05f1e;
+    --sp-stage-bg:#0b2c25;
+    --sp-accent:#C04F23;
+    --sp-accent-strong:#A8441D;
     --sp-input-bg:#f4ead8;
     --sp-input-text:#1f2a23;
     --sp-shadow:0 16px 30px rgba(10,18,14,0.35);
@@ -306,8 +306,8 @@
   body{
     background:var(--sp-stage-bg);
     background-image:
-      radial-gradient(1200px 700px at 10% -20%, rgba(217,119,42,0.18) 0%, rgba(217,119,42,0) 60%),
-      radial-gradient(900px 600px at 85% -10%, rgba(58,92,73,0.45) 0%, rgba(58,92,73,0) 55%),
+      radial-gradient(1200px 700px at 10% -20%, rgba(192,79,35,0.18) 0%, rgba(192,79,35,0) 60%),
+      radial-gradient(900px 600px at 85% -10%, rgba(88,111,97,0.45) 0%, rgba(88,111,97,0) 55%),
       repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 2px, transparent 2px, transparent 10px);
   }
   #sp-scope{
@@ -319,8 +319,8 @@
     padding:28px 24px calc(52px + var(--sp-floating-offset, 0px));
   }
   .sp-header{
-    background:var(--sp-green-dark);
-    border:1px solid #223429;
+    background:var(--sp-green);
+    border:1px solid var(--sp-border);
     border-radius:var(--sp-radius);
     padding:18px 20px;
     box-shadow:var(--sp-shadow);
@@ -333,7 +333,7 @@
     position:absolute;
     inset:0;
     background:
-      radial-gradient(360px 120px at 10% 0%, rgba(217,119,42,0.12), transparent 70%),
+      radial-gradient(360px 120px at 10% 0%, rgba(192,79,35,0.16), transparent 70%),
       radial-gradient(420px 140px at 90% 10%, rgba(255,255,255,0.06), transparent 75%);
     pointer-events:none;
   }
@@ -424,7 +424,7 @@
   .sp-card{
     padding:18px;
     border-radius:var(--sp-radius);
-    background:linear-gradient(180deg, rgba(46,67,53,0.92) 0%, rgba(34,50,40,0.98) 100%);
+    background:linear-gradient(180deg, rgba(0,75,61,0.92) 0%, rgba(0,52,40,0.98) 100%);
     border:1px solid var(--sp-border);
     box-shadow:var(--sp-shadow);
     position:relative;
@@ -470,7 +470,7 @@
   .sp-input:focus,.sp-select:focus,.sp-textarea:focus{
     outline:none;
     border-color:var(--sp-accent);
-    box-shadow:0 0 0 3px rgba(217,119,42,0.25);
+    box-shadow:0 0 0 3px rgba(192,79,35,0.25);
   }
   .sp-number{
     border-radius:12px;
@@ -486,14 +486,14 @@
     color:#1f2a23;
   }
   .sp-hint{
-    color:#cbbba3;
+    color:var(--sp-muted);
   }
   .sp-btn{
     border-radius:999px;
     padding:10px 18px;
     font-weight:700;
-    border:1px solid #4b5b4f;
-    background:#324235;
+    border:1px solid var(--sp-border);
+    background:var(--sp-green);
     color:#f5efe6;
     box-shadow:0 6px 12px rgba(10,18,14,0.35);
   }
@@ -501,7 +501,7 @@
     background:var(--sp-accent);
     border-color:var(--sp-accent-strong);
     color:#1f1206;
-    box-shadow:0 10px 18px rgba(217,119,42,0.35);
+    box-shadow:0 10px 18px rgba(192,79,35,0.35);
   }
   .sp-btn.sp-btn-schedule{
     background:var(--sp-accent);
@@ -510,7 +510,7 @@
   }
   .sp-btn.ghost{
     background:transparent;
-    border-color:#5a6a5d;
+    border-color:var(--sp-border);
   }
   .sp-btn.danger{
     background:#3a2c2c;
@@ -523,8 +523,8 @@
     color:#fff;
   }
   .sp-chip{
-    border:1px solid #4c5a50;
-    background:#2f3f34;
+    border:1px solid var(--sp-border);
+    background:rgba(88,111,97,0.25);
     color:#f2e7d4;
   }
   .sp-chip.is-info{
@@ -549,8 +549,8 @@
   }
   .sp-scope-group{
     border-radius:14px;
-    background:#2d3b32;
-    border:1px solid #3b4b40;
+    background:rgba(88,111,97,0.18);
+    border:1px solid var(--sp-border);
   }
   .sp-scope-pill{
     letter-spacing:0.16em;
@@ -562,7 +562,7 @@
   .sp-scope-group.is-gates{ --accent:#68b7d8; background:#253642; }
 
   #sp-map{
-    border:1px solid #566256;
+    border:1px solid var(--sp-border);
     box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06);
   }
 
@@ -610,8 +610,8 @@
   .sp-jump-link{
     text-decoration:none;
     color:#f4f0e6;
-    background:#2a3a31;
-    border:1px solid #4c5a50;
+    background:var(--sp-green);
+    border:1px solid var(--sp-border);
     border-radius:999px;
     padding:6px 10px;
     font-size:12px;
@@ -622,15 +622,15 @@
   }
 
   .sp-floating-actions{
-    background:rgba(30,44,36,0.95);
+    background:rgba(0,75,61,0.92);
     backdrop-filter:blur(6px);
-    border-top:1px solid #2f3f34;
+    border-top:1px solid var(--sp-border);
     box-shadow:0 -10px 20px rgba(8,14,11,0.45);
   }
   .sp-floating-actions .sp-fab{
     border-radius:999px;
-    background:#2b3a31;
-    border-color:#415146;
+    background:var(--sp-green);
+    border-color:var(--sp-border);
     color:#f4f0e6;
   }
   .sp-floating-actions .sp-fab-icon{
@@ -651,8 +651,8 @@
     background:rgba(10,16,12,0.7);
   }
   .sp-modal-card{
-    background:linear-gradient(180deg, rgba(46,67,53,0.95) 0%, rgba(32,45,36,0.98) 100%);
-    border:1px solid #3b4b40;
+    background:linear-gradient(180deg, rgba(0,75,61,0.95) 0%, rgba(0,52,40,0.98) 100%);
+    border:1px solid var(--sp-border);
   }
 
   @keyframes sp-fade-up{
