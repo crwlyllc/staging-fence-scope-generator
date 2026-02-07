@@ -349,6 +349,32 @@
     font-family:"Cinzel","Times New Roman",serif;
     font-size:28px;
     letter-spacing:0.5px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .sp-title-text{
+    font-size:26px;
+    letter-spacing:0.5px;
+  }
+  .sp-logo{
+    height:38px;
+    width:auto;
+    display:block;
+  }
+  .sp-logo-panel{
+    margin-top:12px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#f4ead8;
+    border:1px solid #d6c7ae;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .sp-logo-panel img{
+    height:28px;
+    width:auto;
   }
   .sp-subtitle{
     font-size:13px;
@@ -389,6 +415,8 @@
     .sp-container{ padding:20px 16px calc(44px + var(--sp-floating-offset, 0px)); }
     .sp-header{ padding:16px 14px; }
     .sp-title{ font-size:24px; }
+    .sp-title-text{ font-size:22px; }
+    .sp-logo{ height:32px; }
   }
   .sp-inline-cards{
     grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -652,7 +680,10 @@
     <div class="sp-container">
       <div class="sp-header">
         <div class="sp-brand">
-          <div class="sp-title"><span class="sp-badge">Strong Perimeter</span> Scope Generator</div>
+          <div class="sp-title">
+            <img class="sp-logo" src="assets/strong-perimeter-logo-white.svg" alt="Strong Perimeter" />
+            <span class="sp-title-text">Scope Generator</span>
+          </div>
           <div class="sp-subtitle">Residential &amp; commercial fence experts • internal scope builder</div>
         </div>
         <div class="sp-actions">
@@ -866,6 +897,9 @@
             <a class="sp-jump-link" href="#sp-map-card">Map</a>
             <a class="sp-jump-link" href="#sp-sections">Sections</a>
             <a class="sp-jump-link" href="#sp-output">Notes</a>
+          </div>
+          <div class="sp-logo-panel">
+            <img src="assets/strong-perimeter-logo-green.svg" alt="Strong Perimeter" />
           </div>
           <div class="sp-hint">Use the floating bar for quick add, duplicate, reset, and jump actions.</div>
         </div>
