@@ -5590,7 +5590,7 @@ document.addEventListener('DOMContentLoaded', function(){
           if(!parts.length) return null;
           let desc = parts.join(' ');
           if(key === 'repairs'){
-            const disclaimer = 'The listed repairs are what was found and attributed to this estimate option. There could be more repairs needed that were not found/seen. If our crew finds additional repairs when on site, we will present them to you for approval at an additional cost.';
+            const disclaimer = 'The repairs listed are based on what was identified at the time of this estimate. Additional repairs may be required that were not visible or discoverable during inspection. If our crew identifies any additional issues on site, we will notify you for approval prior to proceeding, and any extra work will be billed at an additional cost.';
             desc = desc ? `${desc}\n\n${disclaimer}` : disclaimer;
           }
           return { name: label, desc };
