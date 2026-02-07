@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Scope Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/jpeg" sizes="32x32" href="https://cdn.prod.website-files.com/6594928d27a68dfdb6474334/66e8a1e05c9e00dea43e9a1b_Strong-Perimeter-Logo-32.jpg" />
   <style>
   :root{
@@ -282,13 +285,318 @@
     }
   }
 
+  /* === Redesign overrides === */
+  :root{
+    --sp-green:#0f3d2e;
+    --sp-ink:#14211b;
+    --sp-muted:#5f6b63;
+    --sp-border:#e2d9cc;
+    --sp-bg:#f4efe6;
+    --sp-card:#fffaf1;
+    --sp-radius:18px;
+    --sp-stage-bg:#f2ede2;
+    --sp-accent:#f59e0b;
+    --sp-accent-strong:#d97706;
+    --sp-shadow:0 12px 30px rgba(15,61,46,0.10);
+    --sp-floating-offset:112px;
+  }
+  body{
+    background:var(--sp-stage-bg);
+    background-image:
+      radial-gradient(1200px 700px at 10% -10%, #fff4da 0%, rgba(255,244,218,0) 60%),
+      radial-gradient(1000px 650px at 95% 0%, #e6f5ee 0%, rgba(230,245,238,0) 55%),
+      repeating-linear-gradient(135deg, rgba(15,61,46,0.03) 0px, rgba(15,61,46,0.03) 2px, transparent 2px, transparent 10px);
+  }
+  #sp-scope{
+    font-family:"Space Grotesk","Segoe UI","Helvetica Neue",sans-serif;
+    color:var(--sp-ink);
+  }
+  .sp-container{
+    max-width:1200px;
+    padding:28px 24px calc(52px + var(--sp-floating-offset, 0px));
+  }
+  .sp-header{
+    background:var(--sp-card);
+    border:1px solid var(--sp-border);
+    border-radius:var(--sp-radius);
+    padding:16px 18px;
+    box-shadow:var(--sp-shadow);
+    gap:16px;
+  }
+  .sp-brand{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:200px;
+  }
+  .sp-title{
+    font-family:"Fraunces","Times New Roman",serif;
+    font-size:28px;
+    letter-spacing:0.2px;
+  }
+  .sp-subtitle{
+    font-size:14px;
+    color:var(--sp-muted);
+    max-width:560px;
+  }
+  .sp-badge{
+    background:var(--sp-green);
+    color:#fff;
+    letter-spacing:0.6px;
+  }
+  .sp-actions{ gap:8px; }
+  .sp-layout{
+    display:grid;
+    gap:20px;
+    align-items:start;
+  }
+  .sp-main{
+    display:grid;
+    gap:16px;
+  }
+  .sp-side{
+    display:grid;
+    gap:16px;
+  }
+  @media(min-width:980px){
+    .sp-layout{ grid-template-columns:minmax(0,1fr) 360px; }
+    .sp-side{ position:sticky; top:20px; }
+  }
+  @media(max-width:719px){
+    .sp-container{ padding:20px 16px calc(44px + var(--sp-floating-offset, 0px)); }
+    .sp-header{ padding:14px 14px; }
+    .sp-title{ font-size:24px; }
+  }
+  .sp-inline-cards{
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  }
+  .sp-card{
+    padding:18px;
+    border-radius:var(--sp-radius);
+    background:linear-gradient(180deg,#fffdf6 0%, #fff6e8 100%);
+    border:1px solid var(--sp-border);
+    box-shadow:var(--sp-shadow);
+    position:relative;
+  }
+  .sp-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    pointer-events:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7);
+  }
+  .sp-card-header{
+    margin-bottom:12px;
+    padding-bottom:10px;
+    border-bottom:1px dashed var(--sp-border);
+  }
+  .sp-card-title{
+    font-family:"Fraunces","Times New Roman",serif;
+    font-size:18px;
+  }
+  .sp-card.is-collapsed .sp-card-header{ margin-bottom:0; }
+  .sp-field{ gap:8px; }
+  .sp-label{
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--sp-muted);
+  }
+  .sp-input,.sp-select,.sp-textarea{
+    border:1px solid #d8cfbf;
+    background:#fff;
+    border-radius:12px;
+    padding:11px 12px;
+    font-size:14px;
+    transition:border-color .2s ease, box-shadow .2s ease;
+  }
+  .sp-input:focus,.sp-select:focus,.sp-textarea:focus{
+    outline:none;
+    border-color:var(--sp-accent);
+    box-shadow:0 0 0 3px rgba(245,158,11,0.18);
+  }
+  .sp-number{
+    border-radius:14px;
+    border:1px solid #d8cfbf;
+    background:#fff;
+  }
+  .sp-step{
+    background:var(--sp-bg);
+  }
+  .sp-btn{
+    border-radius:999px;
+    padding:10px 16px;
+    font-weight:700;
+    border:1px solid var(--sp-border);
+    background:#fff;
+    box-shadow:0 4px 10px rgba(15,61,46,0.08);
+  }
+  .sp-btn.primary{
+    background:var(--sp-green);
+    border-color:var(--sp-green);
+    color:#fff;
+    box-shadow:0 10px 18px rgba(15,61,46,0.2);
+  }
+  .sp-btn.sp-btn-schedule{
+    background:var(--sp-accent);
+    border-color:var(--sp-accent-strong);
+    color:#2c1b00;
+  }
+  .sp-btn.ghost{
+    background:transparent;
+  }
+  .sp-btn.danger{
+    background:#fff;
+    color:#b91c1c;
+  }
+  .sp-btn.danger.is-confirm{
+    background:#b91c1c;
+    border-color:#b91c1c;
+    color:#fff;
+  }
+  .sp-chip{
+    border:1px dashed var(--sp-border);
+    background:#fff7e6;
+    color:#7a5b18;
+  }
+  .sp-chip.is-info{
+    background:#e9f1ff;
+    color:#1d4ed8;
+    border-color:#bfdbfe;
+  }
+  .sp-chip.is-success{
+    background:#e7f7ef;
+    color:#0f7b4d;
+    border-color:#b7ebcf;
+  }
+  .sp-chip.is-warn{
+    background:#fff4dc;
+    color:#9a5a06;
+    border-color:#f5d08d;
+  }
+  .sp-chip.is-error{
+    background:#ffecec;
+    color:#b91c1c;
+    border-color:#fecaca;
+  }
+  .sp-scope-group{
+    border-radius:16px;
+    background:#fffdf6;
+    border:1px solid var(--sp-border);
+  }
+  .sp-scope-pill{
+    letter-spacing:0.12em;
+  }
+  .sp-scope-group.is-basics{ --accent:#0f766e; background:#eaf6f2; }
+  .sp-scope-group.is-wood{ --accent:#a16207; background:#fff2df; }
+  .sp-scope-group.is-style{ --accent:#1d4ed8; background:#e8f0ff; }
+  .sp-scope-group.is-repair{ --accent:#b91c1c; background:#fff1f2; }
+  .sp-scope-group.is-gates{ --accent:#0284c7; background:#e0f2fe; }
+
+  .sp-output{
+    margin-top:0;
+  }
+  .sp-output textarea{
+    min-height:180px;
+    background:#fff;
+  }
+
+  .sp-guide{
+    display:grid;
+    gap:12px;
+  }
+  .sp-guide-item{
+    display:grid;
+    grid-template-columns:32px 1fr;
+    gap:12px;
+    align-items:start;
+  }
+  .sp-guide-step{
+    width:32px;
+    height:32px;
+    border-radius:10px;
+    background:var(--sp-green);
+    color:#fff;
+    font-weight:800;
+    display:grid;
+    place-items:center;
+  }
+  .sp-guide-title{
+    font-weight:700;
+  }
+  .sp-guide-sub{
+    color:var(--sp-muted);
+    font-size:13px;
+  }
+  .sp-jump{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .sp-jump-link{
+    text-decoration:none;
+    color:var(--sp-ink);
+    background:#fff;
+    border:1px solid var(--sp-border);
+    border-radius:999px;
+    padding:6px 10px;
+    font-size:12px;
+    font-weight:700;
+  }
+  .sp-jump-link:hover{
+    border-color:var(--sp-green);
+  }
+
+  .sp-floating-actions{
+    background:rgba(255,250,240,0.95);
+    backdrop-filter:blur(6px);
+    border-top:1px solid var(--sp-border);
+    box-shadow:0 -10px 20px rgba(15,61,46,0.08);
+  }
+  .sp-floating-actions .sp-fab{
+    border-radius:999px;
+    background:#fff;
+  }
+  .sp-floating-actions .sp-fab-icon{
+    background:var(--sp-green);
+  }
+  .sp-floating-actions .sp-fab.danger{
+    background:#ffecec;
+    color:#b91c1c;
+    border-color:#fecaca;
+  }
+  .sp-floating-actions .sp-fab.danger .sp-fab-icon{
+    background:#b91c1c;
+  }
+
+  @keyframes sp-fade-up{
+    from{ opacity:0; transform:translateY(8px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .sp-card,
+  .sp-scope-group{
+    animation:sp-fade-up .45s ease both;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .sp-card,
+    .sp-scope-group{
+      animation:none;
+    }
+    *{
+      transition:none !important;
+    }
+  }
+
   </style>
 </head>
 <body>
 <div id="sp-scope">
     <div class="sp-container">
       <div class="sp-header">
-        <div class="sp-title">Scope Generator</div>
+        <div class="sp-brand">
+          <div class="sp-title"><span class="sp-badge">Staging</span> Scope Generator</div>
+          <div class="sp-subtitle">Estimate, map, and generate notes in one flow for faster, more consistent scopes.</div>
+        </div>
         <div class="sp-actions">
           <a class="sp-btn ghost sp-btn-schedule" href="https://pro.housecallpro.com/app/calendar_new" target="_blank" rel="noopener noreferrer">Schedule</a>
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
@@ -373,7 +681,9 @@
       </div>
     </div>
 
-    <div class="sp-inline-cards">
+    <div class="sp-layout">
+      <div class="sp-main">
+        <div class="sp-inline-cards">
       <div class="sp-card" id="sp-hcp-card">
         <div class="sp-card-header">
           <div class="sp-card-title">Housecall Pro Estimate</div>
@@ -461,6 +771,47 @@
       </div>
     </div>
 
+      </div>
+      <aside class="sp-side">
+        <div class="sp-card sp-guide-card" id="sp-guide-card">
+          <div class="sp-card-header">
+            <div class="sp-card-title">Quick Guide</div>
+            <span class="sp-chip is-info">3 steps</span>
+          </div>
+          <div class="sp-guide">
+            <div class="sp-guide-item">
+              <div class="sp-guide-step">1</div>
+              <div>
+                <div class="sp-guide-title">Get the address</div>
+                <div class="sp-guide-sub">Enter the estimate number to pull the service location.</div>
+              </div>
+            </div>
+            <div class="sp-guide-item">
+              <div class="sp-guide-step">2</div>
+              <div>
+                <div class="sp-guide-title">Map the fence runs</div>
+                <div class="sp-guide-sub">Draw each run to auto-create sections and lengths.</div>
+              </div>
+            </div>
+            <div class="sp-guide-item">
+              <div class="sp-guide-step">3</div>
+              <div>
+                <div class="sp-guide-title">Dial in scope</div>
+                <div class="sp-guide-sub">Edit materials, gates, and repairs, then copy notes.</div>
+              </div>
+            </div>
+          </div>
+          <div class="sp-divider"></div>
+          <div class="sp-jump">
+            <a class="sp-jump-link" href="#sp-hcp-card">Estimate</a>
+            <a class="sp-jump-link" href="#sp-import-card">Reload</a>
+            <a class="sp-jump-link" href="#sp-map-card">Map</a>
+            <a class="sp-jump-link" href="#sp-sections">Sections</a>
+            <a class="sp-jump-link" href="#sp-output">Notes</a>
+          </div>
+          <div class="sp-hint">Use the floating bar for quick add, duplicate, reset, and jump actions.</div>
+        </div>
+
     <div class="sp-output" id="sp-output" style="display:none">
       <div class="sp-card">
         <div class="sp-card-header">
@@ -496,6 +847,8 @@
         <div class="sp-service-list" id="sp-service-lines"></div>
         <div class="sp-hint">Use the copy buttons to grab titles or descriptions individually.</div>
       </div>
+    </div>
+      </aside>
     </div>
   </div>
 </div>
