@@ -464,6 +464,23 @@
     font-size:14px;
     transition:border-color .2s ease, box-shadow .2s ease;
   }
+  .sp-output-value{
+    border:1px dashed rgba(200,183,159,0.65);
+    border-radius:10px;
+    padding:11px 12px;
+    font-size:14px;
+    font-weight:600;
+    color:var(--sp-ink);
+    background:rgba(244,234,216,0.18);
+    min-height:42px;
+    display:flex;
+    align-items:center;
+  }
+  .sp-output-value:empty::before{
+    content:attr(data-placeholder);
+    color:#8a7a66;
+    font-weight:500;
+  }
   .sp-input::placeholder,.sp-textarea::placeholder{
     color:#8a7a66;
   }
@@ -937,7 +954,7 @@
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-charge">Recommended Charge</label>
             <div class="sp-row">
-              <input class="sp-input" id="sp-manual-charge" type="text" readonly placeholder="$0.00" />
+              <div class="sp-output-value" id="sp-manual-charge" data-placeholder="$0.00" role="status" aria-live="polite"></div>
               <span class="sp-chip is-info" id="sp-manual-mode" style="display:none">Pricing</span>
             </div>
           </div>
@@ -946,19 +963,19 @@
         <div class="sp-grid">
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-gross">Total gross</label>
-            <input class="sp-input" id="sp-manual-gross" type="text" readonly placeholder="$0.00" />
+            <div class="sp-output-value" id="sp-manual-gross" data-placeholder="$0.00"></div>
           </div>
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-gross-hour">Gross per hour</label>
-            <input class="sp-input" id="sp-manual-gross-hour" type="text" readonly placeholder="$0.00" />
+            <div class="sp-output-value" id="sp-manual-gross-hour" data-placeholder="$0.00"></div>
           </div>
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-commission">Commission</label>
-            <input class="sp-input" id="sp-manual-commission" type="text" readonly placeholder="$0.00" />
+            <div class="sp-output-value" id="sp-manual-commission" data-placeholder="$0.00"></div>
           </div>
           <div class="sp-field col-6">
             <label class="sp-label" for="sp-manual-net">Net $</label>
-            <input class="sp-input" id="sp-manual-net" type="text" readonly placeholder="$0.00" />
+            <div class="sp-output-value" id="sp-manual-net" data-placeholder="$0.00"></div>
           </div>
         </div>
         <div class="sp-divider"></div>
@@ -968,19 +985,19 @@
             <div class="sp-service-list">
               <div class="sp-manual-scenario" data-manual-scenario data-target="90">
                 <span class="sp-chip is-info">$90 / hr</span>
-                <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
+                <div class="sp-output-value" data-manual-scenario-total data-placeholder="$0.00"></div>
               </div>
               <div class="sp-manual-scenario" data-manual-scenario data-target="100">
                 <span class="sp-chip is-info">$100 / hr</span>
-                <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
+                <div class="sp-output-value" data-manual-scenario-total data-placeholder="$0.00"></div>
               </div>
               <div class="sp-manual-scenario" data-manual-scenario data-target="110">
                 <span class="sp-chip is-info">$110 / hr</span>
-                <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
+                <div class="sp-output-value" data-manual-scenario-total data-placeholder="$0.00"></div>
               </div>
               <div class="sp-manual-scenario" data-manual-scenario data-target="120">
                 <span class="sp-chip is-info">$120 / hr</span>
-                <input class="sp-input" data-manual-scenario-total type="text" readonly placeholder="$0.00" />
+                <div class="sp-output-value" data-manual-scenario-total data-placeholder="$0.00"></div>
               </div>
             </div>
           </div>
@@ -5980,13 +5997,13 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function clearManualMetrics(){
-    if(manualGrossOutput) manualGrossOutput.value = '';
-    if(manualGrossHourOutput) manualGrossHourOutput.value = '';
-    if(manualCommissionOutput) manualCommissionOutput.value = '';
-    if(manualNetOutput) manualNetOutput.value = '';
+    if(manualGrossOutput) manualGrossOutput.textContent = '';
+    if(manualGrossHourOutput) manualGrossHourOutput.textContent = '';
+    if(manualCommissionOutput) manualCommissionOutput.textContent = '';
+    if(manualNetOutput) manualNetOutput.textContent = '';
     manualScenarioRows.forEach(row => {
       const totalEl = row.querySelector('[data-manual-scenario-total]');
-      if(totalEl) totalEl.value = '';
+      if(totalEl) totalEl.textContent = '';
     });
   }
 
@@ -5996,7 +6013,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const minimumSummary = getMinimumSummaryText();
     const raw = (manualCostInput.value || '').trim();
     if(!raw){
-      manualChargeOutput.value = '';
+      manualChargeOutput.textContent = '';
       manualModeChip.style.display = 'none';
       manualStatusEl.textContent = '';
       delete manualStatusEl.dataset.state;
@@ -6006,7 +6023,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const materialEquipmentCost = parseCurrencyInput(raw);
     if(!isFinite(materialEquipmentCost) || materialEquipmentCost < 0){
-      manualChargeOutput.value = '';
+      manualChargeOutput.textContent = '';
       manualModeChip.style.display = 'none';
       manualStatusEl.textContent = 'Enter a valid non-negative cost amount.';
       manualStatusEl.dataset.state = 'error';
@@ -6017,7 +6034,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const rawHours = manualHoursInput ? (manualHoursInput.value || '').trim() : '';
     const totalHours = parseFloat(rawHours);
     if(!isFinite(totalHours) || totalHours <= 0){
-      manualChargeOutput.value = '';
+      manualChargeOutput.textContent = '';
       manualModeChip.style.display = 'none';
       manualStatusEl.textContent = '';
       manualStatusEl.dataset.state = 'error';
@@ -6030,7 +6047,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const totalCost = materialEquipmentCost + laborCost + travelCost;
     const pricing = computeChargeRevenue(totalCost, totalHours);
     if(!pricing || !isFinite(pricing.revenue)){
-      manualChargeOutput.value = '';
+      manualChargeOutput.textContent = '';
       manualModeChip.style.display = 'none';
       manualStatusEl.textContent = 'Pricing inputs produced an invalid result. Check overhead and hours.';
       manualStatusEl.dataset.state = 'error';
@@ -6039,7 +6056,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const revenue = pricing.revenue;
-    manualChargeOutput.value = '$' + money(revenue);
+    manualChargeOutput.textContent = '$' + money(revenue);
     manualModeChip.textContent = 'Gross/hr target';
     manualModeChip.classList.remove('is-warn');
     manualModeChip.classList.add('is-info');
@@ -6052,15 +6069,15 @@ document.addEventListener('DOMContentLoaded', function(){
     const grossProfit = revenue - totalCost - (revenue * RATES.overhead);
     const netProfit = grossProfit - commissionValue;
 
-    if(manualGrossOutput) manualGrossOutput.value = '$' + money(grossProfit);
-    if(manualCommissionOutput) manualCommissionOutput.value = '$' + money(commissionValue);
-    if(manualNetOutput) manualNetOutput.value = '$' + money(netProfit);
+    if(manualGrossOutput) manualGrossOutput.textContent = '$' + money(grossProfit);
+    if(manualCommissionOutput) manualCommissionOutput.textContent = '$' + money(commissionValue);
+    if(manualNetOutput) manualNetOutput.textContent = '$' + money(netProfit);
 
     if(manualGrossHourOutput){
       if(isFinite(totalHours) && totalHours > 0){
-        manualGrossHourOutput.value = '$' + money(grossProfit / totalHours);
+        manualGrossHourOutput.textContent = '$' + money(grossProfit / totalHours);
       } else {
-        manualGrossHourOutput.value = '';
+        manualGrossHourOutput.textContent = '';
       }
     }
 
@@ -6069,24 +6086,24 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!totalEl) return;
       const target = parseFloat(row.dataset.target || '');
       if(!isFinite(target) || !isFinite(totalHours) || totalHours <= 0){
-        totalEl.value = '';
+        totalEl.textContent = '';
         return;
       }
       const targetGross = computeTargetGross(totalHours, target);
       if(!isFinite(targetGross)){
-        totalEl.value = '';
+        totalEl.textContent = '';
         return;
       }
       let grossRevenue = (targetGross + totalCost) / (1 - RATES.overhead);
       if(!isFinite(grossRevenue)){
-        totalEl.value = '';
+        totalEl.textContent = '';
         return;
       }
       const revenueMinimum = getRevenueMinimum();
       if(isFinite(revenueMinimum) && revenueMinimum > 0){
         grossRevenue = Math.max(grossRevenue, revenueMinimum);
       }
-      totalEl.value = '$' + money(grossRevenue);
+      totalEl.textContent = '$' + money(grossRevenue);
     });
   }
 
