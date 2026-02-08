@@ -5867,7 +5867,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const PRICING = {
     grossProfitTargetPerHour: 100,
     grossProfitMinimumResidential: 350,
-    grossProfitMinimumCommercial: 2500
+    grossProfitMinimumCommercial: 350,
+    revenueMinimumCommercial: 2500
   };
   const MANUAL_TRAVEL_FLAT = 50;
 
@@ -5893,13 +5894,38 @@ document.addEventListener('DOMContentLoaded', function(){
     return PRICING.grossProfitMinimumResidential;
   }
 
+  function getRevenueMinimum(){
+    const type = getCustomerType();
+    if(type === 'Commercial' || type === 'City'){
+      return PRICING.revenueMinimumCommercial;
+    }
+    return null;
+  }
+
+  function getMinimumLabelAndValue(){
+    const revenueMin = getRevenueMinimum();
+    if(isFinite(revenueMin) && revenueMin > 0){
+      return { label: 'Minimum charge', value: revenueMin };
+    }
+    return { label: 'Minimum gross', value: getGrossProfitMinimum() };
+  }
+
+  function getMinimumSummaryText(){
+    const minGross = getGrossProfitMinimum();
+    const revenueMin = getRevenueMinimum();
+    if(isFinite(revenueMin) && revenueMin > 0){
+      return `$${money(minGross)} minimum gross, $${money(revenueMin)} minimum charge`;
+    }
+    return `$${money(minGross)} minimum gross`;
+  }
+
   function updatePricingMinimumUI(){
-    const minValue = getGrossProfitMinimum();
+    const minValue = getMinimumLabelAndValue();
     if(customerMinHint){
-      customerMinHint.textContent = `Minimum charge: $${money(minValue)}`;
+      customerMinHint.textContent = `${minValue.label}: $${money(minValue.value)}`;
     }
     if(manualScenarioLabel){
-      manualScenarioLabel.textContent = `What to charge scenarios (target gross per hour, $${money(minValue)} min)`;
+      manualScenarioLabel.textContent = `What to charge scenarios (target gross per hour, $${money(getGrossProfitMinimum())} min)`;
     }
     updateManualQuote();
   }
@@ -5930,9 +5956,17 @@ document.addEventListener('DOMContentLoaded', function(){
     const denom = 1 - RATES.overhead;
     if(denom <= 0) return { revenue: NaN, mode: 'invalid' };
 
-    const targetGross = computeTargetGross(hours);
-    const revenue = (cost + targetGross) / denom;
-    return { revenue, mode: 'gross-per-hour', targetGross, hours };
+    let targetGross = computeTargetGross(hours);
+    let revenue = (cost + targetGross) / denom;
+    const revenueMinimum = getRevenueMinimum();
+    if(isFinite(revenueMinimum) && revenueMinimum > 0 && revenue < revenueMinimum){
+      revenue = revenueMinimum;
+      const minTargetGross = (revenue * denom) - cost;
+      if(isFinite(minTargetGross)){
+        targetGross = Math.max(targetGross, minTargetGross);
+      }
+    }
+    return { revenue, mode: 'gross-per-hour', targetGross, hours, revenueMinimum };
   }
 
   function setManualModal(open){
@@ -5962,12 +5996,12 @@ document.addEventListener('DOMContentLoaded', function(){
   function updateManualQuote(){
     if(!manualCostInput || !manualChargeOutput || !manualStatusEl || !manualModeChip) return;
 
-    const minGross = getGrossProfitMinimum();
+    const minimumSummary = getMinimumSummaryText();
     const raw = (manualCostInput.value || '').trim();
     if(!raw){
       manualChargeOutput.value = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = `Enter materials & equipment costs and total hours to compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit ($${money(minGross)} minimum).`;
+      manualStatusEl.textContent = `Enter materials & equipment costs and total hours to compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit (${minimumSummary}).`;
       delete manualStatusEl.dataset.state;
       clearManualMetrics();
       return;
@@ -5988,7 +6022,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!isFinite(totalHours) || totalHours <= 0){
       manualChargeOutput.value = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = `Enter total hours (onsite) to add labor and a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost, then compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit ($${money(minGross)} minimum).`;
+      manualStatusEl.textContent = `Enter total hours (onsite) to add labor and a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost, then compute pricing at $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit (${minimumSummary}).`;
       manualStatusEl.dataset.state = 'error';
       clearManualMetrics();
       return;
@@ -6013,7 +6047,7 @@ document.addEventListener('DOMContentLoaded', function(){
     manualModeChip.classList.remove('is-warn');
     manualModeChip.classList.add('is-info');
     manualModeChip.style.display = 'inline-block';
-    manualStatusEl.textContent = `Targets $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit on total time (onsite), $${money(minGross)} minimum. Labor is added from total hours plus a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost.`;
+    manualStatusEl.textContent = `Targets $${money(PRICING.grossProfitTargetPerHour)}/hr gross profit on total time (onsite), ${minimumSummary}. Labor is added from total hours plus a flat $${money(MANUAL_TRAVEL_FLAT)} travel cost.`;
     manualStatusEl.dataset.state = 'success';
 
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
@@ -6046,10 +6080,14 @@ document.addEventListener('DOMContentLoaded', function(){
         totalEl.value = '';
         return;
       }
-      const grossRevenue = (targetGross + totalCost) / (1 - RATES.overhead);
+      let grossRevenue = (targetGross + totalCost) / (1 - RATES.overhead);
       if(!isFinite(grossRevenue)){
         totalEl.value = '';
         return;
+      }
+      const revenueMinimum = getRevenueMinimum();
+      if(isFinite(revenueMinimum) && revenueMinimum > 0){
+        grossRevenue = Math.max(grossRevenue, revenueMinimum);
       }
       totalEl.value = '$' + money(grossRevenue);
     });
