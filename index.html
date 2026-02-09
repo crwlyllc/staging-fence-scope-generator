@@ -5726,6 +5726,12 @@ document.addEventListener('DOMContentLoaded', function(){
     const parts = ['2x4', typeLabel].filter(Boolean);
     return `wood rail (${parts.join(', ')})`;
   }
+  function addWoodBoardReplaceLf(map, size, lf){
+    const cleanSize = normalizeLabelText(size || '');
+    const lengthFt = parseFloat(lf);
+    if(!cleanSize || !isFinite(lengthFt) || lengthFt <= 0) return;
+    map.set(cleanSize, (map.get(cleanSize) || 0) + lengthFt);
+  }
   function woodRailDescriptor(section){
     if(!section) return 'rail';
     const sizeLabel = normalizeLabelText(section.woodRailSize || '');
@@ -6741,6 +6747,11 @@ document.addEventListener('DOMContentLoaded', function(){
       postsReplace: zeroPostCounts(),
       woodPostInstallMethods: zeroWoodMethodCounts()
     };
+    const woodBoardReplaceLf = {
+      topCap: new Map(),
+      trim: new Map(),
+      kick: new Map()
+    };
     let hasWoodStaining = false;
     let hasWoodWashSelection = false;
     let hasWroughtRepair = false;
@@ -7106,9 +7117,9 @@ document.addEventListener('DOMContentLoaded', function(){
           const postInstallCount = i(s.woodRepairPostInstall);
           const panelReplaceCount = i(s.woodRepairPanelReplace);
           const gateCount = i(s.woodRepairWalkGateCount);
-          const topCapLf = i(s.woodRepairTopCapReplaceLf);
-          const trimLf = i(s.woodRepairTrimReplaceLf);
-          const kickLf = i(s.woodRepairKickReplaceLf);
+          const topCapLf = parseFloat(s.woodRepairTopCapReplaceLf || 0) || 0;
+          const trimLf = parseFloat(s.woodRepairTrimReplaceLf || 0) || 0;
+          const kickLf = parseFloat(s.woodRepairKickReplaceLf || 0) || 0;
           if(picketReplaceCount > 0) repairLines.push(`  - Pickets to replace: ${picketReplaceCount}`);
           if(picketInstallCount > 0) repairLines.push(`  - Pickets to install: ${picketInstallCount}`);
           if(railReplaceCount > 0) repairLines.push(`  - Rails to replace: ${railReplaceCount}`);
@@ -7763,9 +7774,9 @@ document.addEventListener('DOMContentLoaded', function(){
         const walkGates = parseInt(s.woodRepairWalkGateCount||0,10) || 0;
         const strengthen = parseInt(s.woodRepairGateStrengthen||0,10) || 0;
         const replaceGate = parseInt(s.woodRepairGateReplace||0,10) || 0;
-        const topCapLf = parseInt(s.woodRepairTopCapReplaceLf||0,10) || 0;
-        const trimLf = parseInt(s.woodRepairTrimReplaceLf||0,10) || 0;
-        const kickLf = parseInt(s.woodRepairKickReplaceLf||0,10) || 0;
+        const topCapLf = parseFloat(s.woodRepairTopCapReplaceLf||0) || 0;
+        const trimLf = parseFloat(s.woodRepairTrimReplaceLf||0) || 0;
+        const kickLf = parseFloat(s.woodRepairKickReplaceLf||0) || 0;
         const kickStack = parseInt(s.woodRepairKickReplaceStack||0,10) || 1;
 
         const picketReplace = picketWidth
@@ -7938,6 +7949,29 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         if(replaceGate>0){
           parts.push(`Replace ${replaceGate} walk gate${replaceGate===1?'':'s'} with new build and hardware`);
+          addMat(materials, 'wood walk gate hinge', replaceGate);
+          addMat(materials, 'wood walk gate latch', replaceGate);
+          const picketWidthIn = parseWoodInches(s.woodPicketWidth, 5.5);
+          const isBoardOnBoard = /board on board/i.test(s.woodStyle || '');
+          const picketsPerGate = woodPicketCountForWidth(60, picketWidthIn, isBoardOnBoard);
+          if(picketsPerGate > 0){
+            addMat(materials, woodPicketMaterialLabel(s), picketsPerGate * replaceGate);
+          }
+          addMat(materials, woodGate2x4MaterialLabel(s), replaceGate * 5);
+          if(s.woodAddTopCap){
+            const size = s.woodTopCapSize || '2x6';
+            addMat(materials, `wood top cap (${size})`, replaceGate);
+          }
+          if(s.woodAddTrim){
+            const trimSizes = splitWoodTrimSizes(s.woodTrimType || 'Trim');
+            trimSizes.forEach(size=>{
+              addMat(materials, `wood trim (${size})`, replaceGate);
+            });
+          }
+          if(s.woodAddKickBoard){
+            const size = s.woodKickBoardSize || '2x6';
+            addMat(materials, `wood kick board (${size})`, replaceGate);
+          }
           const hours = replaceGate * 2;
           totals.woodGateReplace += replaceGate;
           woodHelperHours += hours;
@@ -7948,6 +7982,7 @@ document.addEventListener('DOMContentLoaded', function(){
           parts.push(`Replace ${topCapLf} lf of top cap (${size})`);
           const hours = topCapLf * ((20/60)/16);
           totals.woodTopCapLf += topCapLf;
+          addWoodBoardReplaceLf(woodBoardReplaceLf.topCap, size, topCapLf);
           woodHelperHours += hours;
           woodManHours += hours;
         }
@@ -7956,6 +7991,10 @@ document.addEventListener('DOMContentLoaded', function(){
           parts.push(`Replace ${trimLf} lf of trim${size ? ` (${size})` : ''}`);
           const hours = trimLf * ((10/60)/8);
           totals.woodTrimLf += trimLf;
+          const trimSizes = splitWoodTrimSizes(size || '');
+          trimSizes.forEach(trimSize=>{
+            addWoodBoardReplaceLf(woodBoardReplaceLf.trim, trimSize, trimLf);
+          });
           woodHelperHours += hours;
           woodManHours += hours;
         }
@@ -7965,6 +8004,7 @@ document.addEventListener('DOMContentLoaded', function(){
           parts.push(`Replace ${kickLf} lf of kick board (${size}, ${stack} board stack)`);
           const hours = kickLf * stack * ((20/60)/8);
           totals.woodKickLf += kickLf;
+          addWoodBoardReplaceLf(woodBoardReplaceLf.kick, size, kickLf * stack);
           woodHelperHours += hours;
           woodManHours += hours;
         }
@@ -8300,6 +8340,21 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     addWoodPicketMaterials();
+
+    function addWoodBoardReplacementMaterials(){
+      const addFromMap = (typeLabel, map) => {
+        map.forEach((lf, size) => {
+          const lengthLabel = formatFtValue(lf);
+          if(!lengthLabel) return;
+          addMat(materials, `wood ${typeLabel} (${size}, ${lengthLabel} ft)`, 1);
+        });
+      };
+      addFromMap('top cap', woodBoardReplaceLf.topCap);
+      addFromMap('trim', woodBoardReplaceLf.trim);
+      addFromMap('kick board', woodBoardReplaceLf.kick);
+    }
+
+    addWoodBoardReplacementMaterials();
 
     // ==== Materials aggregation ====
     let paintLenTotal = 0;
@@ -9226,13 +9281,18 @@ document.addEventListener('DOMContentLoaded', function(){
     const materialEntries = Object.keys(materials)
       .filter(label => materials[label] > 0)
       .sort((a, b) => a.localeCompare(b))
-      .map(label => ({ label, qty: materials[label] }));
+      .map(label => {
+        const qty = materials[label];
+        const woodBoardCost = woodBoardCostFromLabel(label, qty);
+        const displayQty = (woodBoardCost && woodBoardCost.pieces > 0) ? woodBoardCost.pieces : qty;
+        return { label, qty, displayQty };
+      });
 
     if (materialEntries.length) {
       lines.push('');
       lines.push('MATERIALS');
-      materialEntries.forEach(({ label, qty }) => {
-        lines.push(`- ${qty}x ${label}`);
+      materialEntries.forEach(({ label, displayQty }) => {
+        lines.push(`- ${displayQty}x ${label}`);
       });
     }
 
