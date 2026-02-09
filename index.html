@@ -40,6 +40,9 @@
   .sp-btn.is-hidden{display:none}
 
   .sp-sections{display:grid;gap:16px}
+  .sp-onboard [data-gated]{
+    display:none !important;
+  }
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
   #sp-map-card{margin-bottom:16px}
   #sp-crew-card{margin-top:18px;display:none}
@@ -326,6 +329,7 @@
     gap:16px;
     position:relative;
     overflow:hidden;
+    width:100%;
   }
   .sp-header::after{
     content:"";
@@ -397,18 +401,22 @@
     display:grid;
     gap:20px;
     align-items:start;
+    width:100%;
   }
   .sp-main{
     display:grid;
     gap:16px;
+    min-width:0;
   }
   .sp-side{
     display:grid;
     gap:16px;
+    min-width:0;
   }
   @media(min-width:980px){
     .sp-layout{ grid-template-columns:minmax(0,1fr) 360px; }
     .sp-side{ position:sticky; top:20px; }
+    .sp-onboard .sp-layout{ grid-template-columns:minmax(0,1fr); }
   }
   @media(max-width:719px){
     .sp-container{ padding:20px 16px calc(44px + var(--sp-floating-offset, 0px)); }
@@ -915,7 +923,7 @@
   </style>
 </head>
 <body>
-<div id="sp-scope">
+<div id="sp-scope" class="sp-onboard">
     <div class="sp-container">
       <div class="sp-header">
         <div class="sp-brand">
@@ -925,7 +933,7 @@
           </div>
           <div class="sp-subtitle">Residential &amp; commercial fence experts • internal scope builder</div>
         </div>
-        <div class="sp-actions">
+        <div class="sp-actions" data-gated>
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
           <button class="sp-btn is-hidden" id="sp-refresh-materials" type="button">Update Material Costs</button>
         </div>
@@ -1042,7 +1050,7 @@
         </div>
       </div>
 
-      <div class="sp-card" id="sp-customer-card">
+      <div class="sp-card" id="sp-customer-card" data-gated>
         <div class="sp-card-header">
           <div class="sp-card-title">Customer Type</div>
         </div>
@@ -1060,7 +1068,7 @@
       </div>
     </div>
 
-    <div class="sp-card is-collapsed" id="sp-map-card">
+    <div class="sp-card is-collapsed" id="sp-map-card" data-gated>
       <div class="sp-card-header">
         <div class="sp-card-title">Map Measurements</div>
         <div class="sp-row">
@@ -1080,9 +1088,9 @@
       </div>
     </div>
 
-    <div id="sp-sections" class="sp-sections"></div>
+    <div id="sp-sections" class="sp-sections" data-gated></div>
 
-    <div class="sp-card" id="sp-crew-card">
+    <div class="sp-card" id="sp-crew-card" data-gated>
       <div class="sp-card-header">
         <div class="sp-card-title">Labor</div>
       </div>
@@ -1096,7 +1104,7 @@
     </div>
 
       </div>
-      <aside class="sp-side">
+      <aside class="sp-side" data-gated>
     <div class="sp-output" id="sp-output" style="display:none">
       <div class="sp-card">
         <div class="sp-card-header">
@@ -1138,7 +1146,7 @@
   </div>
 </div>
 
-<div class="sp-floating-actions" id="sp-quick-actions" aria-label="Quick actions">
+<div class="sp-floating-actions" id="sp-quick-actions" aria-label="Quick actions" data-gated>
   <button class="sp-fab" id="sp-quick-add" type="button">
     <span class="sp-fab-icon">＋</span>
     <span>Add</span>
@@ -1403,6 +1411,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const serviceCopyAllBtn = $('#sp-copy-service');
   const laborRateInput = document.getElementById('sp-labor-rate');
   const estimateLookupBtnLabel = estimateLookupBtn ? estimateLookupBtn.textContent : '';
+  const scopeEl = document.getElementById('sp-scope');
+  let gateUnlocked = false;
   let lastServiceLines = [];
   let autoGenerateTimer = null;
   let isGeneratingNotes = false;
@@ -1410,6 +1420,16 @@ document.addEventListener('DOMContentLoaded', function(){
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
   let lastEstimateExists = false;
+
+  function setGateUnlocked(unlocked){
+    gateUnlocked = !!unlocked;
+    if(!scopeEl){
+      return;
+    }
+    scopeEl.classList.toggle('sp-onboard', !gateUnlocked);
+  }
+
+  setGateUnlocked(false);
 
   if(laborRateInput){
     laborRateInput.value = `$${money(LABOR_RATE)}/hr (crew rate)`;
@@ -2096,6 +2116,7 @@ document.addEventListener('DOMContentLoaded', function(){
         lastEstimateExists = false;
         updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
       }
+      setGateUnlocked(true);
     }catch(err){
       if(controller && controller.signal && controller.signal.aborted){
         return;
@@ -9540,6 +9561,7 @@ document.addEventListener('DOMContentLoaded', function(){
       try{
         applySnapshotToState(legacySnapshot);
         updateImportStatus('Scope restored from pasted notes (legacy format).', 'success');
+        setGateUnlocked(true);
         return;
       }catch(err){
         console.error('Failed to apply legacy snapshot', err);
@@ -9551,6 +9573,7 @@ document.addEventListener('DOMContentLoaded', function(){
     try{
       applySnapshotToState(payload);
       updateImportStatus('Scope restored from pasted notes.', 'success');
+      setGateUnlocked(true);
     }catch(err){
       console.error('Failed to apply snapshot', err);
       updateImportStatus('Embedded data was invalid or incomplete.', 'error');
