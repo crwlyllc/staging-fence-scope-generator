@@ -5769,28 +5769,38 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     return null;
   }
-  function woodBoardUnitPriceFromLabel(label){
+  function woodBoardCostFromLabel(label, qty){
     const raw = String(label||'');
     const match = raw.match(/^wood\s+(top cap|trim|kick board)\s*\(([^)]+)\)/i);
     if(!match) return null;
     const typeLabel = String(match[1] || '').toLowerCase();
     const sizeRaw = match[2] ? String(match[2]) : '';
     const sizeLabel = normalizeLabelText(sizeRaw.split(',')[0] || '');
-    let unit = 0;
-    const typeMap = WOOD_LINEAR_PRICES_BY_TYPE[typeLabel];
-    if(typeMap && Object.prototype.hasOwnProperty.call(typeMap, sizeLabel)){
-      unit = typeMap[sizeLabel] || 0;
-    } else if(Object.prototype.hasOwnProperty.call(WOOD_LINEAR_PRICES, sizeLabel)){
-      unit = WOOD_LINEAR_PRICES[sizeLabel] || 0;
-    } else {
-      return 0;
+    const typeMap = WOOD_BOARD_PIECE_PRICING[typeLabel];
+    if(!typeMap || !Object.prototype.hasOwnProperty.call(typeMap, sizeLabel)){
+      return { totalCost: 0, pieces: 0, pieceCost: 0, unpriced: true };
     }
+    const config = typeMap[sizeLabel] || {};
+    const pieceLengthFt = Number(config.lengthFt || 0);
+    const pieceCost = Number(config.cost || 0);
     const lengthMatch = raw.match(/(\d+(?:\.\d+)?)\s*(?:ft|feet|lf)\b/i);
-    if(lengthMatch){
-      const lengthFt = parseFloat(lengthMatch[1]) || 0;
-      if(lengthFt > 0) unit *= lengthFt;
+    const lengthFt = lengthMatch ? (parseFloat(lengthMatch[1]) || 0) : 0;
+    const itemQty = Number(qty || 0);
+
+    if(!isFinite(pieceLengthFt) || pieceLengthFt <= 0 || !isFinite(pieceCost) || pieceCost <= 0){
+      return { totalCost: 0, pieces: 0, pieceCost: pieceCost || 0, unpriced: true };
     }
-    return unit;
+
+    let pieces = 0;
+    if(lengthFt > 0 && itemQty > 0){
+      const totalLength = lengthFt * itemQty;
+      pieces = Math.ceil(totalLength / pieceLengthFt);
+    } else if(itemQty > 0){
+      pieces = itemQty;
+    }
+
+    const totalCost = pieces * pieceCost;
+    return { totalCost, pieces, pieceCost, unpriced: false };
   }
   function addMat(map, label, qty){
     if(!qty || qty <= 0) return;
@@ -5944,33 +5954,24 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood rail': 0
   };
 
-  const WOOD_LINEAR_PRICES_BY_TYPE = {
-    // Per-linear-foot pricing for wood detail boards by type (override as needed).
+  const WOOD_BOARD_PIECE_PRICING = {
+    // Per-piece pricing and piece length (feet) for wood detail boards.
     'top cap': {
-      '2x6': 1.67125,
-      '2x8': 0,
-      '2x10': 0,
-      '2x12': 0
+      '2x6': { lengthFt: 16, cost: 26.74 },
+      '2x8': { lengthFt: 16, cost: 0 },
+      '2x10': { lengthFt: 16, cost: 0 },
+      '2x12': { lengthFt: 16, cost: 0 }
     },
     'kick board': {
-      '2x6': 1.09625,
-      '2x8': 0,
-      '2x10': 0,
-      '2x12': 0
+      '2x6': { lengthFt: 16, cost: 17.54 },
+      '2x8': { lengthFt: 16, cost: 0 },
+      '2x10': { lengthFt: 16, cost: 0 },
+      '2x12': { lengthFt: 16, cost: 0 }
     },
     'trim': {
-      '1x4': 0.72,
-      '1x2': 0
+      '1x4': { lengthFt: 8, cost: 5.76 },
+      '1x2': { lengthFt: 8, cost: 0 }
     }
-  };
-  const WOOD_LINEAR_PRICES = {
-    // Fallback per-linear-foot pricing when type-specific pricing is missing.
-    '2x6': 0,
-    '2x8': 0,
-    '2x10': 0,
-    '2x12': 0,
-    '1x4': 0,
-    '1x2': 0
   };
 
   const PRICE = {
@@ -8766,13 +8767,18 @@ document.addEventListener('DOMContentLoaded', function(){
         matBreak.push(`  - ${label}: ${qty} x $${money(unit)} = $${money(c)}`);
         return;
       }
-      const woodBoardUnit = woodBoardUnitPriceFromLabel(label);
-      if(woodBoardUnit !== null){
-        const unit = woodBoardUnit || 0;
-        if(unit <= 0) unpriced = true;
-        const c = qty * unit;
+      const woodBoardCost = woodBoardCostFromLabel(label, qty);
+      if(woodBoardCost !== null){
+        const pieces = woodBoardCost.pieces || 0;
+        const pieceCost = woodBoardCost.pieceCost || 0;
+        const c = woodBoardCost.totalCost || 0;
+        if(woodBoardCost.unpriced) unpriced = true;
         costMaterials += c;
-        matBreak.push(`  - ${label}: ${qty} x $${money(unit)} = $${money(c)}`);
+        if(pieces > 0){
+          matBreak.push(`  - ${label}: ${pieces} piece(s) x $${money(pieceCost)} = $${money(c)}`);
+        } else {
+          matBreak.push(`  - ${label}: ${qty} x $${money(0)} = $${money(0)}`);
+        }
         return;
       }
       if(/^wood rail/i.test(label)){
