@@ -6710,6 +6710,7 @@ document.addEventListener('DOMContentLoaded', function(){
     };
     let hasWoodStaining = false;
     let hasWoodWashSelection = false;
+    let hasWroughtRepair = false;
     const woodStainDetails = [];
     const woodWashDetails = [];
     const materials = {};
@@ -6794,6 +6795,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const scopeType = (s.scopeType || 'repair');
       const fenceType = (s.fenceType || '').toLowerCase();
       const isWood = fenceType === 'wood';
+      const isWrought = fenceType === 'wrought iron';
       const railsDesc = isWood
         ? (s.woodRailSize || '-')
         : (Array.isArray(s.rails) && s.rails.length)
@@ -6808,6 +6810,9 @@ document.addEventListener('DOMContentLoaded', function(){
           : (s.railStacked ? `${s.railSize} + ${s.railSize2} (stacked)` : `${s.railSize}`);
       const isInstall = scopeType === 'install' || scopeType === 'replace';
       const isRepair = !isInstall;
+      if(isRepair && isWrought){
+        hasWroughtRepair = true;
+      }
       if(scopeType === 'install'){ totals.installSections += 1; }
       if(scopeType === 'replace'){ totals.replaceSections += 1; }
 
@@ -8976,6 +8981,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const MIN_CREW_PER_DAY = Math.max(minCrewBase, CREW_SETTINGS.minCrew);
     const MAX_CREW_PER_DAY = CREW_SETTINGS.maxCrew;
     const MAX_WELDERS = Math.max(0, CREW_SETTINGS.maxWelders || MAX_CREW_PER_DAY);
+    // Wrought-iron repair work is capped at 2 concurrent welders.
+    const MAX_BASE_WELDERS = hasWroughtRepair ? Math.min(MAX_WELDERS, 2) : MAX_WELDERS;
     const stainReturnHours = hasWoodWash ? stainHours : 0;
     const day2Hours = primePaintReturnHours + stainReturnHours;
     const helperHoursDay2 = day2Hours;
@@ -9016,7 +9023,7 @@ document.addEventListener('DOMContentLoaded', function(){
       let welderCount = 0;
       if(remainingWelderHours > 0.01){
         const welderNeeded = Math.ceil(remainingWelderHours / HOURS_PER_PERSON);
-        welderCount = Math.max(1, Math.min(welderNeeded, MAX_WELDERS, MAX_CREW_PER_DAY));
+        welderCount = Math.max(1, Math.min(welderNeeded, MAX_BASE_WELDERS, MAX_CREW_PER_DAY));
       }
       let stainerCount = 0;
       if(remainingStainHours > 0.01){
