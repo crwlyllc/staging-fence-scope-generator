@@ -5726,6 +5726,13 @@ document.addEventListener('DOMContentLoaded', function(){
     const parts = ['2x4', typeLabel].filter(Boolean);
     return `wood rail (${parts.join(', ')})`;
   }
+  function woodBoardPieceLength(typeLabel, sizeLabel){
+    const typeMap = WOOD_BOARD_PIECE_PRICING[typeLabel];
+    if(!typeMap || !Object.prototype.hasOwnProperty.call(typeMap, sizeLabel)) return 0;
+    const entry = typeMap[sizeLabel] || {};
+    const lengthFt = Number(entry.lengthFt || 0);
+    return isFinite(lengthFt) ? lengthFt : 0;
+  }
   function addWoodBoardReplaceLf(map, size, lf){
     const cleanSize = normalizeLabelText(size || '');
     const lengthFt = parseFloat(lf);
@@ -8344,6 +8351,13 @@ document.addEventListener('DOMContentLoaded', function(){
     function addWoodBoardReplacementMaterials(){
       const addFromMap = (typeLabel, map) => {
         map.forEach((lf, size) => {
+          const pieceLen = woodBoardPieceLength(typeLabel, size);
+          if(pieceLen > 0){
+            const pieces = Math.ceil(lf / pieceLen);
+            if(pieces <= 0) return;
+            addMat(materials, `wood ${typeLabel} (${size}, ${formatFtValue(pieceLen)} ft)`, pieces);
+            return;
+          }
           const lengthLabel = formatFtValue(lf);
           if(!lengthLabel) return;
           addMat(materials, `wood ${typeLabel} (${size}, ${lengthLabel} ft)`, 1);
