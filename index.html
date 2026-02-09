@@ -993,30 +993,7 @@
             <div class="sp-output-value" id="sp-manual-net" data-placeholder="$0.00"></div>
           </div>
         </div>
-        <div class="sp-divider"></div>
-        <div class="sp-grid">
-          <div class="sp-field col-12">
-            <label class="sp-label" id="sp-manual-scenario-label">What to charge scenarios (target gross per hour, $350 min)</label>
-            <div class="sp-service-list">
-              <div class="sp-manual-scenario" data-manual-scenario data-target="90">
-                <span class="sp-chip is-info">$90 / hr</span>
-                <div class="sp-output-value" data-manual-scenario-total data-placeholder="$0.00"></div>
-              </div>
-              <div class="sp-manual-scenario" data-manual-scenario data-target="100">
-                <span class="sp-chip is-info">$100 / hr</span>
-                <div class="sp-output-value" data-manual-scenario-total data-placeholder="$0.00"></div>
-              </div>
-              <div class="sp-manual-scenario" data-manual-scenario data-target="110">
-                <span class="sp-chip is-info">$110 / hr</span>
-                <div class="sp-output-value" data-manual-scenario-total data-placeholder="$0.00"></div>
-              </div>
-              <div class="sp-manual-scenario" data-manual-scenario data-target="120">
-                <span class="sp-chip is-info">$120 / hr</span>
-                <div class="sp-output-value" data-manual-scenario-total data-placeholder="$0.00"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
 
@@ -1416,8 +1393,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const manualGrossHourOutput = document.getElementById('sp-manual-gross-hour');
   const manualCommissionOutput = document.getElementById('sp-manual-commission');
   const manualNetOutput = document.getElementById('sp-manual-net');
-  const manualScenarioRows = Array.from(document.querySelectorAll('[data-manual-scenario]'));
-  const manualScenarioLabel = document.getElementById('sp-manual-scenario-label');
+  
   const customerTypeSelect = document.getElementById('sp-customer-type');
   const customerMinHint = document.getElementById('sp-customer-min-hint');
   const customerCardEl = document.getElementById('sp-customer-card');
@@ -5799,10 +5775,18 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!match) return null;
     const sizeRaw = match[2] ? String(match[2]) : '';
     const sizeLabel = normalizeLabelText(sizeRaw.split(',')[0] || '');
+    let unit = 0;
     if(Object.prototype.hasOwnProperty.call(WOOD_LINEAR_PRICES, sizeLabel)){
-      return WOOD_LINEAR_PRICES[sizeLabel] || 0;
+      unit = WOOD_LINEAR_PRICES[sizeLabel] || 0;
+    } else {
+      return 0;
     }
-    return 0;
+    const lengthMatch = raw.match(/(\d+(?:\.\d+)?)\s*(?:ft|feet|lf)\b/i);
+    if(lengthMatch){
+      const lengthFt = parseFloat(lengthMatch[1]) || 0;
+      if(lengthFt > 0) unit *= lengthFt;
+    }
+    return unit;
   }
   function addMat(map, label, qty){
     if(!qty || qty <= 0) return;
@@ -6041,9 +6025,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(customerMinHint){
       customerMinHint.textContent = `${minValue.label}: $${money(minValue.value)}`;
     }
-    if(manualScenarioLabel){
-      manualScenarioLabel.textContent = `What to charge scenarios (target gross per hour, $${money(getGrossProfitMinimum())} min)`;
-    }
     updateManualQuote();
   }
 
@@ -6117,10 +6098,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(manualGrossHourOutput) manualGrossHourOutput.textContent = '';
     if(manualCommissionOutput) manualCommissionOutput.textContent = '';
     if(manualNetOutput) manualNetOutput.textContent = '';
-    manualScenarioRows.forEach(row => {
-      const totalEl = row.querySelector('[data-manual-scenario-total]');
-      if(totalEl) totalEl.textContent = '';
-    });
   }
 
   function updateManualQuote(){
@@ -6197,30 +6174,6 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
 
-    manualScenarioRows.forEach(row => {
-      const totalEl = row.querySelector('[data-manual-scenario-total]');
-      if(!totalEl) return;
-      const target = parseFloat(row.dataset.target || '');
-      if(!isFinite(target) || !isFinite(totalHours) || totalHours <= 0){
-        totalEl.textContent = '';
-        return;
-      }
-      const targetGross = computeTargetGross(totalHours, target);
-      if(!isFinite(targetGross)){
-        totalEl.textContent = '';
-        return;
-      }
-      let grossRevenue = (targetGross + totalCost) / (1 - RATES.overhead);
-      if(!isFinite(grossRevenue)){
-        totalEl.textContent = '';
-        return;
-      }
-      const revenueMinimum = getRevenueMinimum();
-      if(isFinite(revenueMinimum) && revenueMinimum > 0){
-        grossRevenue = Math.max(grossRevenue, revenueMinimum);
-      }
-      totalEl.textContent = '$' + money(grossRevenue);
-    });
   }
 
   async function generateNotes(eventOrOptions){
@@ -7129,15 +7082,7 @@ document.addEventListener('DOMContentLoaded', function(){
           if(panelReplaceCount > 0){
             const panelCalc = s._woodPanelCalc || calcWoodPanelReplacement(s, panelReplaceCount);
             if(panelCalc) s._woodPanelCalc = panelCalc;
-            const detailParts = [];
-            if(panelCalc && panelCalc.widthFt) detailParts.push(`~${panelCalc.widthFt} ft each`);
-            if(panelCalc && panelCalc.totalRails) detailParts.push(`${panelCalc.totalRails} rails`);
-            if(panelCalc && panelCalc.totalPickets) detailParts.push(`${panelCalc.totalPickets} pickets`);
-            if(panelCalc && panelCalc.topCap) detailParts.push(`${panelCalc.topCap.lf} lf top cap`);
-            if(panelCalc && panelCalc.trim) detailParts.push(`${panelCalc.trim.lf} lf trim`);
-            if(panelCalc && panelCalc.kick) detailParts.push(`${panelCalc.kick.lf} lf kick board`);
-            const detail = detailParts.length ? ` (${detailParts.join('; ')})` : '';
-            repairLines.push(`  - Panels to replace: ${panelReplaceCount}${detail}`);
+            repairLines.push(`  - Panels to replace: ${panelReplaceCount}`);
           }
           if(gateCount > 0) repairLines.push(`  - Walk gates to repair: ${gateCount}`);
           if(topCapLf > 0) repairLines.push(`  - Top cap to replace: ${topCapLf} lf`);
@@ -7876,15 +7821,15 @@ document.addEventListener('DOMContentLoaded', function(){
         if(panels>0){
           const panelCalc = s._woodPanelCalc || calcWoodPanelReplacement(s, panels);
           if(panelCalc) s._woodPanelCalc = panelCalc;
-          const widthLabel = panelCalc && panelCalc.widthFt ? `${panelCalc.widthFt} ft` : 'approx. 8 ft';
-          const detailParts = [];
-          if(panelCalc && panelCalc.totalRails) detailParts.push(`${panelCalc.totalRails} rails`);
-          if(panelCalc && panelCalc.totalPickets) detailParts.push(`${panelCalc.totalPickets} pickets`);
-          if(panelCalc && panelCalc.topCap) detailParts.push(`${panelCalc.topCap.lf} lf top cap`);
-          if(panelCalc && panelCalc.trim) detailParts.push(`${panelCalc.trim.lf} lf trim`);
-          if(panelCalc && panelCalc.kick) detailParts.push(`${panelCalc.kick.lf} lf kick board`);
-          const detailSuffix = detailParts.length ? `; ${detailParts.join(', ')}` : '';
-          parts.push(`Replace ${panels} panel${panels===1?'':'s'} (~${widthLabel} each${detailSuffix})`);
+          const panelStyleRaw = String(s.woodStyle || '').trim();
+          const panelStyle = panelStyleRaw ? `wood ${panelStyleRaw.toLowerCase()} panel` : 'wood panel';
+          const panelAddOns = [];
+          if(panelCalc && panelCalc.kick) panelAddOns.push('kick board');
+          if(panelCalc && panelCalc.topCap) panelAddOns.push('top cap');
+          if(panelCalc && panelCalc.trim) panelAddOns.push('trim');
+          const addOnText = panelAddOns.length ? ` with ${joinParts(panelAddOns)}` : '';
+          parts.push(`Replace ${panels}x ${panelStyle}${addOnText}`);
+          parts.push('Remove and haul away the existing panel(s)');
           const hours = panels * 1.5;
           totals.woodPanels += panels;
           if(panelCalc){
@@ -7892,7 +7837,6 @@ document.addEventListener('DOMContentLoaded', function(){
               const disposalLf = panelCalc.panelLf;
               totals.removalLf += disposalLf;
               totals.removalCost += disposalLf * 3.9;
-              addMat(materials, 'Removal & disposal (wood panels)', disposalLf);
             }
             if(panelCalc.totalRails > 0){
               addMat(materials, woodRailMaterialLabel(s), panelCalc.totalRails);
@@ -7901,20 +7845,19 @@ document.addEventListener('DOMContentLoaded', function(){
               addMat(materials, woodPicketMaterialLabel(s), panelCalc.totalPickets);
             }
             if(panelCalc.topCap){
-              totals.woodTopCapLf += panelCalc.topCap.lf;
-              addMat(materials, `wood top cap (${panelCalc.topCap.size})`, panelCalc.topCap.lf);
+              const lengthLabel = formatFtValue(panelCalc.widthFt || 8) || '8';
+              addMat(materials, `wood top cap (${panelCalc.topCap.size}, ${lengthLabel} ft)`, panels);
             }
             if(panelCalc.trim){
-              totals.woodTrimLf += panelCalc.trim.lf;
               panelCalc.trim.sizes.forEach(size=>{
-                addMat(materials, `wood trim (${size})`, panelCalc.trim.lf);
+                const lengthLabel = formatFtValue(panelCalc.widthFt || 8) || '8';
+                addMat(materials, `wood trim (${size}, ${lengthLabel} ft)`, panels);
               });
             }
             if(panelCalc.kick){
-              totals.woodKickLf += panelCalc.kick.lf;
               const stack = panelCalc.kick.stack || 1;
-              const stackLabel = stack > 1 ? `, ${stack}x` : '';
-              addMat(materials, `wood kick board (${panelCalc.kick.size}${stackLabel})`, panelCalc.kick.lf * stack);
+              const lengthLabel = formatFtValue(panelCalc.widthFt || 8) || '8';
+              addMat(materials, `wood kick board (${panelCalc.kick.size}, ${lengthLabel} ft)`, panels * stack);
             }
           }
           woodHelperHours += hours;
