@@ -8452,6 +8452,12 @@ document.addEventListener('DOMContentLoaded', function(){
       manHours += postInstallManHours;
       helperHours += postInstallManHours;
     }
+    if(installPostsNeedingCrew > 0){
+      const cureCrewHours = installPostsNeedingCrew * 2;
+      const cureManHours = cureCrewHours * ONSITE_CREW_SIZE;
+      manHours += cureManHours;
+      helperHours += cureManHours;
+    }
     const cutWeldWelderHours = totals.postsRealignCutWeld * 0.5;
     const cutWeldHelperHours = totals.postsRealignCutWeld * 0.5;
     if(totals.postsRealignCutWeld > 0){
