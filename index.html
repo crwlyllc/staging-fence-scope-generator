@@ -5773,10 +5773,14 @@ document.addEventListener('DOMContentLoaded', function(){
     const raw = String(label||'');
     const match = raw.match(/^wood\s+(top cap|trim|kick board)\s*\(([^)]+)\)/i);
     if(!match) return null;
+    const typeLabel = String(match[1] || '').toLowerCase();
     const sizeRaw = match[2] ? String(match[2]) : '';
     const sizeLabel = normalizeLabelText(sizeRaw.split(',')[0] || '');
     let unit = 0;
-    if(Object.prototype.hasOwnProperty.call(WOOD_LINEAR_PRICES, sizeLabel)){
+    const typeMap = WOOD_LINEAR_PRICES_BY_TYPE[typeLabel];
+    if(typeMap && Object.prototype.hasOwnProperty.call(typeMap, sizeLabel)){
+      unit = typeMap[sizeLabel] || 0;
+    } else if(Object.prototype.hasOwnProperty.call(WOOD_LINEAR_PRICES, sizeLabel)){
       unit = WOOD_LINEAR_PRICES[sizeLabel] || 0;
     } else {
       return 0;
@@ -5940,8 +5944,27 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood rail': 0
   };
 
+  const WOOD_LINEAR_PRICES_BY_TYPE = {
+    // Per-linear-foot pricing for wood detail boards by type (override as needed).
+    'top cap': {
+      '2x6': 1.67125,
+      '2x8': 0,
+      '2x10': 0,
+      '2x12': 0
+    },
+    'kick board': {
+      '2x6': 1.09625,
+      '2x8': 0,
+      '2x10': 0,
+      '2x12': 0
+    },
+    'trim': {
+      '1x4': 0.72,
+      '1x2': 0
+    }
+  };
   const WOOD_LINEAR_PRICES = {
-    // Per-linear-foot pricing for wood detail boards (override as needed).
+    // Fallback per-linear-foot pricing when type-specific pricing is missing.
     '2x6': 0,
     '2x8': 0,
     '2x10': 0,
