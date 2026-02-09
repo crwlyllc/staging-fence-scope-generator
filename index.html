@@ -5720,6 +5720,12 @@ document.addEventListener('DOMContentLoaded', function(){
     const parts = [sizeLabel, typeLabel].filter(Boolean);
     return `wood rail${parts.length ? ` (${parts.join(', ')})` : ''}`;
   }
+  function woodGate2x4MaterialLabel(section){
+    if(!section) return 'wood rail (2x4)';
+    const typeLabel = woodRailTypeLabel(section);
+    const parts = ['2x4', typeLabel].filter(Boolean);
+    return `wood rail (${parts.join(', ')})`;
+  }
   function woodRailDescriptor(section){
     if(!section) return 'rail';
     const sizeLabel = normalizeLabelText(section.woodRailSize || '');
@@ -5925,6 +5931,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'Simpson 1 piece ties': 1.81,
     'Simpson 2 piece ties': 1.81,
     'lag screws': 0.075,
+    'wood walk gate hinge': 35,
+    'wood walk gate latch': 20,
     // NEW
     'replacement finial': 1.25,
     'puppy picket insert (1/2")': 62.59,
@@ -5949,28 +5957,28 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood rail (2x3, Pressure Treated)': 3.23,
     'wood rail (2x4, Cedar)': 9.33,
     'wood rail (2x4, Stained Cedar)': 10.81,
-    'wood rail (2x3)': 0,
-    'wood rail (2x4)': 0,
-    'wood rail': 0
+    'wood rail (2x3)': 10.81,
+    'wood rail (2x4)': 10.81,
+    'wood rail': 10.81
   };
 
   const WOOD_BOARD_PIECE_PRICING = {
     // Per-piece pricing and piece length (feet) for wood detail boards.
     'top cap': {
       '2x6': { lengthFt: 16, cost: 26.74 },
-      '2x8': { lengthFt: 16, cost: 0 },
-      '2x10': { lengthFt: 16, cost: 0 },
-      '2x12': { lengthFt: 16, cost: 0 }
+      '2x8': { lengthFt: 16, cost: 32.09 },
+      '2x10': { lengthFt: 16, cost: 34.76 },
+      '2x12': { lengthFt: 16, cost: 37.44 }
     },
     'kick board': {
       '2x6': { lengthFt: 16, cost: 17.54 },
-      '2x8': { lengthFt: 16, cost: 0 },
-      '2x10': { lengthFt: 16, cost: 0 },
-      '2x12': { lengthFt: 16, cost: 0 }
+      '2x8': { lengthFt: 16, cost: 21.05 },
+      '2x10': { lengthFt: 16, cost: 22.80 },
+      '2x12': { lengthFt: 16, cost: 24.56 }
     },
     'trim': {
       '1x4': { lengthFt: 8, cost: 5.76 },
-      '1x2': { lengthFt: 8, cost: 0 }
+      '1x2': { lengthFt: 8, cost: 5.76 }
     }
   };
 
@@ -7900,6 +7908,21 @@ document.addEventListener('DOMContentLoaded', function(){
           if(s.woodRepairWalkGateWood) tasks.push('repair wood around gate');
           const taskLabel = tasks.length ? ` (${tasks.join(', ')})` : '';
           parts.push(`Repair ${walkGates} walk gate${walkGates===1?'':'s'}${taskLabel}`);
+          if(s.woodRepairWalkGateHinges){
+            addMat(materials, 'wood walk gate hinge', walkGates);
+          }
+          if(s.woodRepairWalkGateLatch){
+            addMat(materials, 'wood walk gate latch', walkGates);
+          }
+          if(s.woodRepairWalkGateWood){
+            const picketWidthIn = parseWoodInches(s.woodPicketWidth, 5.5);
+            const isBoardOnBoard = /board on board/i.test(s.woodStyle || '');
+            const picketsPerGate = woodPicketCountForWidth(60, picketWidthIn, isBoardOnBoard);
+            if(picketsPerGate > 0){
+              addMat(materials, woodPicketMaterialLabel(s), picketsPerGate * walkGates);
+            }
+            addMat(materials, woodGate2x4MaterialLabel(s), walkGates * 4);
+          }
           const hours = walkGates * 2;
           totals.woodGateRepair += walkGates;
           woodHelperHours += hours;
@@ -7907,6 +7930,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         if(strengthen>0){
           parts.push(`Strengthen ${strengthen} walk gate${strengthen===1?'':'s'} with additional 2x4 framing`);
+          addMat(materials, woodGate2x4MaterialLabel(s), strengthen * 2);
           const hours = strengthen * 1;
           totals.woodGateStrengthen += strengthen;
           woodHelperHours += hours;
