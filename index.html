@@ -5793,6 +5793,17 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     return null;
   }
+  function woodBoardUnitPriceFromLabel(label){
+    const raw = String(label||'');
+    const match = raw.match(/^wood\s+(top cap|trim|kick board)\s*\(([^)]+)\)/i);
+    if(!match) return null;
+    const sizeRaw = match[2] ? String(match[2]) : '';
+    const sizeLabel = normalizeLabelText(sizeRaw.split(',')[0] || '');
+    if(Object.prototype.hasOwnProperty.call(WOOD_LINEAR_PRICES, sizeLabel)){
+      return WOOD_LINEAR_PRICES[sizeLabel] || 0;
+    }
+    return 0;
+  }
   function addMat(map, label, qty){
     if(!qty || qty <= 0) return;
     const cleanLabel = normalizeLabelText(label);
@@ -5943,6 +5954,16 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood rail (2x3)': 0,
     'wood rail (2x4)': 0,
     'wood rail': 0
+  };
+
+  const WOOD_LINEAR_PRICES = {
+    // Per-linear-foot pricing for wood detail boards (override as needed).
+    '2x6': 0,
+    '2x8': 0,
+    '2x10': 0,
+    '2x12': 0,
+    '1x4': 0,
+    '1x2': 0
   };
 
   const PRICE = {
@@ -6227,7 +6248,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     try{
       syncStateFromDOM();
-      state.sections.forEach(s=>{ delete s._panelCalc; delete s._installCalc; });
+      state.sections.forEach(s=>{ delete s._panelCalc; delete s._installCalc; delete s._woodPanelCalc; });
 
     // --- PANEL REPLACEMENT helpers ---
     const PANEL_PRICE = {
@@ -6285,6 +6306,74 @@ document.addEventListener('DOMContentLoaded', function(){
       // Work fully in inches
       const strideIn = (pw*1) * 1.0 + 3.9375; // picket width inches + gap inches
       return Math.max(1, Math.floor( (parseFloat(widthIn)||0 + 3.9375) / strideIn ));
+    }
+    const roundTo = (value, decimals = 1)=>{
+      const factor = Math.pow(10, decimals);
+      return Math.round((Number(value) || 0) * factor) / factor;
+    };
+    function parseWoodInches(value, fallback){
+      const match = String(value||'').match(/(\d+(\.\d+)?)/);
+      const num = match ? parseFloat(match[1]) : NaN;
+      if(isFinite(num) && num > 0) return num;
+      const fb = parseFloat(fallback);
+      return isFinite(fb) && fb > 0 ? fb : 0;
+    }
+    function woodRailsForHeight(heightFt){
+      if(!isFinite(heightFt) || heightFt <= 0) return 3;
+      return heightFt >= 8 ? 4 : 3;
+    }
+    function woodPicketCountForWidth(widthIn, picketWidthIn, isBoardOnBoard){
+      const gapIn = 0.5; // estimated gap for side-by-side layout
+      const width = parseFloat(widthIn) || 0;
+      const picket = parseFloat(picketWidthIn) || 0;
+      if(width <= 0 || picket <= 0) return 0;
+      const base = Math.max(1, Math.ceil((width + gapIn) / (picket + gapIn)));
+      return isBoardOnBoard ? base * 2 : base;
+    }
+    function splitWoodTrimSizes(trimType){
+      const raw = normalizeLabelText(trimType || '');
+      if(!raw) return [];
+      if(raw.includes('&')){
+        return raw.split('&').map(part=> normalizeLabelText(part)).filter(Boolean);
+      }
+      return [raw];
+    }
+    function calcWoodPanelReplacement(section, panelCount){
+      const panels = parseInt(panelCount||0,10) || 0;
+      if(!section || panels <= 0) return null;
+      const widthFtRaw = parseFloat(section.woodRepairPanelWidth||0) || 0;
+      const widthFt = roundTo(widthFtRaw > 0 ? widthFtRaw : 8, 2);
+      const widthIn = widthFt * 12;
+      const picketWidthIn = parseWoodInches(section.woodPicketWidth, 5.5);
+      const isBoardOnBoard = /board on board/i.test(section.woodStyle || '');
+      const picketsPerPanel = woodPicketCountForWidth(widthIn, picketWidthIn, isBoardOnBoard);
+      const totalPickets = picketsPerPanel * panels;
+      const heightFt = Math.max(0, feetFromStr(section.woodHeight || section.height));
+      const railsPerPanel = woodRailsForHeight(heightFt);
+      const totalRails = railsPerPanel * panels;
+      const panelLf = roundTo(widthFt * panels, 2);
+      const topCap = section.woodAddTopCap
+        ? { size: section.woodTopCapSize || '2x6', lf: panelLf }
+        : null;
+      const trimSizes = section.woodAddTrim ? splitWoodTrimSizes(section.woodTrimType || 'Trim') : [];
+      const trim = trimSizes.length ? { sizes: trimSizes, lf: panelLf } : null;
+      const kickStack = parseInt(section.woodKickBoardStack||0,10) || 1;
+      const kick = section.woodAddKickBoard
+        ? { size: section.woodKickBoardSize || '2x6', stack: kickStack, lf: panelLf }
+        : null;
+      return {
+        panels,
+        widthFt,
+        widthIn,
+        panelLf,
+        picketsPerPanel,
+        totalPickets,
+        railsPerPanel,
+        totalRails,
+        topCap,
+        trim,
+        kick
+      };
     }
 
     const lines = [];
@@ -7037,7 +7126,19 @@ document.addEventListener('DOMContentLoaded', function(){
           if(woodRealignCounts.dig > 0) repairLines.push(`  - Posts to realign (dig/straighten): ${woodRealignCounts.dig}`);
           if(woodRealignCounts.cutWeld > 0) repairLines.push(`  - Posts to realign (cut & weld): ${woodRealignCounts.cutWeld}`);
           if(postInstallCount > 0) repairLines.push(`  - Posts to install: ${postInstallCount}`);
-          if(panelReplaceCount > 0) repairLines.push(`  - Panels to replace: ${panelReplaceCount}`);
+          if(panelReplaceCount > 0){
+            const panelCalc = s._woodPanelCalc || calcWoodPanelReplacement(s, panelReplaceCount);
+            if(panelCalc) s._woodPanelCalc = panelCalc;
+            const detailParts = [];
+            if(panelCalc && panelCalc.widthFt) detailParts.push(`~${panelCalc.widthFt} ft each`);
+            if(panelCalc && panelCalc.totalRails) detailParts.push(`${panelCalc.totalRails} rails`);
+            if(panelCalc && panelCalc.totalPickets) detailParts.push(`${panelCalc.totalPickets} pickets`);
+            if(panelCalc && panelCalc.topCap) detailParts.push(`${panelCalc.topCap.lf} lf top cap`);
+            if(panelCalc && panelCalc.trim) detailParts.push(`${panelCalc.trim.lf} lf trim`);
+            if(panelCalc && panelCalc.kick) detailParts.push(`${panelCalc.kick.lf} lf kick board`);
+            const detail = detailParts.length ? ` (${detailParts.join('; ')})` : '';
+            repairLines.push(`  - Panels to replace: ${panelReplaceCount}${detail}`);
+          }
           if(gateCount > 0) repairLines.push(`  - Walk gates to repair: ${gateCount}`);
           if(topCapLf > 0) repairLines.push(`  - Top cap to replace: ${topCapLf} lf`);
           if(trimLf > 0) repairLines.push(`  - Trim to replace: ${trimLf} lf`);
@@ -7773,11 +7874,49 @@ document.addEventListener('DOMContentLoaded', function(){
           woodManHours += hours;
         }
         if(panels>0){
-          const width = parseFloat(s.woodRepairPanelWidth||0) || 0;
-          const widthLabel = width ? `${width} ft` : 'approx. 8 ft';
-          parts.push(`Replace ${panels} panel${panels===1?'':'s'} (~${widthLabel} each)`);
+          const panelCalc = s._woodPanelCalc || calcWoodPanelReplacement(s, panels);
+          if(panelCalc) s._woodPanelCalc = panelCalc;
+          const widthLabel = panelCalc && panelCalc.widthFt ? `${panelCalc.widthFt} ft` : 'approx. 8 ft';
+          const detailParts = [];
+          if(panelCalc && panelCalc.totalRails) detailParts.push(`${panelCalc.totalRails} rails`);
+          if(panelCalc && panelCalc.totalPickets) detailParts.push(`${panelCalc.totalPickets} pickets`);
+          if(panelCalc && panelCalc.topCap) detailParts.push(`${panelCalc.topCap.lf} lf top cap`);
+          if(panelCalc && panelCalc.trim) detailParts.push(`${panelCalc.trim.lf} lf trim`);
+          if(panelCalc && panelCalc.kick) detailParts.push(`${panelCalc.kick.lf} lf kick board`);
+          const detailSuffix = detailParts.length ? `; ${detailParts.join(', ')}` : '';
+          parts.push(`Replace ${panels} panel${panels===1?'':'s'} (~${widthLabel} each${detailSuffix})`);
           const hours = panels * 1.5;
           totals.woodPanels += panels;
+          if(panelCalc){
+            if(panelCalc.panelLf > 0){
+              const disposalLf = panelCalc.panelLf;
+              totals.removalLf += disposalLf;
+              totals.removalCost += disposalLf * 3.9;
+              addMat(materials, 'Removal & disposal (wood panels)', disposalLf);
+            }
+            if(panelCalc.totalRails > 0){
+              addMat(materials, woodRailMaterialLabel(s), panelCalc.totalRails);
+            }
+            if(panelCalc.totalPickets > 0){
+              addMat(materials, woodPicketMaterialLabel(s), panelCalc.totalPickets);
+            }
+            if(panelCalc.topCap){
+              totals.woodTopCapLf += panelCalc.topCap.lf;
+              addMat(materials, `wood top cap (${panelCalc.topCap.size})`, panelCalc.topCap.lf);
+            }
+            if(panelCalc.trim){
+              totals.woodTrimLf += panelCalc.trim.lf;
+              panelCalc.trim.sizes.forEach(size=>{
+                addMat(materials, `wood trim (${size})`, panelCalc.trim.lf);
+              });
+            }
+            if(panelCalc.kick){
+              totals.woodKickLf += panelCalc.kick.lf;
+              const stack = panelCalc.kick.stack || 1;
+              const stackLabel = stack > 1 ? `, ${stack}x` : '';
+              addMat(materials, `wood kick board (${panelCalc.kick.size}${stackLabel})`, panelCalc.kick.lf * stack);
+            }
+          }
           woodHelperHours += hours;
           woodManHours += hours;
         }
@@ -8079,11 +8218,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(woodStainBuckets > 0){
       addMat(materials, '5 gal wood stain bucket', woodStainBuckets);
     }
-
-    const woodRailsForHeight = (heightFt)=>{
-      if(!isFinite(heightFt) || heightFt <= 0) return 3;
-      return heightFt >= 8 ? 4 : 3;
-    };
 
     function addWoodPostReplacementMaterials(){
       state.sections.forEach(s=>{
@@ -8654,6 +8788,15 @@ document.addEventListener('DOMContentLoaded', function(){
       const woodRailUnit = woodRailUnitPriceFromLabel(label);
       if(woodRailUnit !== null){
         const unit = woodRailUnit || 0;
+        if(unit <= 0) unpriced = true;
+        const c = qty * unit;
+        costMaterials += c;
+        matBreak.push(`  - ${label}: ${qty} x $${money(unit)} = $${money(c)}`);
+        return;
+      }
+      const woodBoardUnit = woodBoardUnitPriceFromLabel(label);
+      if(woodBoardUnit !== null){
+        const unit = woodBoardUnit || 0;
         if(unit <= 0) unpriced = true;
         const c = qty * unit;
         costMaterials += c;
