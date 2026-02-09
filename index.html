@@ -7979,7 +7979,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const size = s.woodKickBoardSize || '2x6';
             addMat(materials, `wood kick board (${size})`, replaceGate);
           }
-          const hours = replaceGate * 2;
+          const hours = replaceGate * 3;
           totals.woodGateReplace += replaceGate;
           woodHelperHours += hours;
           woodManHours += hours;
@@ -7987,7 +7987,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(topCapLf>0){
           const size = s.woodRepairTopCapReplaceSize || s.woodTopCapSize || '2x6';
           parts.push(`Replace ${topCapLf} lf of top cap (${size})`);
-          const hours = topCapLf * ((20/60)/16);
+          const hours = topCapLf * ((30/60)/16);
           totals.woodTopCapLf += topCapLf;
           addWoodBoardReplaceLf(woodBoardReplaceLf.topCap, size, topCapLf);
           woodHelperHours += hours;
@@ -8009,7 +8009,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const size = s.woodRepairKickReplaceSize || s.woodKickBoardSize || '';
           const stack = kickStack > 0 ? kickStack : 1;
           parts.push(`Replace ${kickLf} lf of kick board (${size}, ${stack} board stack)`);
-          const hours = kickLf * stack * ((20/60)/8);
+          const hours = kickLf * stack * ((60/60)/8);
           totals.woodKickLf += kickLf;
           addWoodBoardReplaceLf(woodBoardReplaceLf.kick, size, kickLf * stack);
           woodHelperHours += hours;
