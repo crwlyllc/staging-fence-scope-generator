@@ -1522,8 +1522,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const scopeMatch = line.match(/^-\s*Scope:\s*(.+)$/i);
       if(scopeMatch){
         const rawScope = scopeMatch[1].toLowerCase();
-        if(/install/.test(rawScope)) current.scopeType = 'install';
-        else if(/replace/.test(rawScope)) current.scopeType = 'replace';
+        if(/replace/.test(rawScope)) current.scopeType = 'replace';
+        else if(/install/.test(rawScope)) current.scopeType = 'install';
         else current.scopeType = 'repair';
         return;
       }
@@ -7008,11 +7008,55 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       lines.push(`${title}`);
-      const scopeLabel = scopeType === 'install'
-        ? 'Install new section'
-        : scopeType === 'replace'
-          ? 'Remove & replace section'
-          : 'Repair existing section';
+      const scopeLabel = (()=>{
+        if(scopeType === 'install') return 'Install new section';
+        if(scopeType !== 'replace') return 'Repair existing section';
+        if(!isWrought) return 'Remove & replace section';
+
+        const lengthValue = formatFtValue(s.length);
+        const lengthLabel = lengthValue || numOrDash(s.length);
+        const heightLabel = normalizeLabelText(s.height || '').trim();
+        const heightPhrase = heightLabel ? `${heightLabel} tall` : '';
+        const styleRaw = normalizeLabelText(s.style || '').trim();
+        const styleLabel = styleRaw ? styleRaw.toLowerCase() : '';
+        const replaceDescriptor = [heightPhrase, 'wrought iron fence'].filter(Boolean).join(' ').trim() || 'wrought iron fence';
+        const installDescriptor = [heightPhrase, styleLabel ? `${styleLabel} wrought iron fence` : 'wrought iron fence']
+          .filter(Boolean).join(' ').trim() || 'wrought iron fence';
+
+        const railSizes = new Set();
+        const railsArr = Array.isArray(s.rails) ? s.rails.slice(0, s.railsCount || s.rails.length) : [];
+        if(railsArr.length){
+          railsArr.forEach(r=>{
+            const size = normalizeSize(r?.size);
+            if(size) railSizes.add(size);
+            if(r?.stacked){
+              const size2 = normalizeSize(r?.size2);
+              if(size2) railSizes.add(size2);
+            }
+          });
+        } else if(s.railSize){
+          const size = normalizeSize(s.railSize);
+          if(size) railSizes.add(size);
+          if(s.railStacked && s.railSize2){
+            const size2 = normalizeSize(s.railSize2);
+            if(size2) railSizes.add(size2);
+          }
+        }
+        const picketSize = normalizeSize(s.picketSize || '');
+        const sizeParts = [];
+        if(railSizes.size){
+          sizeParts.push(`${joinParts(Array.from(railSizes))} rails`);
+        }
+        if(picketSize){
+          sizeParts.push(`${picketSize} pickets`);
+        }
+        const sizeDetail = sizeParts.length ? ` with ${joinParts(sizeParts)}` : '';
+
+        const gateCount = parseInt(s.walkGatesAdd||0,10) || 0;
+        const gateDetail = gateCount ? ` with ${gateCount} walk gate${gateCount === 1 ? '' : 's'}` : '';
+
+        return `Replace ${lengthLabel} linear ft of ${replaceDescriptor}. Remove, haul away and dispose of the existing fence. Install new ${installDescriptor}${sizeDetail}${gateDetail}.`;
+      })();
       lines.push(`- Scope: ${scopeLabel}`);
       const woodFinish = s.woodFinish || 'None';
       const woodStyle = s.woodStyle || '';
