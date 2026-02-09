@@ -941,6 +941,7 @@
         </div>
         <div class="sp-actions">
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
+          <button class="sp-btn ghost" id="sp-open-import" type="button">Reload from Notes</button>
           <button class="sp-btn is-hidden" id="sp-refresh-materials" type="button" data-gated>Update Material Costs</button>
         </div>
       </div>
@@ -1019,6 +1020,30 @@
       </div>
     </div>
 
+    <div class="sp-modal" id="sp-import-modal" aria-hidden="true" role="dialog" aria-labelledby="sp-import-title">
+      <div class="sp-card sp-modal-card" id="sp-import-modal-card">
+        <div class="sp-card-header">
+          <div class="sp-card-title" id="sp-import-title">Reload from Notes</div>
+          <div class="sp-row">
+            <button class="sp-btn ghost" id="sp-import-close" type="button">Close</button>
+          </div>
+        </div>
+        <div class="sp-grid">
+          <div class="sp-field col-12">
+            <div class="sp-row">
+              <button class="sp-btn" id="sp-import-btn" type="button">Load Notes</button>
+              <button class="sp-btn ghost" id="sp-import-clear" type="button">Clear</button>
+            </div>
+          </div>
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-import-text">Paste saved notes</label>
+            <textarea class="sp-textarea" id="sp-import-text" placeholder="Paste previously generated notes to restore sections and map info..."></textarea>
+            <div class="sp-hint" id="sp-import-status">Paste notes that include the embedded reload key added by this generator.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="sp-layout">
       <div class="sp-main">
         <div class="sp-inline-cards">
@@ -1036,23 +1061,6 @@
             </div>
             <div class="sp-hint">Enter the estimate number and click “Fetch Estimate Address” to load the service address from Housecall Pro.</div>
             <div class="sp-hint" id="sp-estimate-status" aria-live="polite"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sp-card" id="sp-import-card">
-        <div class="sp-card-header">
-          <div class="sp-card-title">Reload from Notes</div>
-          <div class="sp-row">
-            <button class="sp-btn" id="sp-import-btn" type="button">Load Notes</button>
-            <button class="sp-btn ghost" id="sp-import-clear" type="button">Clear</button>
-          </div>
-        </div>
-        <div class="sp-grid">
-          <div class="sp-field col-12">
-            <label class="sp-label" for="sp-import-text">Paste saved notes</label>
-            <textarea class="sp-textarea" id="sp-import-text" placeholder="Paste previously generated notes to restore sections and map info..."></textarea>
-            <div class="sp-hint" id="sp-import-status">Paste notes that include the embedded reload key added by this generator.</div>
           </div>
         </div>
       </div>
@@ -1417,6 +1425,9 @@ document.addEventListener('DOMContentLoaded', function(){
   const manualModal = document.getElementById('sp-manual-modal');
   const manualOpenBtn = document.getElementById('sp-open-manual');
   const manualCloseBtn = document.getElementById('sp-manual-close');
+  const importModal = document.getElementById('sp-import-modal');
+  const importOpenBtn = document.getElementById('sp-open-import');
+  const importCloseBtn = document.getElementById('sp-import-close');
   const pushHcpBtn = document.getElementById('sp-push-hcp');
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
@@ -6067,6 +6078,19 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function setImportModal(open){
+    if(!importModal) return;
+    importModal.setAttribute('aria-hidden', open ? 'false' : 'true');
+    importModal.classList.toggle('is-open', !!open);
+
+    if(open && importTextEl){
+      importTextEl.focus();
+      if(typeof importTextEl.select === 'function'){
+        importTextEl.select();
+      }
+    }
+  }
+
   function clearManualMetrics(){
     if(manualGrossOutput) manualGrossOutput.textContent = '';
     if(manualGrossHourOutput) manualGrossHourOutput.textContent = '';
@@ -9707,6 +9731,12 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   if(manualCloseBtn){
     manualCloseBtn.addEventListener('click', ()=> setManualModal(false));
+  }
+  if(importOpenBtn && importModal){
+    importOpenBtn.addEventListener('click', ()=> setImportModal(true));
+  }
+  if(importCloseBtn){
+    importCloseBtn.addEventListener('click', ()=> setImportModal(false));
   }
 
   if(manualCalcBtn){
