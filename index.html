@@ -43,6 +43,9 @@
   .sp-onboard [data-gated]{
     display:none !important;
   }
+  .sp-section-locked [data-section-detail]{
+    display:none !important;
+  }
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
   #sp-map-card{margin-bottom:16px}
   #sp-crew-card{margin-top:18px;display:none}
@@ -908,6 +911,10 @@
     background:#b91c1c;
     color:#ffffff;
   }
+  .sp-card.is-unconfirmed{
+    border-color:var(--sp-accent);
+    box-shadow:0 0 0 2px rgba(192,79,35,0.28), var(--sp-shadow);
+  }
   .sp-modal{
     background:rgba(0,0,0,0.45);
   }
@@ -1050,9 +1057,12 @@
         </div>
       </div>
 
-      <div class="sp-card" id="sp-customer-card" data-gated>
+      <div class="sp-card is-unconfirmed" id="sp-customer-card" data-gated>
         <div class="sp-card-header">
           <div class="sp-card-title">Customer Type</div>
+          <div class="sp-row">
+            <button class="sp-btn ghost" id="sp-customer-confirm" type="button">Confirm</button>
+          </div>
         </div>
         <div class="sp-grid">
           <div class="sp-field col-12">
@@ -1402,6 +1412,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const manualScenarioLabel = document.getElementById('sp-manual-scenario-label');
   const customerTypeSelect = document.getElementById('sp-customer-type');
   const customerMinHint = document.getElementById('sp-customer-min-hint');
+  const customerCardEl = document.getElementById('sp-customer-card');
+  const customerConfirmBtn = document.getElementById('sp-customer-confirm');
   const manualModal = document.getElementById('sp-manual-modal');
   const manualOpenBtn = document.getElementById('sp-open-manual');
   const manualCloseBtn = document.getElementById('sp-manual-close');
@@ -1420,6 +1432,7 @@ document.addEventListener('DOMContentLoaded', function(){
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
   let lastEstimateExists = false;
+  let customerTypeConfirmed = false;
 
   function setGateUnlocked(unlocked){
     gateUnlocked = !!unlocked;
@@ -1429,7 +1442,20 @@ document.addEventListener('DOMContentLoaded', function(){
     scopeEl.classList.toggle('sp-onboard', !gateUnlocked);
   }
 
+  function setCustomerTypeConfirmed(confirmed){
+    customerTypeConfirmed = !!confirmed;
+    if(customerCardEl){
+      customerCardEl.classList.toggle('is-unconfirmed', !customerTypeConfirmed);
+    }
+    if(customerConfirmBtn){
+      customerConfirmBtn.textContent = customerTypeConfirmed ? 'Confirmed' : 'Confirm';
+      customerConfirmBtn.classList.toggle('primary', !customerTypeConfirmed);
+      customerConfirmBtn.disabled = customerTypeConfirmed;
+    }
+  }
+
   setGateUnlocked(false);
+  setCustomerTypeConfirmed(false);
 
   if(laborRateInput){
     laborRateInput.value = `$${money(LABOR_RATE)}/hr (crew rate)`;
@@ -2306,6 +2332,21 @@ document.addEventListener('DOMContentLoaded', function(){
       (!section.caps || section.caps.length === 0);
   }
 
+  function sectionBasicsComplete(card){
+    if(!card) return false;
+    const label = (card.querySelector('[data-field="label"]')?.value || '').trim();
+    const lengthInput = card.querySelector('[data-field="length"] input');
+    const length = lengthInput ? parseFloat(lengthInput.value || '0') : 0;
+    const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').trim();
+    const scopeType = (card.querySelector('[data-field="scopeType"]')?.value || '').trim();
+    return !!(label && isFinite(length) && length > 0 && fenceType && scopeType);
+  }
+
+  function updateSectionBasicsGate(card){
+    if(!card) return;
+    card.classList.toggle('sp-section-locked', !sectionBasicsComplete(card));
+  }
+
   function updateMapControlsUI(){
     const clearBtn = document.getElementById('sp-map-clear');
     if(clearBtn){
@@ -2735,7 +2776,7 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
           </div>
         </div>
-        <div class="sp-scope-group col-12 is-wood" data-wood-only>
+        <div class="sp-scope-group col-12 is-wood" data-section-detail data-wood-only>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Wood</div>
             <div>
@@ -2840,7 +2881,7 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
 
-        <div class="sp-scope-group col-12 is-repair" data-wood-only data-repair-only>
+        <div class="sp-scope-group col-12 is-repair" data-section-detail data-wood-only data-repair-only>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Wood Repairs</div>
             <div>
@@ -2974,7 +3015,7 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
 
-        <div class="sp-scope-group col-12 is-style" data-style-group>
+        <div class="sp-scope-group col-12 is-style" data-section-detail data-style-group>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Style, Finish & Patches</div>
             <div>
@@ -3097,7 +3138,7 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
         </div>
-        <div class="sp-scope-group col-12 is-repair">
+        <div class="sp-scope-group col-12 is-repair" data-section-detail>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Repairs</div>
             <div>
@@ -3215,7 +3256,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           </div>
         </div>
-        <div class="sp-scope-group col-12 is-gates">
+        <div class="sp-scope-group col-12 is-gates" data-section-detail>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Gates</div>
             <div>
@@ -5511,6 +5552,7 @@ document.addEventListener('DOMContentLoaded', function(){
       writeSectionToDOM(card, s);
       card.dataset.lastFenceType = (s.fenceType || 'Wrought Iron').toLowerCase();
       card.dataset.lastWoodPost = (s.woodPost || '').toLowerCase();
+      updateSectionBasicsGate(card);
       updateFenceTypeConditional(card);
       attachNumberHandlers(card);
       attachRailsHandlers(card);
@@ -5526,7 +5568,10 @@ document.addEventListener('DOMContentLoaded', function(){
         titleEl.textContent = `Section ${idx+1}${v ? ' - ' + v : ''}`;
       }
       refreshTitle();
-      labelInput.addEventListener('input', refreshTitle);
+      labelInput.addEventListener('input', ()=>{
+        refreshTitle();
+        updateSectionBasicsGate(card);
+      });
 
       const deleteBtn = $('.sp-del', card);
       if(deleteBtn){
@@ -5572,7 +5617,10 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       $$('input, select, textarea', card).forEach(el=>{
-        el.addEventListener('input', ()=>{ persist(); });
+        el.addEventListener('input', ()=>{
+          updateSectionBasicsGate(card);
+          persist();
+        });
         el.addEventListener('change', ()=>{
           if(el.matches('[data-field="fenceType"]')){
             const nextType = (el.value || '').toLowerCase();
@@ -5586,6 +5634,7 @@ document.addEventListener('DOMContentLoaded', function(){
           updateWalkGateConditional(card);
           updateDriveGateOperatorConditional(card);
           updateInstallConditional(card);
+          updateSectionBasicsGate(card);
           persist();
         });
       });
@@ -5802,6 +5851,7 @@ document.addEventListener('DOMContentLoaded', function(){
       state.customerType = normalizeCustomerType(customerTypeSelect.value);
     }
     updatePricingMinimumUI();
+    setCustomerTypeConfirmed(false);
 
     const importAddress = (payload.map && payload.map.address) || (payload.estimate && payload.estimate.address) || '';
     if(mapAddressInput){
@@ -9691,6 +9741,7 @@ document.addEventListener('DOMContentLoaded', function(){
       customerTypeSelect.value = normalizeCustomerType(customerTypeSelect.value);
       state.customerType = customerTypeSelect.value;
       updatePricingMinimumUI();
+      setCustomerTypeConfirmed(false);
       persist();
     });
   }
@@ -9699,6 +9750,9 @@ document.addEventListener('DOMContentLoaded', function(){
     state.customerType = customerTypeSelect.value;
   }
   updatePricingMinimumUI();
+  if(customerConfirmBtn){
+    customerConfirmBtn.addEventListener('click', ()=> setCustomerTypeConfirmed(true));
+  }
 
   const quickAddBtn = document.getElementById('sp-quick-add');
   if(quickAddBtn){ quickAddBtn.addEventListener('click', ()=>{ addSection(); persist(); }); }
