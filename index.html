@@ -9225,14 +9225,20 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodPicketInstall > 0) sub.push('- Wood pickets to install: '+totals.woodPicketInstall);
     if (totals.woodRailReplace > 0) sub.push('- Wood rails to replace: '+totals.woodRailReplace);
     if (totals.woodRailInstall > 0) sub.push('- Wood rails to install: '+totals.woodRailInstall);
-    const woodPostReplaceTotal = (totals.woodPostReplace6 || 0) + (totals.woodPostReplace8 || 0);
-    if (woodPostReplaceTotal > 0){
-      const woodPostParts = [];
-      if (totals.woodPostReplace6 > 0) woodPostParts.push(`${totals.woodPostReplace6} × 6ft`);
-      if (totals.woodPostReplace8 > 0) woodPostParts.push(`${totals.woodPostReplace8} × 8ft`);
-      const woodPostDetail = woodPostParts.length ? ` (${woodPostParts.join(', ')})` : '';
-      sub.push(`- Wood posts to replace: ${woodPostReplaceTotal}${woodPostDetail}`);
-    }
+    const woodPostReplaceByType = new Map();
+    state.sections.forEach(section=>{
+      if((section.fenceType || '').toLowerCase() !== 'wood') return;
+      if((section.scopeType || 'repair') !== 'repair') return;
+      const count = parseInt(section.woodRepairPostReplace || 0, 10) || 0;
+      if(count <= 0) return;
+      const rawType = String(section.woodPost || 'wood post').trim();
+      const typeLabel = rawType ? rawType.toLowerCase() : 'wood';
+      woodPostReplaceByType.set(typeLabel, (woodPostReplaceByType.get(typeLabel) || 0) + count);
+    });
+    woodPostReplaceByType.forEach((count, typeLabel)=>{
+      const postLabel = count === 1 ? 'post' : 'posts';
+      sub.push(`- Replace ${count} ${typeLabel} ${postLabel}`);
+    });
     const woodMethodLabel = (method)=>{
       const match = WOOD_POST_INSTALL_METHODS.find(item=>item.value === method);
       return match ? match.label : method;
@@ -9253,27 +9259,55 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodTopCapLf > 0) sub.push('- Wood top cap to replace: '+totals.woodTopCapLf+' lf');
     if (totals.woodTrimLf > 0) sub.push('- Wood trim to replace: '+totals.woodTrimLf+' lf');
     if (totals.woodKickLf > 0) sub.push('- Wood kick board to replace: '+totals.woodKickLf+' lf');
+    const stainScopeLines = [];
+    const summarizeStainLengths = (details)=>{
+      const totalsBySide = new Map();
+      details.forEach(detail=>{
+        const sideRaw = String(detail.sideLabel || '').trim().toLowerCase();
+        const sideLabel = sideRaw || 'side';
+        const length = isFinite(detail.lengthFt) ? detail.lengthFt : 0;
+        if(length <= 0) return;
+        totalsBySide.set(sideLabel, (totalsBySide.get(sideLabel) || 0) + length);
+      });
+      if(!totalsBySide.size) return '';
+      const parts = [];
+      const order = ['both sides', 'outside', 'inside'];
+      order.forEach(side=>{
+        if(!totalsBySide.has(side)) return;
+        const len = totalsBySide.get(side);
+        const rounded = Math.round(len * 10) / 10;
+        const lenLabel = Math.abs(rounded - Math.round(rounded)) < 0.05 ? `${Math.round(rounded)}` : `${rounded.toFixed(1)}`;
+        parts.push(`${side} of ${lenLabel} linear ft`);
+      });
+      totalsBySide.forEach((len, side)=>{
+        if(order.includes(side)) return;
+        const rounded = Math.round(len * 10) / 10;
+        const lenLabel = Math.abs(rounded - Math.round(rounded)) < 0.05 ? `${Math.round(rounded)}` : `${rounded.toFixed(1)}`;
+        parts.push(`${side} of ${lenLabel} linear ft`);
+      });
+      return parts.join('; ');
+    };
     if (woodWashDetails.length){
-      sub.push('- Wood wash & stain selected; wash on day one and return later to stain.');
-      woodWashDetails.forEach(detail=>{
-        const lengthLabel = isFinite(detail.lengthFt) ? `${detail.lengthFt.toFixed(1)} lf` : 'Length N/A';
-        const washLabel = detail.washType === 'hail' ? 'Wash hail & stain' : 'Wash & stain';
-        sub.push(`- ${washLabel}: ${detail.sectionLabel} (${detail.sideLabel}; ${lengthLabel})`);
-      });
+      const summary = summarizeStainLengths(woodWashDetails);
+      if(summary){
+        stainScopeLines.push(`- Power wash the fence to clean off dirt and debris (${summary})`);
+        stainScopeLines.push(`- Return after a couple of days to stain the fence (${summary})`);
+      } else if (hasWoodWashSelection) {
+        stainScopeLines.push('- Wood wash & stain selected; add section length and height to estimate wash time.');
+      }
     } else if (hasWoodWashSelection) {
-      sub.push('- Wood wash & stain selected; add section length and height to estimate wash time.');
-    }
-    if (woodStainDetails.length){
-      if (totals.woodStainSqft > 0) sub.push('- Wood stain area (est.): '+Math.round(totals.woodStainSqft)+' sq ft total');
-      woodStainDetails.forEach(detail=>{
-        const lengthLabel = isFinite(detail.lengthFt) ? `${detail.lengthFt.toFixed(1)} lf` : 'Length N/A';
-        const sqftValue = isFinite(detail.sqft) ? Math.round(detail.sqft) : null;
-        const sqftLabel = sqftValue != null ? `${sqftValue} sq ft` : 'Area N/A';
-        sub.push(`- Wood staining: ${detail.sectionLabel} (${detail.sideLabel}; ${lengthLabel}; est. ${sqftLabel})`);
-      });
+      stainScopeLines.push('- Wood wash & stain selected; add section length and height to estimate wash time.');
+    } else if (woodStainDetails.length){
+      const summary = summarizeStainLengths(woodStainDetails);
+      if(summary){
+        stainScopeLines.push(`- Stain the fence (${summary})`);
+      } else if (hasWoodStaining) {
+        stainScopeLines.push('- Wood staining selected; add section length and height to estimate area.');
+      }
     } else if (hasWoodStaining) {
-      sub.push('- Wood staining selected; add section length and height to estimate area.');
+      stainScopeLines.push('- Wood staining selected; add section length and height to estimate area.');
     }
+    stainScopeLines.forEach(line => sub.push(line));
     sub.push('');
     sub.push('MATERIALS');
     materialEntries.forEach(({ label, qty }) => {
