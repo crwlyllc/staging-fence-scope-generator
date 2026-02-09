@@ -6276,12 +6276,13 @@ document.addEventListener('DOMContentLoaded', function(){
       return heightFt >= 8 ? 4 : 3;
     }
     function woodPicketCountForWidth(widthIn, picketWidthIn, isBoardOnBoard){
-      const gapIn = 0.5; // estimated gap for side-by-side layout
       const width = parseFloat(widthIn) || 0;
-      const picket = parseFloat(picketWidthIn) || 0;
-      if(width <= 0 || picket <= 0) return 0;
-      const base = Math.max(1, Math.ceil((width + gapIn) / (picket + gapIn)));
-      return isBoardOnBoard ? base * 2 : base;
+      if(width <= 0) return 0;
+      const divisor = isBoardOnBoard ? 3.5 : (parseFloat(picketWidthIn) || 0);
+      if(divisor <= 0) return 0;
+      const base = width / divisor;
+      const withExtra = base * 1.1;
+      return Math.ceil(withExtra);
     }
     function splitWoodTrimSizes(trimType){
       const raw = normalizeLabelText(trimType || '');
