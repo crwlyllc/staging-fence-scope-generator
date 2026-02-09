@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="icon" type="image/jpeg" sizes="32x32" href="https://cdn.prod.website-files.com/6594928d27a68dfdb6474334/66e8a1e05c9e00dea43e9a1b_Strong-Perimeter-Logo-32.jpg" />
+  <link rel="icon" type="image/svg+xml" href="assets/strong-perimeter-favicon.svg" />
   <style>
   :root{
     --sp-green:#004B3D;
@@ -1237,15 +1237,14 @@ document.addEventListener('DOMContentLoaded', function(){
   })();
   // Set favicon
   (function setFavicon(){
-    var href = 'https://cdn.prod.website-files.com/6594928d27a68dfdb6474334/66e8a1e05c9e00dea43e9a1b_Strong-Perimeter-Logo-32.jpg';
+    var href = 'assets/strong-perimeter-favicon.svg';
     var head = document.head || document.getElementsByTagName('head')[0];
     if (!head) return;
     var olds = head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
     olds.forEach(function(el){ el.parentNode.removeChild(el); });
     var link = document.createElement('link');
     link.rel = 'icon';
-    link.type = 'image/jpeg';
-    link.sizes = '32x32';
+    link.type = 'image/svg+xml';
     link.href = href;
     head.appendChild(link);
   })();
