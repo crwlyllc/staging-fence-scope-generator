@@ -8421,6 +8421,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let primerGallons = 0;
     let primerCans = 0;
 
+    const replacePostCounts = totals.postsReplace || zeroPostCounts();
     const weldRepairHours = (
       totals.wiPickets*12 +
       totals.puppyPickets*12 +
@@ -8429,14 +8430,28 @@ document.addEventListener('DOMContentLoaded', function(){
       totals.wiRails*30 +
       totals.wiRailGaps*20 +
       totals.weldRedos*5 +
-      totals.posts1p5*60 +
-      totals.posts2x2*60 +
-      totals.posts3x3*90 +
-      totals.posts4x4*120 +
+      (replacePostCounts.posts1p5 || 0)*60 +
+      (replacePostCounts.posts2x2 || 0)*60 +
+      (replacePostCounts.posts3x3 || 0)*90 +
+      (replacePostCounts.posts4x4 || 0)*120 +
       (totals.postsRealign2x2 + totals.postsRealign3x3)*30
     )/60;
     manHours += weldRepairHours;
     welderHours += weldRepairHours;
+    const installPostCounts = totals.postsInstall || zeroPostCounts();
+    const wallPostCountsForLabor = totals.retainingWallPosts || zeroPostCounts();
+    const installPostsNeedingCrew = (
+      Math.max(0, (installPostCounts.posts1p5 || 0) - (wallPostCountsForLabor.posts1p5 || 0)) +
+      Math.max(0, (installPostCounts.posts2x2 || 0) - (wallPostCountsForLabor.posts2x2 || 0)) +
+      Math.max(0, (installPostCounts.posts3x3 || 0) - (wallPostCountsForLabor.posts3x3 || 0)) +
+      Math.max(0, (installPostCounts.posts4x4 || 0) - (wallPostCountsForLabor.posts4x4 || 0))
+    );
+    if(installPostsNeedingCrew > 0){
+      const crewHours = installPostsNeedingCrew * (20/60);
+      const postInstallManHours = crewHours * ONSITE_CREW_SIZE;
+      manHours += postInstallManHours;
+      helperHours += postInstallManHours;
+    }
     const cutWeldWelderHours = totals.postsRealignCutWeld * 0.5;
     const cutWeldHelperHours = totals.postsRealignCutWeld * 0.5;
     if(totals.postsRealignCutWeld > 0){
