@@ -933,9 +933,9 @@
           </div>
           <div class="sp-subtitle">Residential &amp; commercial fence experts • internal scope builder</div>
         </div>
-        <div class="sp-actions" data-gated>
+        <div class="sp-actions">
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
-          <button class="sp-btn is-hidden" id="sp-refresh-materials" type="button">Update Material Costs</button>
+          <button class="sp-btn is-hidden" id="sp-refresh-materials" type="button" data-gated>Update Material Costs</button>
         </div>
       </div>
 
@@ -1026,6 +1026,7 @@
             <input class="sp-input" id="sp-estimate-number" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" />
             <div class="sp-row" style="margin-top:8px">
               <button class="sp-btn ghost" id="sp-estimate-lookup" type="button">Fetch Estimate Address</button>
+              <button class="sp-btn" id="sp-proceed-no-estimate" type="button">Proceed Without Estimate</button>
             </div>
             <div class="sp-hint">Enter the estimate number and click “Fetch Estimate Address” to load the service address from Housecall Pro.</div>
             <div class="sp-hint" id="sp-estimate-status" aria-live="polite"></div>
@@ -1383,6 +1384,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const importStatusEl = document.getElementById('sp-import-status');
   const estimateNumberInput = document.getElementById('sp-estimate-number');
   const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
+  const proceedWithoutEstimateBtn = document.getElementById('sp-proceed-no-estimate');
   const mapAddressInput = document.getElementById('sp-map-address');
   const mapCardEl = document.getElementById('sp-map-card');
   const mapToggleBtn = document.getElementById('sp-map-toggle');
@@ -9731,6 +9733,12 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   if(estimateLookupBtn){
     estimateLookupBtn.addEventListener('click', ()=>runEstimateLookup());
+  }
+  if(proceedWithoutEstimateBtn){
+    proceedWithoutEstimateBtn.addEventListener('click', ()=>{
+      updateEstimateStatus('Proceeding without estimate.', 'info');
+      setGateUnlocked(true);
+    });
   }
   if(pushHcpBtn){
     pushHcpBtn.addEventListener('click', pushNotesToHcp);
