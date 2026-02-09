@@ -9225,6 +9225,14 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodPicketInstall > 0) sub.push('- Wood pickets to install: '+totals.woodPicketInstall);
     if (totals.woodRailReplace > 0) sub.push('- Wood rails to replace: '+totals.woodRailReplace);
     if (totals.woodRailInstall > 0) sub.push('- Wood rails to install: '+totals.woodRailInstall);
+    const woodPostReplaceTotal = (totals.woodPostReplace6 || 0) + (totals.woodPostReplace8 || 0);
+    if (woodPostReplaceTotal > 0){
+      const woodPostParts = [];
+      if (totals.woodPostReplace6 > 0) woodPostParts.push(`${totals.woodPostReplace6} × 6ft`);
+      if (totals.woodPostReplace8 > 0) woodPostParts.push(`${totals.woodPostReplace8} × 8ft`);
+      const woodPostDetail = woodPostParts.length ? ` (${woodPostParts.join(', ')})` : '';
+      sub.push(`- Wood posts to replace: ${woodPostReplaceTotal}${woodPostDetail}`);
+    }
     const woodMethodLabel = (method)=>{
       const match = WOOD_POST_INSTALL_METHODS.find(item=>item.value === method);
       return match ? match.label : method;
