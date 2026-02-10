@@ -2320,18 +2320,12 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function sectionBasicsComplete(card){
-    if(!card) return false;
-    const label = (card.querySelector('[data-field="label"]')?.value || '').trim();
-    const lengthInput = card.querySelector('[data-field="length"] input');
-    const length = lengthInput ? parseFloat(lengthInput.value || '0') : 0;
-    const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').trim();
-    const scopeType = (card.querySelector('[data-field="scopeType"]')?.value || '').trim();
-    return !!(label && isFinite(length) && length > 0 && fenceType && scopeType);
+    return true;
   }
 
   function updateSectionBasicsGate(card){
     if(!card) return;
-    card.classList.toggle('sp-section-locked', !sectionBasicsComplete(card));
+    card.classList.remove('sp-section-locked');
   }
 
   function updateMapControlsUI(){
