@@ -2349,7 +2349,10 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function clearMapDrawing(options={}){
-    mapState.polylines.forEach(poly=>poly.setMap(null));
+    mapState.polylines.forEach(poly=>{
+      clearPolylineLabels(poly);
+      poly.setMap(null);
+    });
     mapState.polylines = [];
     updateMapControlsUI();
     if(!options.skipSections){
@@ -2392,6 +2395,56 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function clearPolylineLabels(polyline){
+    if(!polyline || !Array.isArray(polyline.__spSegmentLabels)) return;
+    polyline.__spSegmentLabels.forEach(marker=>{
+      if(marker && typeof marker.setMap === 'function'){
+        marker.setMap(null);
+      }
+    });
+    polyline.__spSegmentLabels = [];
+  }
+
+  function segmentMidpoint(start, end){
+    if(typeof google !== 'undefined'
+      && google.maps
+      && google.maps.geometry
+      && google.maps.geometry.spherical
+      && typeof google.maps.geometry.spherical.interpolate === 'function'){
+      return google.maps.geometry.spherical.interpolate(start, end, 0.5);
+    }
+    const lat = (start.lat() + end.lat()) / 2;
+    const lng = (start.lng() + end.lng()) / 2;
+    return new google.maps.LatLng(lat, lng);
+  }
+
+  function addSegmentLabel(polyline, position, text){
+    if(!polyline || !mapState.map || typeof google === 'undefined' || !google.maps || !google.maps.Marker) return;
+    const marker = new google.maps.Marker({
+      position,
+      map: mapState.map,
+      clickable: false,
+      draggable: false,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 0,
+        strokeOpacity: 0,
+        fillOpacity: 0
+      },
+      label: {
+        text,
+        color: '#111827',
+        fontSize: '12px',
+        fontWeight: '700'
+      },
+      zIndex: 2000
+    });
+    if(!Array.isArray(polyline.__spSegmentLabels)){
+      polyline.__spSegmentLabels = [];
+    }
+    polyline.__spSegmentLabels.push(marker);
+  }
+
   function refreshSectionsFromMap(){
     if(!mapState.polylines.length){
       updateMapControlsUI();
@@ -2405,6 +2458,7 @@ document.addEventListener('DOMContentLoaded', function(){
     updateMapControlsUI();
     const segments = [];
     mapState.polylines.forEach((polyline, runIndex)=>{
+      clearPolylineLabels(polyline);
       const path = polyline.getPath();
       if(!path) return;
       const length = path.getLength();
@@ -2416,6 +2470,11 @@ document.addEventListener('DOMContentLoaded', function(){
         const feet = meters * 3.28084;
         if(!isFinite(feet) || feet <= 0.1) continue;
         const segId = `${polyline.__spPolylineId}:${i}`;
+        const labelText = `${Math.round(feet)} lf`;
+        const midpoint = segmentMidpoint(start, end);
+        if(midpoint){
+          addSegmentLabel(polyline, midpoint, labelText);
+        }
         segments.push({
           id: segId,
           label: `Map Run ${runIndex+1} – Segment ${i+1}`,
@@ -2504,6 +2563,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return;
       }
       if(confirm('Remove this fence run?')){
+        clearPolylineLabels(polyline);
         polyline.setMap(null);
         mapState.polylines = mapState.polylines.filter(p=>p!==polyline);
         scheduleMapSectionsUpdate();
