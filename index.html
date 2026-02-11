@@ -2657,6 +2657,24 @@ document.addEventListener('DOMContentLoaded', function(){
     applyPendingMapRestore();
   }
 
+  function enforceOverheadMapView(){
+    if(!mapState.map){
+      return;
+    }
+    if(typeof mapState.map.getTilt === 'function' && typeof mapState.map.setTilt === 'function'){
+      const tilt = mapState.map.getTilt();
+      if(tilt && tilt !== 0){
+        mapState.map.setTilt(0);
+      }
+    }
+    if(typeof mapState.map.getHeading === 'function' && typeof mapState.map.setHeading === 'function'){
+      const heading = mapState.map.getHeading();
+      if(heading && heading !== 0){
+        mapState.map.setHeading(0);
+      }
+    }
+  }
+
   function initializeMap(){
     if(mapState.map) return;
     if(typeof google === 'undefined' || !google.maps || !google.maps.drawing) return;
@@ -2669,7 +2687,15 @@ document.addEventListener('DOMContentLoaded', function(){
       zoomControl: true,
       streetViewControl: false,
       mapTypeControl: false,
+      rotateControl: false,
+      tilt: 0,
+      heading: 0,
     });
+    enforceOverheadMapView();
+    google.maps.event.addListenerOnce(mapState.map, 'idle', enforceOverheadMapView);
+    google.maps.event.addListener(mapState.map, 'tilt_changed', enforceOverheadMapView);
+    google.maps.event.addListener(mapState.map, 'heading_changed', enforceOverheadMapView);
+    google.maps.event.addListener(mapState.map, 'maptypeid_changed', enforceOverheadMapView);
     mapState.maxZoomService = (typeof google.maps.MaxZoomService === 'function') ? new google.maps.MaxZoomService() : null;
     mapState.drawingManager = new google.maps.drawing.DrawingManager({
       drawingMode: null,
