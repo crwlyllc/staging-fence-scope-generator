@@ -1072,9 +1072,19 @@
         </div>
       </div>
       <div class="sp-grid">
-        <div class="sp-field col-12">
+        <div class="sp-field col-8">
           <label class="sp-label" for="sp-map-address">Search Address</label>
           <input class="sp-input" id="sp-map-address" type="text" placeholder="Search for a property" autocomplete="off" />
+        </div>
+        <div class="sp-field col-4">
+          <label class="sp-label" for="sp-map-front-facing">Front of House Faces</label>
+          <select class="sp-select" id="sp-map-front-facing">
+            <option value="south">South</option>
+            <option value="north">North</option>
+            <option value="east">East</option>
+            <option value="west">West</option>
+          </select>
+          <div class="sp-hint">Used to auto-name sections (left/front/back/right).</div>
         </div>
         <div class="col-12">
           <div id="sp-map"></div>
@@ -1363,6 +1373,7 @@ document.addEventListener('DOMContentLoaded', function(){
     maxZoomService: null,
     nextPolylineId: 1,
     pendingAddress: '',
+    frontFacing: 'south',
   };
   let pendingMapRestore = null;
   let mapUpdateScheduled = false;
@@ -1379,6 +1390,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
   const proceedWithoutEstimateBtn = document.getElementById('sp-proceed-no-estimate');
   const mapAddressInput = document.getElementById('sp-map-address');
+  const mapFrontFacingSelect = document.getElementById('sp-map-front-facing');
   const mapCardEl = document.getElementById('sp-map-card');
   const mapToggleBtn = document.getElementById('sp-map-toggle');
   const estimateStatusEl = document.getElementById('sp-estimate-status');
@@ -1457,6 +1469,14 @@ document.addEventListener('DOMContentLoaded', function(){
   function parsePositiveInt(value){
     const parsed = parseInt(value, 10);
     return (isFinite(parsed) && parsed > 0) ? parsed : 0;
+  }
+
+  function normalizeMapFrontFacing(value){
+    const normalized = String(value || '').toLowerCase();
+    if(normalized === 'north' || normalized === 'east' || normalized === 'south' || normalized === 'west'){
+      return normalized;
+    }
+    return 'south';
   }
 
   function encodePayloadForNotes(payload){
@@ -2425,6 +2445,66 @@ document.addEventListener('DOMContentLoaded', function(){
     return new google.maps.LatLng(lat, lng);
   }
 
+  function mapFrontVector(frontFacing){
+    const facing = normalizeMapFrontFacing(frontFacing);
+    if(facing === 'north') return { x: 0, y: 1 };
+    if(facing === 'east') return { x: 1, y: 0 };
+    if(facing === 'west') return { x: -1, y: 0 };
+    return { x: 0, y: -1 };
+  }
+
+  function sectionNameFromRelativeAngle(angleDeg){
+    if(angleDeg >= -22.5 && angleDeg < 22.5) return 'Front Section';
+    if(angleDeg >= 22.5 && angleDeg < 67.5) return 'Left Front Section';
+    if(angleDeg >= 67.5 && angleDeg < 112.5) return 'Left Side Section';
+    if(angleDeg >= 112.5 && angleDeg < 157.5) return 'Left Back Section';
+    if(angleDeg >= 157.5 || angleDeg < -157.5) return 'Back Section';
+    if(angleDeg >= -157.5 && angleDeg < -112.5) return 'Right Back Section';
+    if(angleDeg >= -112.5 && angleDeg < -67.5) return 'Right Side Section';
+    return 'Right Front Section';
+  }
+
+  function assignDirectionalNamesToSegments(segments){
+    if(!Array.isArray(segments) || !segments.length){
+      return;
+    }
+
+    const validPoints = segments.filter(seg=>isFinite(seg.midpointLat) && isFinite(seg.midpointLng));
+    if(!validPoints.length){
+      segments.forEach((seg, idx)=>{
+        seg.label = `Map Section ${idx + 1}`;
+      });
+      return;
+    }
+
+    const totals = validPoints.reduce((acc, seg)=>{
+      acc.lat += seg.midpointLat;
+      acc.lng += seg.midpointLng;
+      return acc;
+    }, { lat: 0, lng: 0 });
+
+    const centerLat = totals.lat / validPoints.length;
+    const centerLng = totals.lng / validPoints.length;
+    const lngScale = Math.max(0.000001, Math.cos(centerLat * Math.PI / 180));
+    const frontVec = mapFrontVector(mapState.frontFacing);
+    const leftVec = { x: frontVec.y, y: -frontVec.x };
+    const labelCounts = new Map();
+
+    segments.forEach((seg, idx)=>{
+      const lat = isFinite(seg.midpointLat) ? seg.midpointLat : centerLat;
+      const lng = isFinite(seg.midpointLng) ? seg.midpointLng : centerLng;
+      const x = (lng - centerLng) * lngScale;
+      const y = (lat - centerLat);
+      const frontScore = (x * frontVec.x) + (y * frontVec.y);
+      const leftScore = (x * leftVec.x) + (y * leftVec.y);
+      const angleDeg = Math.atan2(leftScore, frontScore) * (180 / Math.PI);
+      const baseLabel = sectionNameFromRelativeAngle(angleDeg) || `Map Section ${idx + 1}`;
+      const count = (labelCounts.get(baseLabel) || 0) + 1;
+      labelCounts.set(baseLabel, count);
+      seg.label = count > 1 ? `${baseLabel} ${count}` : baseLabel;
+    });
+  }
+
   function createSegmentLabelIcon(text){
     if(typeof google === 'undefined' || !google.maps) return null;
     const content = String(text || '').trim();
@@ -2453,6 +2533,7 @@ document.addEventListener('DOMContentLoaded', function(){
       map: mapState.map,
       clickable: false,
       draggable: false,
+      optimized: false,
       icon: labelIcon || undefined,
       label: {
         text,
@@ -2460,7 +2541,7 @@ document.addEventListener('DOMContentLoaded', function(){
         fontSize: '12px',
         fontWeight: '800'
       },
-      zIndex: 2000
+      zIndex: 1000000
     });
     if(!Array.isArray(polyline.__spSegmentLabels)){
       polyline.__spSegmentLabels = [];
@@ -2487,7 +2568,7 @@ document.addEventListener('DOMContentLoaded', function(){
     mapState.polylines = mapState.polylines.filter(poly=>!!poly.getMap());
     updateMapControlsUI();
     const segments = [];
-    mapState.polylines.forEach((polyline, runIndex)=>{
+    mapState.polylines.forEach((polyline)=>{
       clearPolylineLabels(polyline);
       const path = polyline.getPath();
       if(!path) return;
@@ -2506,18 +2587,23 @@ document.addEventListener('DOMContentLoaded', function(){
         const displayFeet = overrideFeet || measuredFeet;
         const labelText = `${displayFeet} lf`;
         const midpoint = segmentMidpoint(start, end);
+        const midpointLat = midpoint && typeof midpoint.lat === 'function' ? midpoint.lat() : NaN;
+        const midpointLng = midpoint && typeof midpoint.lng === 'function' ? midpoint.lng() : NaN;
         if(midpoint){
           addSegmentLabel(polyline, midpoint, labelText);
         }
         segments.push({
           id: segId,
-          label: `Map Run ${runIndex+1} – Segment ${i+1}`,
+          label: '',
           lengthFeet: feet,
           measuredFeet,
-          displayFeet
+          displayFeet,
+          midpointLat,
+          midpointLng
         });
       }
     });
+    assignDirectionalNamesToSegments(segments);
     applySegmentsToSections(segments);
   }
 
@@ -2596,6 +2682,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function attachMapPolyline(polyline){
     polyline.__spPolylineId = polyline.__spPolylineId || `poly-${mapState.nextPolylineId++}`;
+    if(polyline && typeof polyline.setOptions === 'function'){
+      polyline.setOptions({ zIndex: 100 });
+    }
     mapState.polylines.push(polyline);
     updateMapControlsUI();
     const path = polyline.getPath();
@@ -2645,7 +2734,12 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
     const address = mapAddressInput ? (mapAddressInput.value || '').trim() : '';
-    return { address, polylines, nextPolylineId: mapState.nextPolylineId || 1 };
+    return {
+      address,
+      polylines,
+      nextPolylineId: mapState.nextPolylineId || 1,
+      frontFacing: normalizeMapFrontFacing(mapState.frontFacing),
+    };
   }
 
   function applyPendingMapRestore(){
@@ -2657,7 +2751,7 @@ document.addEventListener('DOMContentLoaded', function(){
     pendingMapRestore = null;
     clearMapDrawing({ skipSections: true });
 
-    const baseOpts = { editable: true, draggable: true, strokeColor: '#d97706', strokeWeight: 3 };
+    const baseOpts = { editable: true, draggable: true, strokeColor: '#d97706', strokeWeight: 3, zIndex: 100 };
     let maxId = restore.nextPolylineId || mapState.nextPolylineId || 1;
     (restore.polylines || []).forEach(data=>{
       if(!data || !Array.isArray(data.path) || data.path.length < 2) return;
@@ -2676,6 +2770,10 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function restoreMapFromSnapshot(mapData){
+    mapState.frontFacing = normalizeMapFrontFacing((mapData && mapData.frontFacing) || mapState.frontFacing);
+    if(mapFrontFacingSelect){
+      mapFrontFacingSelect.value = mapState.frontFacing;
+    }
     clearMapDrawing({ skipSections: true });
     if(!mapData || !mapData.polylines || !mapData.polylines.length){
       pendingMapRestore = null;
@@ -2737,7 +2835,8 @@ document.addEventListener('DOMContentLoaded', function(){
         editable: true,
         draggable: true,
         strokeColor: '#d97706',
-        strokeWeight: 3
+        strokeWeight: 3,
+        zIndex: 100
       }
     });
     mapState.drawingManager.setMap(mapState.map);
@@ -10417,6 +10516,24 @@ document.addEventListener('DOMContentLoaded', function(){
     render();
     outputEl.style.display='none';
     renderServiceLineNotes([]);
+  }
+  if(mapFrontFacingSelect){
+    mapState.frontFacing = normalizeMapFrontFacing(mapFrontFacingSelect.value || mapState.frontFacing);
+    mapFrontFacingSelect.value = mapState.frontFacing;
+    mapFrontFacingSelect.addEventListener('change', ()=>{
+      const nextFacing = normalizeMapFrontFacing(mapFrontFacingSelect.value);
+      mapFrontFacingSelect.value = nextFacing;
+      if(nextFacing === mapState.frontFacing){
+        return;
+      }
+      mapState.frontFacing = nextFacing;
+      syncStateFromDOM();
+      const hasLinkedSections = state.sections.some(sec=>sec.mapGenerated);
+      if(mapState.polylines.length || hasLinkedSections){
+        scheduleMapSectionsUpdate();
+      }
+      persist();
+    });
   }
   window._spInitializeMap = initializeMap;
   if(window._spGoogleMapsReady){
