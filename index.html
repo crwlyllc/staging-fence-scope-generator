@@ -2418,24 +2418,40 @@ document.addEventListener('DOMContentLoaded', function(){
     return new google.maps.LatLng(lat, lng);
   }
 
+  function createSegmentLabelIcon(text){
+    if(typeof google === 'undefined' || !google.maps) return null;
+    const content = String(text || '').trim();
+    const textLength = Math.max(4, content.length);
+    const width = Math.max(56, Math.min(104, 18 + (textLength * 8)));
+    const height = 28;
+    const corner = 8;
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+      `<rect x="1" y="1" width="${width-2}" height="${height-2}" rx="${corner}" ry="${corner}" fill="rgba(255,255,255,0.95)" stroke="rgba(15,23,42,0.95)" stroke-width="2"/>` +
+      `</svg>`;
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      size: new google.maps.Size(width, height),
+      scaledSize: new google.maps.Size(width, height),
+      anchor: new google.maps.Point(width / 2, height / 2),
+      labelOrigin: new google.maps.Point(width / 2, (height / 2) + 0.5),
+    };
+  }
+
   function addSegmentLabel(polyline, position, text){
     if(!polyline || !mapState.map || typeof google === 'undefined' || !google.maps || !google.maps.Marker) return;
+    const labelIcon = createSegmentLabelIcon(text);
     const marker = new google.maps.Marker({
       position,
       map: mapState.map,
       clickable: false,
       draggable: false,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 0,
-        strokeOpacity: 0,
-        fillOpacity: 0
-      },
+      icon: labelIcon || undefined,
       label: {
         text,
         color: '#111827',
         fontSize: '12px',
-        fontWeight: '700'
+        fontWeight: '800'
       },
       zIndex: 2000
     });
