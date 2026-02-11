@@ -10678,6 +10678,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
   updateManualQuote();
 
+  if(estimateNumberInput){
+    window.setTimeout(()=>{
+      const active = document.activeElement;
+      if(active && active !== document.body && active !== estimateNumberInput){
+        return;
+      }
+      estimateNumberInput.focus();
+      estimateNumberInput.select();
+    }, 0);
+  }
+
   if(estimateNumberInput && estimateNumberInput.value){
     runEstimateLookup();
   }
