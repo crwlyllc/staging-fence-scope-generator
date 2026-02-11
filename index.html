@@ -5946,7 +5946,17 @@ document.addEventListener('DOMContentLoaded', function(){
     updatePricingMinimumUI();
     setCustomerTypeConfirmed(false);
 
-    const importAddress = (payload.map && payload.map.address) || (payload.estimate && payload.estimate.address) || '';
+    const snapshotEstimateNumber = sanitizeEstimateNumber(payload.estimate && payload.estimate.number ? payload.estimate.number : '');
+    const snapshotEstimateAddress = (payload.estimate && payload.estimate.address ? payload.estimate.address : '').trim();
+    const importAddress = (payload.map && payload.map.address) || snapshotEstimateAddress || '';
+
+    if(estimateNumberInput){
+      estimateNumberInput.value = snapshotEstimateNumber;
+    }
+    lastEstimateLookupNumber = snapshotEstimateNumber;
+    lastEstimateAddress = snapshotEstimateAddress || importAddress;
+    lastEstimateExists = !!snapshotEstimateNumber;
+
     if(mapAddressInput){
       mapAddressInput.value = importAddress || '';
       if(importAddress){
@@ -5961,6 +5971,11 @@ document.addEventListener('DOMContentLoaded', function(){
     render();
     renderServiceLineNotes([]);
     generateNotes({ skipScroll: true });
+    if(snapshotEstimateNumber){
+      lookupEstimateAddress(snapshotEstimateNumber);
+    }else{
+      updateEstimateStatus('', '');
+    }
   }
 
   const PRICE_FT = {
