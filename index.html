@@ -238,6 +238,22 @@
     font-size:12px;
     color:var(--sp-muted);
   }
+  .sp-map-segment-label{
+    position:absolute;
+    transform:translate(-50%, -50%);
+    padding:4px 8px;
+    border-radius:8px;
+    border:2px solid rgba(15,23,42,0.95);
+    background:rgba(255,255,255,0.96);
+    color:#111827;
+    font-size:12px;
+    font-weight:800;
+    line-height:1.1;
+    white-space:nowrap;
+    box-shadow:0 2px 6px rgba(15,23,42,0.18);
+    pointer-events:none;
+    z-index:2147483647;
+  }
   .sp-number.is-map-linked{
     background:#f5f3ff;
     border-color:rgba(79,70,229,0.35);
@@ -1077,14 +1093,18 @@
           <input class="sp-input" id="sp-map-address" type="text" placeholder="Search for a property" autocomplete="off" />
         </div>
         <div class="sp-field col-4">
-          <label class="sp-label" for="sp-map-front-facing">Front of House Faces</label>
-          <select class="sp-select" id="sp-map-front-facing">
-            <option value="south">South</option>
-            <option value="north">North</option>
-            <option value="east">East</option>
-            <option value="west">West</option>
+          <label class="sp-label" for="sp-map-first-section">First Drawn Section Is</label>
+          <select class="sp-select" id="sp-map-first-section">
+            <option value="front">Front Section</option>
+            <option value="left-front">Left Front Section</option>
+            <option value="left-side">Left Side Section</option>
+            <option value="left-back">Left Back Section</option>
+            <option value="back">Back Section</option>
+            <option value="right-back">Right Back Section</option>
+            <option value="right-side">Right Section</option>
+            <option value="right-front">Right Front Section</option>
           </select>
-          <div class="sp-hint">Used to auto-name sections (left/front/back/right).</div>
+          <div class="sp-hint">Labels follow this start point in draw order.</div>
         </div>
         <div class="col-12">
           <div id="sp-map"></div>
@@ -1373,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', function(){
     maxZoomService: null,
     nextPolylineId: 1,
     pendingAddress: '',
-    frontFacing: 'south',
+    firstSectionKey: 'front',
   };
   let pendingMapRestore = null;
   let mapUpdateScheduled = false;
@@ -1390,7 +1410,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
   const proceedWithoutEstimateBtn = document.getElementById('sp-proceed-no-estimate');
   const mapAddressInput = document.getElementById('sp-map-address');
-  const mapFrontFacingSelect = document.getElementById('sp-map-front-facing');
+  const mapFirstSectionSelect = document.getElementById('sp-map-first-section');
   const mapCardEl = document.getElementById('sp-map-card');
   const mapToggleBtn = document.getElementById('sp-map-toggle');
   const estimateStatusEl = document.getElementById('sp-estimate-status');
@@ -1471,12 +1491,21 @@ document.addEventListener('DOMContentLoaded', function(){
     return (isFinite(parsed) && parsed > 0) ? parsed : 0;
   }
 
-  function normalizeMapFrontFacing(value){
+  const MAP_SECTION_NAME_SEQUENCE = [
+    { key: 'front', label: 'Front Section' },
+    { key: 'left-front', label: 'Left Front Section' },
+    { key: 'left-side', label: 'Left Side Section' },
+    { key: 'left-back', label: 'Left Back Section' },
+    { key: 'back', label: 'Back Section' },
+    { key: 'right-back', label: 'Right Back Section' },
+    { key: 'right-side', label: 'Right Section' },
+    { key: 'right-front', label: 'Right Front Section' },
+  ];
+
+  function normalizeMapFirstSection(value){
     const normalized = String(value || '').toLowerCase();
-    if(normalized === 'north' || normalized === 'east' || normalized === 'south' || normalized === 'west'){
-      return normalized;
-    }
-    return 'south';
+    const found = MAP_SECTION_NAME_SEQUENCE.find(item => item.key === normalized);
+    return found ? found.key : MAP_SECTION_NAME_SEQUENCE[0].key;
   }
 
   function encodePayloadForNotes(payload){
@@ -2445,104 +2474,77 @@ document.addEventListener('DOMContentLoaded', function(){
     return new google.maps.LatLng(lat, lng);
   }
 
-  function mapFrontVector(frontFacing){
-    const facing = normalizeMapFrontFacing(frontFacing);
-    if(facing === 'north') return { x: 0, y: 1 };
-    if(facing === 'east') return { x: 1, y: 0 };
-    if(facing === 'west') return { x: -1, y: 0 };
-    return { x: 0, y: -1 };
-  }
-
-  function sectionNameFromRelativeAngle(angleDeg){
-    if(angleDeg >= -22.5 && angleDeg < 22.5) return 'Front Section';
-    if(angleDeg >= 22.5 && angleDeg < 67.5) return 'Left Front Section';
-    if(angleDeg >= 67.5 && angleDeg < 112.5) return 'Left Side Section';
-    if(angleDeg >= 112.5 && angleDeg < 157.5) return 'Left Back Section';
-    if(angleDeg >= 157.5 || angleDeg < -157.5) return 'Back Section';
-    if(angleDeg >= -157.5 && angleDeg < -112.5) return 'Right Back Section';
-    if(angleDeg >= -112.5 && angleDeg < -67.5) return 'Right Side Section';
-    return 'Right Front Section';
-  }
-
-  function assignDirectionalNamesToSegments(segments){
+  function assignSequentialNamesToSegments(segments){
     if(!Array.isArray(segments) || !segments.length){
       return;
     }
-
-    const validPoints = segments.filter(seg=>isFinite(seg.midpointLat) && isFinite(seg.midpointLng));
-    if(!validPoints.length){
-      segments.forEach((seg, idx)=>{
-        seg.label = `Map Section ${idx + 1}`;
-      });
-      return;
-    }
-
-    const totals = validPoints.reduce((acc, seg)=>{
-      acc.lat += seg.midpointLat;
-      acc.lng += seg.midpointLng;
-      return acc;
-    }, { lat: 0, lng: 0 });
-
-    const centerLat = totals.lat / validPoints.length;
-    const centerLng = totals.lng / validPoints.length;
-    const lngScale = Math.max(0.000001, Math.cos(centerLat * Math.PI / 180));
-    const frontVec = mapFrontVector(mapState.frontFacing);
-    const leftVec = { x: frontVec.y, y: -frontVec.x };
+    const startKey = normalizeMapFirstSection(mapState.firstSectionKey);
+    const keys = MAP_SECTION_NAME_SEQUENCE.map(item=>item.key);
+    const startIdx = Math.max(0, keys.indexOf(startKey));
     const labelCounts = new Map();
 
     segments.forEach((seg, idx)=>{
-      const lat = isFinite(seg.midpointLat) ? seg.midpointLat : centerLat;
-      const lng = isFinite(seg.midpointLng) ? seg.midpointLng : centerLng;
-      const x = (lng - centerLng) * lngScale;
-      const y = (lat - centerLat);
-      const frontScore = (x * frontVec.x) + (y * frontVec.y);
-      const leftScore = (x * leftVec.x) + (y * leftVec.y);
-      const angleDeg = Math.atan2(leftScore, frontScore) * (180 / Math.PI);
-      const baseLabel = sectionNameFromRelativeAngle(angleDeg) || `Map Section ${idx + 1}`;
+      const seqIdx = (startIdx + idx) % MAP_SECTION_NAME_SEQUENCE.length;
+      const seq = MAP_SECTION_NAME_SEQUENCE[seqIdx] || MAP_SECTION_NAME_SEQUENCE[0];
+      const baseLabel = seq.label;
       const count = (labelCounts.get(baseLabel) || 0) + 1;
       labelCounts.set(baseLabel, count);
       seg.label = count > 1 ? `${baseLabel} ${count}` : baseLabel;
     });
   }
 
-  function createSegmentLabelIcon(text){
-    if(typeof google === 'undefined' || !google.maps) return null;
-    const content = String(text || '').trim();
-    const textLength = Math.max(4, content.length);
-    const width = Math.max(56, Math.min(104, 18 + (textLength * 8)));
-    const height = 28;
-    const corner = 8;
-    const svg =
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
-      `<rect x="1" y="1" width="${width-2}" height="${height-2}" rx="${corner}" ry="${corner}" fill="rgba(255,255,255,0.95)" stroke="rgba(15,23,42,0.95)" stroke-width="2"/>` +
-      `</svg>`;
-    return {
-      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-      size: new google.maps.Size(width, height),
-      scaledSize: new google.maps.Size(width, height),
-      anchor: new google.maps.Point(width / 2, height / 2),
-      labelOrigin: new google.maps.Point(width / 2, (height / 2) + 0.5),
+  function createSegmentLabelOverlay(position, text){
+    if(!mapState.map || typeof google === 'undefined' || !google.maps || typeof google.maps.OverlayView !== 'function'){
+      return null;
+    }
+
+    const overlay = new google.maps.OverlayView();
+    overlay.__spPosition = position;
+    overlay.__spText = String(text || '').trim();
+    overlay.__spDiv = null;
+
+    overlay.onAdd = function(){
+      const div = document.createElement('div');
+      div.className = 'sp-map-segment-label';
+      div.textContent = this.__spText;
+      this.__spDiv = div;
+      const panes = this.getPanes();
+      if(panes && panes.floatPane){
+        panes.floatPane.appendChild(div);
+      }
     };
+
+    overlay.draw = function(){
+      if(!this.__spDiv || !this.__spPosition){
+        return;
+      }
+      const projection = this.getProjection();
+      if(!projection){
+        return;
+      }
+      const point = projection.fromLatLngToDivPixel(this.__spPosition);
+      if(!point){
+        return;
+      }
+      this.__spDiv.style.left = `${point.x}px`;
+      this.__spDiv.style.top = `${point.y}px`;
+    };
+
+    overlay.onRemove = function(){
+      if(this.__spDiv && this.__spDiv.parentNode){
+        this.__spDiv.parentNode.removeChild(this.__spDiv);
+      }
+      this.__spDiv = null;
+    };
+
+    overlay.setMap(mapState.map);
+    return overlay;
   }
 
   function addSegmentLabel(polyline, position, text){
-    if(!polyline || !mapState.map || typeof google === 'undefined' || !google.maps || !google.maps.Marker) return;
-    const labelIcon = createSegmentLabelIcon(text);
-    const marker = new google.maps.Marker({
-      position,
-      map: mapState.map,
-      clickable: false,
-      draggable: false,
-      optimized: false,
-      icon: labelIcon || undefined,
-      label: {
-        text,
-        color: '#111827',
-        fontSize: '12px',
-        fontWeight: '800'
-      },
-      zIndex: 1000000
-    });
+    if(!polyline || !position) return;
+    const marker = createSegmentLabelOverlay(position, text);
+    if(!marker) return;
     if(!Array.isArray(polyline.__spSegmentLabels)){
       polyline.__spSegmentLabels = [];
     }
@@ -2587,8 +2589,6 @@ document.addEventListener('DOMContentLoaded', function(){
         const displayFeet = overrideFeet || measuredFeet;
         const labelText = `${displayFeet} lf`;
         const midpoint = segmentMidpoint(start, end);
-        const midpointLat = midpoint && typeof midpoint.lat === 'function' ? midpoint.lat() : NaN;
-        const midpointLng = midpoint && typeof midpoint.lng === 'function' ? midpoint.lng() : NaN;
         if(midpoint){
           addSegmentLabel(polyline, midpoint, labelText);
         }
@@ -2597,13 +2597,11 @@ document.addEventListener('DOMContentLoaded', function(){
           label: '',
           lengthFeet: feet,
           measuredFeet,
-          displayFeet,
-          midpointLat,
-          midpointLng
+          displayFeet
         });
       }
     });
-    assignDirectionalNamesToSegments(segments);
+    assignSequentialNamesToSegments(segments);
     applySegmentsToSections(segments);
   }
 
@@ -2738,7 +2736,7 @@ document.addEventListener('DOMContentLoaded', function(){
       address,
       polylines,
       nextPolylineId: mapState.nextPolylineId || 1,
-      frontFacing: normalizeMapFrontFacing(mapState.frontFacing),
+      firstSectionKey: normalizeMapFirstSection(mapState.firstSectionKey),
     };
   }
 
@@ -2770,9 +2768,9 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function restoreMapFromSnapshot(mapData){
-    mapState.frontFacing = normalizeMapFrontFacing((mapData && mapData.frontFacing) || mapState.frontFacing);
-    if(mapFrontFacingSelect){
-      mapFrontFacingSelect.value = mapState.frontFacing;
+    mapState.firstSectionKey = normalizeMapFirstSection((mapData && mapData.firstSectionKey) || mapState.firstSectionKey);
+    if(mapFirstSectionSelect){
+      mapFirstSectionSelect.value = mapState.firstSectionKey;
     }
     clearMapDrawing({ skipSections: true });
     if(!mapData || !mapData.polylines || !mapData.polylines.length){
@@ -10517,19 +10515,18 @@ document.addEventListener('DOMContentLoaded', function(){
     outputEl.style.display='none';
     renderServiceLineNotes([]);
   }
-  if(mapFrontFacingSelect){
-    mapState.frontFacing = normalizeMapFrontFacing(mapFrontFacingSelect.value || mapState.frontFacing);
-    mapFrontFacingSelect.value = mapState.frontFacing;
-    mapFrontFacingSelect.addEventListener('change', ()=>{
-      const nextFacing = normalizeMapFrontFacing(mapFrontFacingSelect.value);
-      mapFrontFacingSelect.value = nextFacing;
-      if(nextFacing === mapState.frontFacing){
+  if(mapFirstSectionSelect){
+    mapState.firstSectionKey = normalizeMapFirstSection(mapFirstSectionSelect.value || mapState.firstSectionKey);
+    mapFirstSectionSelect.value = mapState.firstSectionKey;
+    mapFirstSectionSelect.addEventListener('change', ()=>{
+      const nextKey = normalizeMapFirstSection(mapFirstSectionSelect.value);
+      mapFirstSectionSelect.value = nextKey;
+      if(nextKey === mapState.firstSectionKey){
         return;
       }
-      mapState.frontFacing = nextFacing;
+      mapState.firstSectionKey = nextKey;
       syncStateFromDOM();
-      const hasLinkedSections = state.sections.some(sec=>sec.mapGenerated);
-      if(mapState.polylines.length || hasLinkedSections){
+      if(mapState.polylines.length){
         scheduleMapSectionsUpdate();
       }
       persist();
