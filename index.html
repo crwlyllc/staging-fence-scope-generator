@@ -1347,7 +1347,7 @@ document.addEventListener('DOMContentLoaded', function(){
     minCrew: 1,
     maxCrew: 4,
     maxWelders: 2,
-    maxDayHours: 10,
+    maxDayHours: 13,
   };
   const ONSITE_CREW_SIZE = 4;
   const JOB_SETUP_HOURS = 0.25;
@@ -6439,7 +6439,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   const PRICING = {
-    grossProfitTargetPerHour: 100,
+    grossProfitTargetPerHour: 125,
     grossProfitMinimumResidential: 350,
     grossProfitMinimumCommercial: 350,
     revenueMinimumCommercial: 2500
@@ -9586,7 +9586,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const travelHoursPerDay = travelDayInfo.included && isFinite(travelDayInfo.hoursPerDay)
       ? travelDayInfo.hoursPerDay
       : 0;
-    const MAX_CREW_DAY_HOURS = CREW_SETTINGS.maxDayHours || 10;
+    const MAX_CREW_DAY_HOURS = CREW_SETTINGS.maxDayHours || 13;
     const onsiteHoursPerPerson = MAX_CREW_DAY_HOURS - travelHoursPerDay;
     // Guard against zero/negative onsite capacity if travel time exceeds the day cap.
     const HOURS_PER_PERSON = Math.max(0.25, onsiteHoursPerPerson);
