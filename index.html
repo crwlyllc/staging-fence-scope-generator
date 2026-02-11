@@ -246,8 +246,8 @@
     background:transparent;
   }
   .sp-number.is-map-linked .sp-step{
-    opacity:0.5;
-    cursor:not-allowed;
+    opacity:1;
+    cursor:pointer;
   }
   .sp-btn[disabled]{
     opacity:0.55;
@@ -1454,6 +1454,11 @@ document.addEventListener('DOMContentLoaded', function(){
     return (value || '').replace(/[^0-9]/g, '');
   }
 
+  function parsePositiveInt(value){
+    const parsed = parseInt(value, 10);
+    return (isFinite(parsed) && parsed > 0) ? parsed : 0;
+  }
+
   function encodePayloadForNotes(payload){
     try{
       const json = JSON.stringify(payload);
@@ -2233,6 +2238,8 @@ document.addEventListener('DOMContentLoaded', function(){
       mapGenerated: false,
       mapSegmentId: '',
       mapGeneratedLabel: '',
+      mapMeasuredLength: 0,
+      mapLengthOverride: '',
       notes: '',
       painting: defaultPainting,
       paintingApplication: 'By Hand',
@@ -2470,6 +2477,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if(typeof google === 'undefined' || !google.maps || !google.maps.geometry){
       return;
     }
+    syncStateFromDOM();
+    const mapSectionsBySegmentId = new Map();
+    state.sections.forEach(sec=>{
+      if(sec && sec.mapGenerated && sec.mapSegmentId){
+        mapSectionsBySegmentId.set(sec.mapSegmentId, sec);
+      }
+    });
     mapState.polylines = mapState.polylines.filter(poly=>!!poly.getMap());
     updateMapControlsUI();
     const segments = [];
@@ -2486,7 +2500,11 @@ document.addEventListener('DOMContentLoaded', function(){
         const feet = meters * 3.28084;
         if(!isFinite(feet) || feet <= 0.1) continue;
         const segId = `${polyline.__spPolylineId}:${i}`;
-        const labelText = `${Math.round(feet)} lf`;
+        const measuredFeet = Math.round(feet);
+        const linkedSection = mapSectionsBySegmentId.get(segId);
+        const overrideFeet = parsePositiveInt(linkedSection && linkedSection.mapLengthOverride);
+        const displayFeet = overrideFeet || measuredFeet;
+        const labelText = `${displayFeet} lf`;
         const midpoint = segmentMidpoint(start, end);
         if(midpoint){
           addSegmentLabel(polyline, midpoint, labelText);
@@ -2494,7 +2512,9 @@ document.addEventListener('DOMContentLoaded', function(){
         segments.push({
           id: segId,
           label: `Map Run ${runIndex+1} – Segment ${i+1}`,
-          lengthFeet: feet
+          lengthFeet: feet,
+          measuredFeet,
+          displayFeet
         });
       }
     });
@@ -2521,18 +2541,24 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const updatedMapSections = [];
     segments.forEach(segment=>{
-      const lengthFeet = Math.round(segment.lengthFeet);
-      if(!lengthFeet) return;
+      const measuredLengthFeet = parsePositiveInt(segment.measuredFeet || Math.round(segment.lengthFeet));
+      if(!measuredLengthFeet) return;
       const existing = existingMapSections.get(segment.id);
       if(existing){
-        const prevLength = Number(existing.length)||0;
+        const prevLength = parsePositiveInt(existing.length);
+        const prevMeasuredLength = parsePositiveInt(existing.mapMeasuredLength);
+        const overrideLength = parsePositiveInt(existing.mapLengthOverride);
+        const nextLength = overrideLength || measuredLengthFeet;
         const prevLabel = existing.label||'';
         const prevGeneratedLabel = existing.mapGeneratedLabel||'';
-        if(prevLength !== lengthFeet) needsRender = true;
-        existing.length = lengthFeet;
+        if(prevLength !== nextLength) needsRender = true;
+        if(prevMeasuredLength !== measuredLengthFeet) needsRender = true;
+        existing.length = nextLength;
         existing.mapGenerated = true;
         existing.mapSegmentId = segment.id;
         existing.mapGeneratedLabel = segment.label;
+        existing.mapMeasuredLength = measuredLengthFeet;
+        existing.mapLengthOverride = overrideLength || '';
         if(!prevLabel.trim() || prevLabel === prevGeneratedLabel || prevLabel.startsWith('Map Run ')){
           if(prevLabel !== segment.label) needsRender = true;
           existing.label = segment.label;
@@ -2540,13 +2566,16 @@ document.addEventListener('DOMContentLoaded', function(){
         updatedMapSections.push(existing);
         existingMapSections.delete(segment.id);
       }else{
+        const displayLength = parsePositiveInt(segment.displayFeet) || measuredLengthFeet;
         const newSection = createSectionBase({
           label: segment.label,
-          length: lengthFeet,
+          length: displayLength,
           scopeType: 'repair',
           mapGenerated: true,
           mapSegmentId: segment.id,
           mapGeneratedLabel: segment.label,
+          mapMeasuredLength: measuredLengthFeet,
+          mapLengthOverride: '',
         });
         updatedMapSections.push(newSection);
         needsRender = true;
@@ -3640,6 +3669,8 @@ document.addEventListener('DOMContentLoaded', function(){
       mapGenerated: section.mapGenerated,
       mapSegmentId: section.mapSegmentId,
       mapGeneratedLabel: section.mapGeneratedLabel,
+      mapMeasuredLength: section.mapMeasuredLength,
+      mapLengthOverride: section.mapLengthOverride,
       notes: section.notes,
     };
   }
@@ -3905,6 +3936,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
     const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
     const paintingPrepExtra = paintingSelection === 'Paint Section' ? val('paintingPrepExtra') : false;
+    updateMapLengthOverrideFromCard(card);
+    const mapLengthOverride = parsePositiveInt(card.dataset.mapLengthOverride);
+    const mapMeasuredLength = parsePositiveInt(card.dataset.mapMeasuredLength);
 
     return {
       id,
@@ -4027,6 +4061,8 @@ document.addEventListener('DOMContentLoaded', function(){
       mapGenerated: card.dataset.mapGenerated === 'true',
       mapSegmentId: card.dataset.mapSegmentId || '',
       mapGeneratedLabel: card.dataset.mapGeneratedLabel || '',
+      mapMeasuredLength,
+      mapLengthOverride: mapLengthOverride || '',
 
       notes: val('notes').trim()
     };
@@ -4067,6 +4103,18 @@ document.addEventListener('DOMContentLoaded', function(){
       card.dataset.mapGeneratedLabel = data.mapGeneratedLabel;
     }else{
       delete card.dataset.mapGeneratedLabel;
+    }
+    const mapMeasuredLength = parsePositiveInt(data.mapMeasuredLength);
+    if(mapMeasuredLength){
+      card.dataset.mapMeasuredLength = String(mapMeasuredLength);
+    }else{
+      delete card.dataset.mapMeasuredLength;
+    }
+    const mapLengthOverride = parsePositiveInt(data.mapLengthOverride);
+    if(mapLengthOverride){
+      card.dataset.mapLengthOverride = String(mapLengthOverride);
+    }else{
+      delete card.dataset.mapLengthOverride;
     }
     set('label', data.label||'');
     set('fenceType', data.fenceType || 'Wrought Iron');
@@ -5601,6 +5649,8 @@ document.addEventListener('DOMContentLoaded', function(){
       mapGenerated: existing.mapGenerated,
       mapSegmentId: existing.mapSegmentId,
       mapGeneratedLabel: existing.mapGeneratedLabel,
+      mapMeasuredLength: existing.mapMeasuredLength,
+      mapLengthOverride: existing.mapLengthOverride,
       collapsed: existing.collapsed
     } : { id: secId, scopeType: 'repair' };
     const fenceType = normalizedType === 'wood' ? 'Wood' : 'Wrought Iron';
@@ -5699,6 +5749,28 @@ document.addEventListener('DOMContentLoaded', function(){
     if(installWrap){ installWrap.style.display = installCount>0 ? 'block' : 'none'; }
   }
 
+  function updateMapLengthOverrideFromCard(card){
+    if(!card || card.dataset.mapGenerated !== 'true'){
+      if(card){
+        delete card.dataset.mapLengthOverride;
+      }
+      return;
+    }
+    const lengthControl = card.querySelector('[data-field="length"]');
+    const input = lengthControl ? lengthControl.querySelector('input') : null;
+    if(!input){
+      delete card.dataset.mapLengthOverride;
+      return;
+    }
+    const value = parsePositiveInt(input.value);
+    const measured = parsePositiveInt(card.dataset.mapMeasuredLength);
+    if(value > 0 && (!measured || value !== measured)){
+      card.dataset.mapLengthOverride = String(value);
+    }else{
+      delete card.dataset.mapLengthOverride;
+    }
+  }
+
   function applyMapLinkedStateToCard(card, sectionData){
     const lengthControl = card.querySelector('[data-field="length"]');
     if(lengthControl && lengthControl.classList.contains('sp-number')){
@@ -5707,13 +5779,14 @@ document.addEventListener('DOMContentLoaded', function(){
       if(sectionData.mapGenerated){
         lengthControl.classList.add('is-map-linked');
         if(input){
-          input.readOnly = true;
-          input.setAttribute('aria-readonly','true');
+          input.readOnly = false;
+          input.removeAttribute('aria-readonly');
         }
         buttons.forEach(btn=>{
-          btn.disabled = true;
-          btn.setAttribute('aria-disabled','true');
+          btn.disabled = false;
+          btn.removeAttribute('aria-disabled');
         });
+        updateMapLengthOverrideFromCard(card);
       }else{
         lengthControl.classList.remove('is-map-linked');
         if(input){
@@ -5724,6 +5797,8 @@ document.addEventListener('DOMContentLoaded', function(){
           btn.disabled = false;
           btn.removeAttribute('aria-disabled');
         });
+        delete card.dataset.mapLengthOverride;
+        delete card.dataset.mapMeasuredLength;
       }
     }
 
@@ -5896,10 +5971,18 @@ document.addEventListener('DOMContentLoaded', function(){
 
       $$('input, select, textarea', card).forEach(el=>{
         el.addEventListener('input', ()=>{
+          if(el.closest('.sp-number[data-field="length"]') && card.dataset.mapGenerated === 'true'){
+            updateMapLengthOverrideFromCard(card);
+            scheduleMapSectionsUpdate();
+          }
           updateSectionBasicsGate(card);
           persist();
         });
         el.addEventListener('change', ()=>{
+          if(el.closest('.sp-number[data-field="length"]') && card.dataset.mapGenerated === 'true'){
+            updateMapLengthOverrideFromCard(card);
+            scheduleMapSectionsUpdate();
+          }
           if(el.matches('[data-field="fenceType"]')){
             const nextType = (el.value || '').toLowerCase();
             const prevType = card.dataset.lastFenceType || '';
