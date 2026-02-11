@@ -1088,23 +1088,9 @@
         </div>
       </div>
       <div class="sp-grid">
-        <div class="sp-field col-8">
+        <div class="sp-field col-12">
           <label class="sp-label" for="sp-map-address">Search Address</label>
           <input class="sp-input" id="sp-map-address" type="text" placeholder="Search for a property" autocomplete="off" />
-        </div>
-        <div class="sp-field col-4">
-          <label class="sp-label" for="sp-map-first-section">First Drawn Section Is</label>
-          <select class="sp-select" id="sp-map-first-section">
-            <option value="front">Front Section</option>
-            <option value="left-front">Left Front Section</option>
-            <option value="left-side">Left Side Section</option>
-            <option value="left-back">Left Back Section</option>
-            <option value="back">Back Section</option>
-            <option value="right-back">Right Back Section</option>
-            <option value="right-side">Right Section</option>
-            <option value="right-front">Right Front Section</option>
-          </select>
-          <div class="sp-hint">Labels follow this start point in draw order.</div>
         </div>
         <div class="col-12">
           <div id="sp-map"></div>
@@ -1393,7 +1379,6 @@ document.addEventListener('DOMContentLoaded', function(){
     maxZoomService: null,
     nextPolylineId: 1,
     pendingAddress: '',
-    firstSectionKey: 'front',
   };
   let pendingMapRestore = null;
   let mapUpdateScheduled = false;
@@ -1410,7 +1395,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const estimateLookupBtn = document.getElementById('sp-estimate-lookup');
   const proceedWithoutEstimateBtn = document.getElementById('sp-proceed-no-estimate');
   const mapAddressInput = document.getElementById('sp-map-address');
-  const mapFirstSectionSelect = document.getElementById('sp-map-first-section');
   const mapCardEl = document.getElementById('sp-map-card');
   const mapToggleBtn = document.getElementById('sp-map-toggle');
   const estimateStatusEl = document.getElementById('sp-estimate-status');
@@ -1489,23 +1473,6 @@ document.addEventListener('DOMContentLoaded', function(){
   function parsePositiveInt(value){
     const parsed = parseInt(value, 10);
     return (isFinite(parsed) && parsed > 0) ? parsed : 0;
-  }
-
-  const MAP_SECTION_NAME_SEQUENCE = [
-    { key: 'front', label: 'Front Section' },
-    { key: 'left-front', label: 'Left Front Section' },
-    { key: 'left-side', label: 'Left Side Section' },
-    { key: 'left-back', label: 'Left Back Section' },
-    { key: 'back', label: 'Back Section' },
-    { key: 'right-back', label: 'Right Back Section' },
-    { key: 'right-side', label: 'Right Section' },
-    { key: 'right-front', label: 'Right Front Section' },
-  ];
-
-  function normalizeMapFirstSection(value){
-    const normalized = String(value || '').toLowerCase();
-    const found = MAP_SECTION_NAME_SEQUENCE.find(item => item.key === normalized);
-    return found ? found.key : MAP_SECTION_NAME_SEQUENCE[0].key;
   }
 
   function encodePayloadForNotes(payload){
@@ -2474,25 +2441,6 @@ document.addEventListener('DOMContentLoaded', function(){
     return new google.maps.LatLng(lat, lng);
   }
 
-  function assignSequentialNamesToSegments(segments){
-    if(!Array.isArray(segments) || !segments.length){
-      return;
-    }
-    const startKey = normalizeMapFirstSection(mapState.firstSectionKey);
-    const keys = MAP_SECTION_NAME_SEQUENCE.map(item=>item.key);
-    const startIdx = Math.max(0, keys.indexOf(startKey));
-    const labelCounts = new Map();
-
-    segments.forEach((seg, idx)=>{
-      const seqIdx = (startIdx + idx) % MAP_SECTION_NAME_SEQUENCE.length;
-      const seq = MAP_SECTION_NAME_SEQUENCE[seqIdx] || MAP_SECTION_NAME_SEQUENCE[0];
-      const baseLabel = seq.label;
-      const count = (labelCounts.get(baseLabel) || 0) + 1;
-      labelCounts.set(baseLabel, count);
-      seg.label = count > 1 ? `${baseLabel} ${count}` : baseLabel;
-    });
-  }
-
   function createSegmentLabelOverlay(position, text){
     if(!mapState.map || typeof google === 'undefined' || !google.maps || typeof google.maps.OverlayView !== 'function'){
       return null;
@@ -2570,7 +2518,7 @@ document.addEventListener('DOMContentLoaded', function(){
     mapState.polylines = mapState.polylines.filter(poly=>!!poly.getMap());
     updateMapControlsUI();
     const segments = [];
-    mapState.polylines.forEach((polyline)=>{
+    mapState.polylines.forEach((polyline, runIndex)=>{
       clearPolylineLabels(polyline);
       const path = polyline.getPath();
       if(!path) return;
@@ -2594,14 +2542,13 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         segments.push({
           id: segId,
-          label: '',
+          label: `Fence ${runIndex+1} - Section ${i+1}`,
           lengthFeet: feet,
           measuredFeet,
           displayFeet
         });
       }
     });
-    assignSequentialNamesToSegments(segments);
     applySegmentsToSections(segments);
   }
 
@@ -2736,7 +2683,6 @@ document.addEventListener('DOMContentLoaded', function(){
       address,
       polylines,
       nextPolylineId: mapState.nextPolylineId || 1,
-      firstSectionKey: normalizeMapFirstSection(mapState.firstSectionKey),
     };
   }
 
@@ -2768,10 +2714,6 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function restoreMapFromSnapshot(mapData){
-    mapState.firstSectionKey = normalizeMapFirstSection((mapData && mapData.firstSectionKey) || mapState.firstSectionKey);
-    if(mapFirstSectionSelect){
-      mapFirstSectionSelect.value = mapState.firstSectionKey;
-    }
     clearMapDrawing({ skipSections: true });
     if(!mapData || !mapData.polylines || !mapData.polylines.length){
       pendingMapRestore = null;
@@ -10514,23 +10456,6 @@ document.addEventListener('DOMContentLoaded', function(){
     render();
     outputEl.style.display='none';
     renderServiceLineNotes([]);
-  }
-  if(mapFirstSectionSelect){
-    mapState.firstSectionKey = normalizeMapFirstSection(mapFirstSectionSelect.value || mapState.firstSectionKey);
-    mapFirstSectionSelect.value = mapState.firstSectionKey;
-    mapFirstSectionSelect.addEventListener('change', ()=>{
-      const nextKey = normalizeMapFirstSection(mapFirstSectionSelect.value);
-      mapFirstSectionSelect.value = nextKey;
-      if(nextKey === mapState.firstSectionKey){
-        return;
-      }
-      mapState.firstSectionKey = nextKey;
-      syncStateFromDOM();
-      if(mapState.polylines.length){
-        scheduleMapSectionsUpdate();
-      }
-      persist();
-    });
   }
   window._spInitializeMap = initializeMap;
   if(window._spGoogleMapsReady){
