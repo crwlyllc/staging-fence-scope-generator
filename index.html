@@ -2794,6 +2794,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="sp-card-title">Section ${index+1}</div>
         <div class="sp-row">
           <button class="sp-btn ghost sp-toggle" type="button" aria-expanded="true">Collapse</button>
+          <button class="sp-btn ghost sp-apply-basics-all" type="button">Apply Basics to All</button>
           <button class="sp-btn ghost sp-dup" type="button">Duplicate</button>
           <button class="sp-btn danger sp-del" type="button">Remove</button>
         </div>
@@ -3509,6 +3510,173 @@ document.addEventListener('DOMContentLoaded', function(){
     'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap',
     'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie'
   ];
+
+  const BULK_WROUGHT_FIELDS = [
+    'fenceType','scopeType','style','height','postSize','panelAttachment',
+    'railsCount','rails','picketSize','picketHeight','puppy'
+  ];
+
+  const BULK_WOOD_FIELDS = [
+    'fenceType','scopeType','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
+    'woodPost','woodType','woodFinish','woodAddKickBoard','woodAddTopCap','woodAddTrim',
+    'woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType'
+  ];
+
+  function normalizeBulkFenceType(value){
+    return String(value || '').toLowerCase() === 'wood' ? 'wood' : 'wrought iron';
+  }
+
+  function cloneRailsForBulk(rails, railsCount){
+    const count = Math.max(1, parseInt(railsCount, 10) || 2);
+    const sourceRails = Array.isArray(rails) ? rails : [];
+    const fallbackRail = sourceRails[0] || {};
+    const fallbackSize = String(fallbackRail.size || SEED.railSize[0] || '').trim() || SEED.railSize[0];
+    const next = [];
+    for(let i=0;i<count;i++){
+      const sourceRail = sourceRails[i] || fallbackRail || {};
+      const size = String(sourceRail.size || fallbackSize || '').trim() || fallbackSize;
+      const stacked = !!sourceRail.stacked;
+      const rawSize2 = String(sourceRail.size2 || sourceRail.size || size || '').trim();
+      const size2 = stacked ? (rawSize2 || size) : size;
+      next.push({
+        size,
+        stacked,
+        size2,
+        patches: 0,
+        replacements: 0,
+      });
+    }
+    return next;
+  }
+
+  function buildBulkBasicsTemplate(source){
+    if(!source){
+      return null;
+    }
+    const normalizedFenceType = normalizeBulkFenceType(source.fenceType);
+    const isWood = normalizedFenceType === 'wood';
+    const fenceType = isWood ? 'Wood' : 'Wrought Iron';
+    const fields = isWood ? BULK_WOOD_FIELDS : BULK_WROUGHT_FIELDS;
+    const values = {};
+
+    fields.forEach(field=>{
+      if(field === 'fenceType'){
+        values.fenceType = fenceType;
+        return;
+      }
+      if(field === 'railsCount' || field === 'rails'){
+        return;
+      }
+      values[field] = source[field];
+    });
+
+    values.scopeType = values.scopeType || source.scopeType || 'repair';
+
+    if(isWood){
+      values.woodHeight = source.woodHeight || '6ft';
+      values.woodStyle = source.woodStyle || 'Side by Side';
+      values.woodPicketWidth = source.woodPicketWidth || '5.5"';
+      values.woodRailSize = source.woodRailSize || '2x4';
+      values.woodPost = source.woodPost || 'Round Steel';
+      values.woodType = source.woodType || 'Cedar';
+      values.woodFinish = source.woodFinish || 'Oil Based Stain';
+      values.woodAddKickBoard = !!source.woodAddKickBoard;
+      values.woodAddTopCap = !!source.woodAddTopCap;
+      values.woodAddTrim = !!source.woodAddTrim;
+      values.woodKickBoardSize = source.woodKickBoardSize || '2x6';
+      values.woodKickBoardStack = source.woodKickBoardStack || '1';
+      values.woodTopCapSize = source.woodTopCapSize || '2x6';
+      values.woodTrimType = source.woodTrimType || '1x4';
+    }else{
+      values.style = source.style || SEED.style[0];
+      values.height = source.height || '4ft';
+      values.postSize = source.postSize || '2x2';
+      values.panelAttachment = source.panelAttachment || 'Welding';
+      values.picketSize = source.picketSize || SEED.picketSize[0];
+      values.picketHeight = source.picketHeight || '';
+      values.puppy = source.puppy || SEED.puppy[0];
+      values.railsCount = Math.max(1, parseInt(source.railsCount, 10) || 2);
+      values.rails = cloneRailsForBulk(source.rails, values.railsCount);
+    }
+
+    return { normalizedFenceType, values };
+  }
+
+  function preserveSectionForBulk(section){
+    return {
+      id: section.id,
+      collapsed: section.collapsed,
+      label: section.label,
+      length: section.length,
+      hardscape: section.hardscape,
+      trim: section.trim,
+      digOut: section.digOut,
+      mapGenerated: section.mapGenerated,
+      mapSegmentId: section.mapSegmentId,
+      mapGeneratedLabel: section.mapGeneratedLabel,
+      notes: section.notes,
+    };
+  }
+
+  function applyBasicsToAllSectionsFrom(sourceId){
+    syncStateFromDOM();
+    if(!state.sections.length){
+      return;
+    }
+    const source = state.sections.find(sec => sec.id === sourceId);
+    if(!source){
+      return;
+    }
+    const template = buildBulkBasicsTemplate(source);
+    if(!template){
+      return;
+    }
+
+    const targetFenceType = template.normalizedFenceType;
+    const templateValues = template.values;
+
+    state.sections = state.sections.map(section=>{
+      const currentFenceType = normalizeBulkFenceType(section.fenceType);
+      let nextSection;
+      if(currentFenceType !== targetFenceType){
+        const preserved = preserveSectionForBulk(section);
+        nextSection = createSectionBase({
+          ...preserved,
+          fenceType: templateValues.fenceType,
+          scopeType: templateValues.scopeType
+        });
+      }else{
+        nextSection = { ...section };
+      }
+
+      Object.entries(templateValues).forEach(([key, value])=>{
+        if(key === 'rails'){
+          const existingRails = Array.isArray(nextSection.rails) ? nextSection.rails : [];
+          nextSection.rails = Array.isArray(value)
+            ? value.map((rail, idx)=>{
+              const existingRail = existingRails[idx] || {};
+              const existingPatches = Math.max(0, Number(existingRail.patches) || 0);
+              const existingReplacements = Math.max(0, Number(existingRail.replacements) || 0);
+              return {
+                size: rail.size,
+                stacked: !!rail.stacked,
+                size2: rail.size2 || rail.size,
+                patches: existingPatches,
+                replacements: existingReplacements,
+              };
+            })
+            : [];
+          return;
+        }
+        const shouldClone = Array.isArray(value) || (value && typeof value === 'object');
+        nextSection[key] = shouldClone ? JSON.parse(JSON.stringify(value)) : value;
+      });
+      return nextSection;
+    });
+
+    render();
+    persist();
+  }
 
   function createSectionFromStyle(source){
     if(!source) return null;
@@ -5659,6 +5827,33 @@ document.addEventListener('DOMContentLoaded', function(){
         });
       }
       $('.sp-dup', card).addEventListener('click', ()=>{ duplicateSection(s.id); persist(); });
+
+      const applyBasicsBtn = $('.sp-apply-basics-all', card);
+      if(applyBasicsBtn){
+        const canApply = state.sections.length > 1;
+        applyBasicsBtn.disabled = !canApply;
+        applyBasicsBtn.title = canApply
+          ? 'Apply this section basic settings to all sections'
+          : 'Add at least one more section to bulk apply basics';
+        applyBasicsBtn.addEventListener('click', ()=>{
+          if(state.sections.length <= 1){
+            return;
+          }
+          syncStateFromDOM();
+          const source = state.sections.find(sec => sec.id === s.id);
+          if(!source){
+            return;
+          }
+          const sourceLabel = (source.label || '').trim();
+          const sourceFence = normalizeBulkFenceType(source.fenceType) === 'wood' ? 'wood' : 'wrought iron';
+          const sourceTitle = sourceLabel ? `Section ${idx+1} - ${sourceLabel}` : `Section ${idx+1}`;
+          const ok = confirm(`Apply ${sourceFence} basic settings from ${sourceTitle} to all ${state.sections.length} sections?`);
+          if(!ok){
+            return;
+          }
+          applyBasicsToAllSectionsFrom(s.id);
+        });
+      }
 
       const toggleBtn = $('.sp-toggle', card);
       if(toggleBtn){
