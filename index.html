@@ -8585,13 +8585,6 @@ document.addEventListener('DOMContentLoaded', function(){
       woodStainHours += setupHours;
       woodHelperHours += setupHours;
       woodManHours += setupHours * 2;
-      const minCrewHours = 2;
-      if(woodStainHours < minCrewHours){
-        const addedHours = minCrewHours - woodStainHours;
-        woodStainHours += addedHours;
-        woodHelperHours += addedHours;
-        woodManHours += addedHours * 2;
-      }
     }
 
     manHours += woodManHours;
@@ -8881,23 +8874,37 @@ document.addEventListener('DOMContentLoaded', function(){
     let primerCans = 0;
 
     const replacePostCounts = totals.postsReplace || zeroPostCounts();
+    const WROUGHT_PICKETS_PER_WELDER_HOUR = 5;
+    const WROUGHT_PUPPY_PICKETS_PER_WELDER_HOUR = 5;
+    const PICKET_REPLACE_MINUTES = 60 / WROUGHT_PICKETS_PER_WELDER_HOUR;
+    const PUPPY_PICKET_REPLACE_MINUTES = 60 / WROUGHT_PUPPY_PICKETS_PER_WELDER_HOUR;
+    const WROUGHT_POST_REPLACE_HELPER_HOURS = 1;
+    const WROUGHT_POST_REPLACE_WELDER_HOURS = 0.5;
     const RAIL_PATCH_MINUTES = 11.25;
     const weldRepairHours = (
-      totals.wiPickets*12 +
-      totals.puppyPickets*12 +
+      totals.wiPickets*PICKET_REPLACE_MINUTES +
+      totals.puppyPickets*PUPPY_PICKET_REPLACE_MINUTES +
       totals.diagonalBraces*12 +
       totals.wiPatches*RAIL_PATCH_MINUTES +
       totals.wiRails*30 +
       totals.wiRailGaps*20 +
       totals.weldRedos*5 +
-      (replacePostCounts.posts1p5 || 0)*60 +
-      (replacePostCounts.posts2x2 || 0)*60 +
-      (replacePostCounts.posts3x3 || 0)*90 +
-      (replacePostCounts.posts4x4 || 0)*120 +
       (totals.postsRealign2x2 + totals.postsRealign3x3)*30
     )/60;
     manHours += weldRepairHours;
     welderHours += weldRepairHours;
+    const wroughtPostReplacementCount =
+      (replacePostCounts.posts1p5 || 0) +
+      (replacePostCounts.posts2x2 || 0) +
+      (replacePostCounts.posts3x3 || 0) +
+      (replacePostCounts.posts4x4 || 0);
+    if(wroughtPostReplacementCount > 0){
+      const postReplaceHelperHours = wroughtPostReplacementCount * WROUGHT_POST_REPLACE_HELPER_HOURS;
+      const postReplaceWelderHours = wroughtPostReplacementCount * WROUGHT_POST_REPLACE_WELDER_HOURS;
+      manHours += postReplaceHelperHours + postReplaceWelderHours;
+      helperHours += postReplaceHelperHours;
+      welderHours += postReplaceWelderHours;
+    }
     const installPostCounts = totals.postsInstall || zeroPostCounts();
     const wallPostCountsForLabor = totals.retainingWallPosts || zeroPostCounts();
     const installPostsNeedingCrew = (
@@ -9601,23 +9608,19 @@ document.addEventListener('DOMContentLoaded', function(){
       helperHours += setupTeardownManHours;
     }
 
-    const hasPostReplacements = (()=>{
-      const replaceCounts = totals.postsReplace || zeroPostCounts();
-      const hasMetalPosts = (replaceCounts.posts1p5 || 0) > 0
-        || (replaceCounts.posts2x2 || 0) > 0
-        || (replaceCounts.posts3x3 || 0) > 0
-        || (replaceCounts.posts4x4 || 0) > 0;
-      const hasWoodPosts = (totals.woodPostReplace6 || 0) > 0 || (totals.woodPostReplace8 || 0) > 0;
-      return hasMetalPosts || hasWoodPosts;
-    })();
-    if(hasPostReplacements){
-      const minCrewHours = 3;
-      const minManHours = minCrewHours * ONSITE_CREW_SIZE;
-      if(manHours < minManHours){
-        const addedHours = minManHours - manHours;
-        manHours += addedHours;
-        helperHours += addedHours;
-      }
+    const hasWoodPostReplacements = (totals.woodPostReplace6 || 0) > 0 || (totals.woodPostReplace8 || 0) > 0;
+    let minCrewHoursPerJob = 1.5;
+    if(hasWoodStaining){
+      minCrewHoursPerJob = Math.max(minCrewHoursPerJob, 2);
+    }
+    if(hasWoodPostReplacements){
+      minCrewHoursPerJob = Math.max(minCrewHoursPerJob, 3);
+    }
+    const minManHours = minCrewHoursPerJob * ONSITE_CREW_SIZE;
+    if(manHours < minManHours){
+      const addedHours = minManHours - manHours;
+      manHours += addedHours;
+      helperHours += addedHours;
     }
 
     const jobAddress = mapAddressInput ? (mapAddressInput.value || '').trim() : lastEstimateAddress;
