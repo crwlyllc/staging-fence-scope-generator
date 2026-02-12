@@ -6390,6 +6390,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'Pair of Auto Close Hinges': 50,
     'Wood 4x4 posts': 20,
     'Round Steel posts': 23.61,
+    '9ft round steel posts': 23.61,
     '12ft round steel posts': 31.82,
     'Postmaster posts': 50,
     'Dome cap post cap': 1.13,
@@ -6397,6 +6398,10 @@ document.addEventListener('DOMContentLoaded', function(){
     'Simpson 1 piece ties': 1.81,
     'Simpson 2 piece ties': 1.81,
     'lag screws': 0.075,
+    'lag screw bags (100)': 7.50,
+    'ring shank nails': 0,
+    'postmaster screw bags (100)': 0,
+    'Skid steer rental': 500,
     'wood walk gate hinge': 35,
     'wood walk gate latch': 20,
     // NEW
@@ -6430,6 +6435,10 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood rail (2x4)': 10.81,
     'wood rail': 10.81
   };
+  const PRICE_MISC_UNPRICED_LABELS = new Set([
+    'ring shank nails',
+    'postmaster screw bags (100)'
+  ]);
 
   const WOOD_BOARD_PIECE_PRICING = {
     // Per-piece pricing and piece length (feet) for wood detail boards.
@@ -7205,6 +7214,7 @@ document.addEventListener('DOMContentLoaded', function(){
       panelsInstallPrefab:0, panelsInstallCustom:0,
       prefabPanelTypesRepair: new Map(),
       installSections:0, replaceSections:0,
+      wroughtInstallSections:0, wroughtReplaceSections:0,
       removalLf:0, removalCost:0,
       postsInstall: zeroPostCounts(),
       postsReplace: zeroPostCounts(),
@@ -7214,6 +7224,16 @@ document.addEventListener('DOMContentLoaded', function(){
       topCap: new Map(),
       trim: new Map(),
       kick: new Map()
+    };
+    const woodInstallPlan = {
+      sections: 0,
+      totalLf: 0,
+      totalPosts: 0,
+      totalRails: 0,
+      totalPickets: 0,
+      postDays: 0,
+      buildDays: 0,
+      skidDays: 0
     };
     let hasWoodStaining = false;
     let hasWoodWashSelection = false;
@@ -7323,9 +7343,11 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       if(scopeType === 'install'){ totals.installSections += 1; }
       if(scopeType === 'replace'){ totals.replaceSections += 1; }
+      if(isWrought && scopeType === 'install'){ totals.wroughtInstallSections += 1; }
+      if(isWrought && scopeType === 'replace'){ totals.wroughtReplaceSections += 1; }
 
       let installInfo = null;
-      if(isInstall){
+      if(isInstall && isWrought){
         const lengthFt = parseInt(s.length||0,10) || 0;
         const spacingRaw = parseFloat(s.postSpacing||'8');
         const spacingFt = (isFinite(spacingRaw) && spacingRaw > 0) ? spacingRaw : 8;
@@ -7407,12 +7429,18 @@ document.addEventListener('DOMContentLoaded', function(){
         const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
         const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
         if(wallLength > 0 && wallHeight > 0){
+          const lengthFtForWall = parseInt(s.length||0,10) || 0;
+          const spacingRawForWall = parseFloat(s.postSpacing||'8');
+          const spacingFtForWall = (isFinite(spacingRawForWall) && spacingRawForWall > 0) ? spacingRawForWall : 8;
+          const spanCountForWall = lengthFtForWall > 0 ? Math.max(1, Math.ceil(lengthFtForWall / spacingFtForWall)) : 0;
+          const postsTotalForWall = spanCountForWall > 0 ? spanCountForWall + 1 : (lengthFtForWall > 0 ? 2 : 0);
+          const gateAddsForInstallForWall = parseInt(s.walkGatesAdd||0,10) || 0;
           const wallPostCounts = zeroPostCounts();
-          const wallPostKey = postSizeKey(s.postSize);
+          const wallPostKey = isWood ? postSizeKey(s.woodPost) : postSizeKey(s.postSize);
           if(wallPostKey){
-            const wallSpanCount = Math.max(1, Math.ceil(wallLength / spacingFt));
+            const wallSpanCount = Math.max(1, Math.ceil(wallLength / spacingFtForWall));
             const wallPostsTotal = wallSpanCount > 0 ? wallSpanCount + 1 : 0;
-            const maxPostsAvailable = postsTotal + gateAddsForInstall;
+            const maxPostsAvailable = postsTotalForWall + gateAddsForInstallForWall;
             const postsForWall = Math.min(maxPostsAvailable, wallPostsTotal);
             if(postsForWall > 0){
               wallPostCounts[wallPostKey] = postsForWall;
@@ -8779,11 +8807,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.walkGateAddsDouble > 0){
       addServiceLine('Add Double Walk Gate', `Cut in and install ${describeCount(totals.walkGateAddsDouble, 'double swing gate', 'double swing gates')} complete with posts, frame, and hardware.`);
     }
-    if (totals.replaceSections > 0){
-      addServiceLine('Remove Fence Sections', `Take down and haul away ${describeCount(totals.replaceSections, 'existing fence section', 'existing fence sections')} prior to installation.`);
+    if (totals.wroughtReplaceSections > 0){
+      addServiceLine('Remove Fence Sections', `Take down and haul away ${describeCount(totals.wroughtReplaceSections, 'existing fence section', 'existing fence sections')} prior to installation.`);
     }
-    if (totals.installSections > 0){
-      addServiceLine('Install New Fence Sections', `Set posts in concrete and install panels for ${describeCount(totals.installSections, 'new wrought iron fence section', 'new wrought iron fence sections')}.`);
+    if (totals.wroughtInstallSections > 0){
+      addServiceLine('Install New Fence Sections', `Set posts in concrete and install panels for ${describeCount(totals.wroughtInstallSections, 'new wrought iron fence section', 'new wrought iron fence sections')}.`);
     }
 
     const serviceLines = buildServiceLineOutput();
@@ -8904,6 +8932,160 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     addWoodBoardReplacementMaterials();
+
+    function addWoodInstallReplacementMaterials(){
+      const RAILS_PER_SPAN = 3;
+      const FASTENER_BAG_QTY = 100;
+      const parseStack = (value)=>{
+        const stack = parseInt(value, 10) || 0;
+        return stack > 0 ? stack : 1;
+      };
+      const boardPieceLabel = (typeLabel, sizeLabel)=>{
+        const pieceLen = woodBoardPieceLength(typeLabel, sizeLabel);
+        const lengthLabel = formatFtValue(pieceLen > 0 ? pieceLen : 0);
+        if(lengthLabel){
+          return { label: `wood ${typeLabel} (${sizeLabel}, ${lengthLabel} ft)`, pieceLen };
+        }
+        return { label: `wood ${typeLabel} (${sizeLabel})`, pieceLen: 0 };
+      };
+      const computePostDayPlan = (postCount)=>{
+        let remaining = Math.max(0, parseInt(postCount, 10) || 0);
+        let days = 0;
+        let skidDays = 0;
+        while(remaining > 0){
+          if(remaining > 50){
+            days += 1;
+            skidDays += 1;
+            remaining -= Math.min(100, remaining);
+          } else {
+            days += 1;
+            remaining -= 50;
+          }
+        }
+        return { days, skidDays };
+      };
+
+      state.sections.forEach(s=>{
+        if((s.fenceType || '').toLowerCase() !== 'wood') return;
+        const scopeType = (s.scopeType || 'repair');
+        if(scopeType !== 'install' && scopeType !== 'replace') return;
+
+        const lengthFt = Math.max(0, parseFloat(s.length || 0) || 0);
+        if(lengthFt <= 0) return;
+        const spacingRaw = parseFloat(s.postSpacing || '8');
+        const spacingFt = (isFinite(spacingRaw) && spacingRaw > 0) ? spacingRaw : 8;
+        const spanCount = Math.max(1, Math.ceil(lengthFt / spacingFt));
+        const postsTotal = spanCount + 1;
+        const totalRails = spanCount * RAILS_PER_SPAN;
+        const linearInches = lengthFt * 12;
+        const isBoardOnBoard = /board on board/i.test(s.woodStyle || '');
+        const picketWidthIn = Math.max(0.1, parseWoodInches(s.woodPicketWidth, 5.5));
+        const picketDivisor = isBoardOnBoard ? 3.5 : picketWidthIn;
+        const totalPickets = Math.max(0, Math.ceil(linearInches / picketDivisor));
+        const hasKickBoard = !!s.woodAddKickBoard;
+        const kickStack = hasKickBoard ? parseStack(s.woodKickBoardStack) : 0;
+        const heightFt = Math.max(0, feetFromStr(s.woodHeight || s.height));
+        const isRoundSteel = isRoundSteelPost(s.woodPost || '');
+        const isPostmaster = isPostmasterPost(s.woodPost || '');
+
+        addMat(materials, woodRailMaterialLabel(s), totalRails);
+        addMat(materials, woodPicketMaterialLabel(s), totalPickets);
+
+        if(s.woodAddTopCap){
+          const topCapSize = normalizeLabelText(s.woodTopCapSize || '2x6');
+          const cfg = boardPieceLabel('top cap', topCapSize);
+          const topCapPieces = cfg.pieceLen > 0 ? Math.ceil(lengthFt / cfg.pieceLen) : 0;
+          if(topCapPieces > 0){
+            addMat(materials, cfg.label, topCapPieces);
+          }
+        }
+
+        if(hasKickBoard){
+          const kickSize = normalizeLabelText(s.woodKickBoardSize || '2x6');
+          const cfg = boardPieceLabel('kick board', kickSize);
+          const totalKickLf = lengthFt * kickStack;
+          const kickPieces = cfg.pieceLen > 0 ? Math.ceil(totalKickLf / cfg.pieceLen) : 0;
+          if(kickPieces > 0){
+            addMat(materials, cfg.label, kickPieces);
+          }
+        }
+
+        let trimPiecesTotal = 0;
+        if(s.woodAddTrim){
+          const trimSizes = splitWoodTrimSizes(s.woodTrimType || '1x4');
+          trimSizes.forEach(size=>{
+            const trimSize = normalizeLabelText(size || '');
+            if(!trimSize) return;
+            const cfg = boardPieceLabel('trim', trimSize);
+            const trimPieces = cfg.pieceLen > 0 ? Math.ceil(lengthFt / cfg.pieceLen) : 0;
+            if(trimPieces > 0){
+              addMat(materials, cfg.label, trimPieces);
+              trimPiecesTotal += trimPieces;
+            }
+          });
+        }
+
+        const nailsPerPicket = 2 * (RAILS_PER_SPAN + kickStack);
+        const ringShankNails = (totalPickets * nailsPerPicket) + (trimPiecesTotal * 6);
+        if(ringShankNails > 0){
+          addMat(materials, 'ring shank nails', ringShankNails);
+        }
+
+        let postLabel = normalizeLabelText(s.woodPost || '') || 'Wood 4x4';
+        if(isRoundSteel){
+          postLabel = heightFt >= 8 ? '12ft round steel' : '9ft round steel';
+        }
+        addMat(materials, `${postLabel} posts`, postsTotal);
+
+        if(isRoundSteel){
+          const tiesPerPost = RAILS_PER_SPAN + kickStack;
+          const totalTies = postsTotal * tiesPerPost;
+          if(totalTies > 0){
+            addMat(materials, 'Simpson 1 piece ties', totalTies);
+            const lagScrewBags = Math.ceil((totalTies * 4) / FASTENER_BAG_QTY);
+            if(lagScrewBags > 0){
+              addMat(materials, 'lag screw bags (100)', lagScrewBags);
+            }
+          }
+          if(postsTotal > 0){
+            addMat(materials, 'Dome cap post cap', postsTotal);
+          }
+          const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
+          addMat(materials, 'Maximizer bags of concrete', postsTotal * bagsPerPost);
+        } else if(isPostmaster){
+          const postmasterScrewBags = Math.ceil((totalRails * 6) / FASTENER_BAG_QTY);
+          if(postmasterScrewBags > 0){
+            addMat(materials, 'postmaster screw bags (100)', postmasterScrewBags);
+          }
+        }
+
+        if(scopeType === 'replace' && lengthFt > 0){
+          const removalCost = lengthFt * 3.9;
+          totals.removalLf += lengthFt;
+          totals.removalCost += removalCost;
+        }
+
+        woodInstallPlan.sections += 1;
+        woodInstallPlan.totalLf += lengthFt;
+        woodInstallPlan.totalPosts += postsTotal;
+        woodInstallPlan.totalRails += totalRails;
+        woodInstallPlan.totalPickets += totalPickets;
+      });
+
+      if(woodInstallPlan.totalPosts > 0){
+        const postPlan = computePostDayPlan(woodInstallPlan.totalPosts);
+        woodInstallPlan.postDays = postPlan.days;
+        woodInstallPlan.skidDays = postPlan.skidDays;
+      }
+      if(woodInstallPlan.totalLf > 0){
+        woodInstallPlan.buildDays = Math.ceil(woodInstallPlan.totalLf / 200);
+      }
+      if(woodInstallPlan.skidDays > 0){
+        addMat(materials, 'Skid steer rental', woodInstallPlan.skidDays);
+      }
+    }
+
+    addWoodInstallReplacementMaterials();
 
     // ==== Materials aggregation ====
     let paintLenTotal = 0;
@@ -9395,6 +9577,9 @@ document.addEventListener('DOMContentLoaded', function(){
     Object.entries(materials).forEach(([label, qty])=>{
       if(Object.prototype.hasOwnProperty.call(PRICE_MISC, label)){
         const unit = PRICE_MISC[label] || 0;
+        if(unit <= 0 && PRICE_MISC_UNPRICED_LABELS.has(label)){
+          unpriced = true;
+        }
         const c = qty * unit;
         costMaterials += c;
         matBreak.push(`  - ${label}: ${qty} x $${money(unit)} = $${money(c)}`);
@@ -9655,13 +9840,42 @@ document.addEventListener('DOMContentLoaded', function(){
     const HOURS_PER_PERSON = Math.max(0.25, onsiteHoursPerPerson);
     const primePaintScheduled = totalLenPrimePaint > 0;
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
-    const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0) || woodRequiresTwoPerson || stainHours > 0;
+    const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0) || woodRequiresTwoPerson || stainHours > 0 || woodInstallPlan.sections > 0;
     const minCrewBase = requiresTwoPersonCrew ? 2 : 1;
     const MIN_CREW_PER_DAY = Math.max(minCrewBase, CREW_SETTINGS.minCrew);
     const MAX_CREW_PER_DAY = CREW_SETTINGS.maxCrew;
     const MAX_WELDERS = Math.max(0, CREW_SETTINGS.maxWelders || MAX_CREW_PER_DAY);
     // Wrought-iron repair work is capped at 2 concurrent welders.
     const MAX_BASE_WELDERS = hasWroughtRepair ? Math.min(MAX_WELDERS, 2) : MAX_WELDERS;
+    const woodInstallDays = [];
+    if(woodInstallPlan.postDays > 0){
+      for(let i=0;i<woodInstallPlan.postDays;i++){
+        woodInstallDays.push({
+          crew: ONSITE_CREW_SIZE,
+          welderCount: 0,
+          stainerCount: 0,
+          helperCount: ONSITE_CREW_SIZE,
+          hours: ONSITE_CREW_SIZE * HOURS_PER_PERSON,
+          kind: 'wood-posts'
+        });
+      }
+    }
+    if(woodInstallPlan.buildDays > 0){
+      for(let i=0;i<woodInstallPlan.buildDays;i++){
+        woodInstallDays.push({
+          crew: ONSITE_CREW_SIZE,
+          welderCount: 0,
+          stainerCount: 0,
+          helperCount: ONSITE_CREW_SIZE,
+          hours: ONSITE_CREW_SIZE * HOURS_PER_PERSON,
+          kind: 'wood-build'
+        });
+      }
+    }
+    if(woodInstallDays.length){
+      const woodInstallManHours = woodInstallDays.reduce((acc, day)=> acc + (Number(day.hours || 0) || 0), 0);
+      manHours += woodInstallManHours;
+    }
     const stainReturnHours = hasWoodWash ? stainHours : 0;
     const day2Hours = primePaintReturnHours + stainReturnHours;
     const helperHoursDay2 = day2Hours;
@@ -9809,6 +10023,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const crewSchedule = [];
+    woodInstallDays.forEach(day => crewSchedule.push({ ...day }));
     washDays.forEach(day => crewSchedule.push({ ...day, kind: 'wash' }));
     baseDays.forEach(day => crewSchedule.push({ ...day, kind: primePaintScheduled ? 'prime' : 'base' }));
     finishDays.forEach(day => crewSchedule.push({ ...day, kind: 'finish' }));
@@ -9823,13 +10038,17 @@ document.addEventListener('DOMContentLoaded', function(){
       : (primePaintScheduled ? ' (return for finish coat)' : (hasWoodWash ? ' (return for staining)' : ''));
     const scheduleEntries = crewSchedule.map((day, idx) => {
       const crewLabel = crewLabelWithMix(day.crew);
-      const suffix = day.kind === 'wash'
+      const suffix = day.kind === 'wood-posts'
+        ? ' (set wood posts)'
+        : (day.kind === 'wood-build'
+          ? ' (install wood rails & pickets)'
+          : (day.kind === 'wash'
         ? ' (pressure wash)'
         : (day.kind === 'finish'
           ? returnSuffix
           : (day.hasWash
             ? (primePaintScheduled ? ' (prime/repairs, then pressure wash)' : ' (repairs, then pressure wash)')
-            : (primePaintScheduled ? ' (prime/repairs)' : '')));
+            : (primePaintScheduled ? ' (prime/repairs)' : ''))));
       return {
         number: idx + 1,
         crewLabel,
@@ -9897,6 +10116,27 @@ document.addEventListener('DOMContentLoaded', function(){
     pushPostLinesSub('Posts to set (new sections)', totals.postsInstall || zeroPostCounts());
     if (totals.replaceSections > 0) sub.push('- Sections to replace: '+totals.replaceSections);
     if (totals.installSections > 0) sub.push('- New sections to install: '+totals.installSections);
+    if (woodInstallPlan.sections > 0){
+      sub.push(`- Wood install/replace sections: ${woodInstallPlan.sections}`);
+    }
+    if (woodInstallPlan.totalPosts > 0){
+      sub.push(`- Wood posts to set: ${woodInstallPlan.totalPosts}`);
+    }
+    if (woodInstallPlan.totalRails > 0){
+      sub.push(`- Wood rails to install: ${woodInstallPlan.totalRails}`);
+    }
+    if (woodInstallPlan.totalPickets > 0){
+      sub.push(`- Wood pickets to install: ${woodInstallPlan.totalPickets}`);
+    }
+    if (woodInstallPlan.postDays > 0){
+      sub.push(`- Wood post-set days (4-man crew): ${woodInstallPlan.postDays}`);
+    }
+    if (woodInstallPlan.buildDays > 0){
+      sub.push(`- Wood build days (4-man crew): ${woodInstallPlan.buildDays}`);
+    }
+    if (woodInstallPlan.skidDays > 0){
+      sub.push(`- Skid steer rental days: ${woodInstallPlan.skidDays}`);
+    }
     if (totals.removalLf > 0)       sub.push(`- Removal & haul away: ${totals.removalLf} lf (sub paid $${money(totals.removalCost)})`);
     if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
     if (totals.puppyPickets > 0){
