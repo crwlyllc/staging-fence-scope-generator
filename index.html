@@ -1283,6 +1283,13 @@ document.addEventListener('DOMContentLoaded', function(){
   const WOOD_PICKET_WIDTHS = ['3.5"','4"','5.5"','6"'];
   const WOOD_RAIL_SIZES = ['2x3','2x4'];
   const WOOD_TRIM_TYPES = ['1x2','1x4','1x4 & 1x2'];
+  const WOOD_STAIN_BRANDS = ['HueMiller','Ready Seal','Wood Defender'];
+  const DEFAULT_WOOD_STAIN_BRAND = WOOD_STAIN_BRANDS[0];
+  const WOOD_STAIN_BUCKET_COSTS = {
+    'HueMiller': 124.49,
+    'Ready Seal': 160,
+    'Wood Defender': 185
+  };
   const NO_TIES_OPTION = 'No ties';
   const SIMPSON_TIE_OPTIONS = ['1 piece ties','2 piece ties', NO_TIES_OPTION];
   const WOOD_POST_CAP_TYPES = ['Dome cap','Flat cap'];
@@ -2298,6 +2305,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodRepairKickReplaceSize: '2x6',
       woodRepairKickReplaceStack: '1',
       woodRepairStain: 'none',
+      woodRepairStainBrand: DEFAULT_WOOD_STAIN_BRAND,
       woodAddKickBoard: false,
       woodAddTopCap: false,
       woodAddTrim: false,
@@ -2314,6 +2322,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!Object.prototype.hasOwnProperty.call(data, 'woodRepairPostReplaceCap')){
       merged.woodRepairPostReplaceCap = defaultCapForWoodPost(merged.woodPost);
     }
+    merged.woodRepairStainBrand = normalizeWoodStainBrand(merged.woodRepairStainBrand);
     return merged;
   }
 
@@ -3164,6 +3173,10 @@ document.addEventListener('DOMContentLoaded', function(){
                 <option value="wash-hail-both">Wash Hail &amp; Stain both sides</option>
               </select>
             </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Stain Brand</label>
+              <select class="sp-select" data-field="woodRepairStainBrand">${createSelect(WOOD_STAIN_BRANDS)}</select>
+            </div>
           </div>
         </div>
 
@@ -3597,7 +3610,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','installFinialStyle','railsCount','rails',
     'picketSize','picketHeight','puppy','puppyPicketSize','puppyPicketHeight','puppyPicketReplace','painting','paintingApplication','paintingPrepExtra','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
-    'woodAddTopCap','woodAddTrim','woodRepairStain','walkLatch','walkHinges','walkRebuildFrame',
+    'woodAddTopCap','woodAddTrim','woodRepairStain','woodRepairStainBrand','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
     'walkAddPicketSize','walkAddLatch','walkAddHinges','driveGateChainReplace','driveGateOperatorReplace','driveGateOperatorType',
     'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
@@ -3613,7 +3626,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const BULK_WOOD_FIELDS = [
     'fenceType','scopeType','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodAddKickBoard','woodAddTopCap','woodAddTrim',
-    'woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType'
+    'woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodRepairStainBrand'
   ];
 
   function normalizeBulkFenceType(value){
@@ -3681,6 +3694,7 @@ document.addEventListener('DOMContentLoaded', function(){
       values.woodKickBoardStack = source.woodKickBoardStack || '1';
       values.woodTopCapSize = source.woodTopCapSize || '2x6';
       values.woodTrimType = source.woodTrimType || '1x4';
+      values.woodRepairStainBrand = normalizeWoodStainBrand(source.woodRepairStainBrand);
     }else{
       values.style = source.style || SEED.style[0];
       values.height = source.height || '4ft';
@@ -4049,6 +4063,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodRepairKickReplaceSize: val('woodRepairKickReplaceSize'),
       woodRepairKickReplaceStack: val('woodRepairKickReplaceStack'),
       woodRepairStain: val('woodRepairStain'),
+      woodRepairStainBrand: val('woodRepairStainBrand'),
       woodAddKickBoard: val('woodAddKickBoard'),
       woodAddTopCap: val('woodAddTopCap'),
       woodAddTrim: val('woodAddTrim'),
@@ -4227,6 +4242,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodRepairKickReplaceSize', data.woodRepairKickReplaceSize || data.woodKickBoardSize || '2x6');
     set('woodRepairKickReplaceStack', data.woodRepairKickReplaceStack || data.woodKickBoardStack || '1');
     set('woodRepairStain', data.woodRepairStain || 'none');
+    set('woodRepairStainBrand', normalizeWoodStainBrand(data.woodRepairStainBrand));
     set('woodAddKickBoard', Boolean(data.woodAddKickBoard));
     set('woodAddTopCap', Boolean(data.woodAddTopCap));
     set('woodAddTrim', Boolean(data.woodAddTrim));
@@ -5655,7 +5671,8 @@ document.addEventListener('DOMContentLoaded', function(){
         woodRepairTrimReplaceSize: '1x4',
         woodRepairKickReplaceSize: '2x6',
         woodRepairKickReplaceStack: '1',
-        woodRepairStain: 'none'
+        woodRepairStain: 'none',
+        woodRepairStainBrand: DEFAULT_WOOD_STAIN_BRAND
       };
       Object.entries(defaults).forEach(([field, val])=>{
         const el = card.querySelector(`[data-field="${field}"]`);
@@ -6070,6 +6087,14 @@ document.addEventListener('DOMContentLoaded', function(){
       .replace(/×/g,'x')
       .trim();
   }
+  function normalizeWoodStainBrand(value){
+    const raw = String(value || '').trim().toLowerCase();
+    const match = WOOD_STAIN_BRANDS.find(brand=>brand.toLowerCase() === raw);
+    return match || DEFAULT_WOOD_STAIN_BRAND;
+  }
+  function woodStainBucketMaterialLabel(brand){
+    return `5 gal wood stain bucket (${normalizeWoodStainBrand(brand)})`;
+  }
   function isPostmasterPost(post){
     return /postmaster/i.test(String(post||''));
   }
@@ -6389,7 +6414,10 @@ document.addEventListener('DOMContentLoaded', function(){
     'Solar gate power kit': 500,
     'Sliding drive gate chain': 150,
     'panel mount bracket': 1.27,
-    '5 gal wood stain bucket': 124.49,
+    '5 gal wood stain bucket': WOOD_STAIN_BUCKET_COSTS[DEFAULT_WOOD_STAIN_BRAND],
+    '5 gal wood stain bucket (HueMiller)': WOOD_STAIN_BUCKET_COSTS['HueMiller'],
+    '5 gal wood stain bucket (Ready Seal)': WOOD_STAIN_BUCKET_COSTS['Ready Seal'],
+    '5 gal wood stain bucket (Wood Defender)': WOOD_STAIN_BUCKET_COSTS['Wood Defender'],
     'wood picket': 3.0,
     'wood picket (3.5")': 2.5,
     'wood picket (4")': 2.75,
@@ -7227,6 +7255,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let woodStainHours = 0;
     let woodWashHours = 0;
     let woodRequiresTwoPerson = false;
+    const woodStainSqftByBrand = new Map();
     const woodSectionSummaries = [];
     const parseWoodStainSelection = (value)=>{
       const raw = String(value || 'none').trim();
@@ -8504,6 +8533,8 @@ document.addEventListener('DOMContentLoaded', function(){
             }
             if(stainSqft > 0){
               totals.woodStainSqft += stainSqft;
+              const stainBrand = normalizeWoodStainBrand(s.woodRepairStainBrand);
+              woodStainSqftByBrand.set(stainBrand, (woodStainSqftByBrand.get(stainBrand) || 0) + stainSqft);
               const lfPerHour = sidesMultiplier === 2 ? 25 : 50;
               const baseHours = lfPerHour > 0 ? normalizedLengthFt / lfPerHour : 0;
               const topCapLf = parseFloat(s.woodRepairTopCapReplaceLf||0) || 0;
@@ -8728,11 +8759,13 @@ document.addEventListener('DOMContentLoaded', function(){
     const serviceLines = buildServiceLineOutput();
     renderServiceLineNotes(serviceLines);
 
-    const woodStainBuckets = totals.woodStainSqft > 0
-      ? Math.ceil(totals.woodStainSqft / 750)
-      : 0;
-    if(woodStainBuckets > 0){
-      addMat(materials, '5 gal wood stain bucket', woodStainBuckets);
+    if(woodStainSqftByBrand.size){
+      woodStainSqftByBrand.forEach((sqft, brand)=>{
+        const woodStainBuckets = sqft > 0 ? Math.ceil(sqft / 750) : 0;
+        if(woodStainBuckets > 0){
+          addMat(materials, woodStainBucketMaterialLabel(brand), woodStainBuckets);
+        }
+      });
     }
 
     function addWoodPostReplacementMaterials(){
