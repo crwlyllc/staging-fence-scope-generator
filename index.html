@@ -7190,6 +7190,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let hasWoodStaining = false;
     let hasWoodWashSelection = false;
     let hasWroughtRepair = false;
+    let spotPaintWeldCount = 0;
     const woodStainDetails = [];
     const woodWashDetails = [];
     const materials = {};
@@ -7845,6 +7846,36 @@ document.addEventListener('DOMContentLoaded', function(){
         const gateTypeLabel = s.walkAddType || 'Single Swing Walk Gate';
         lines.push(`- Add walk gate(s): ${wga} — ${gateTypeLabel}`);
         lines.push(`  - Post: ${s.walkAddPostSize}; Frame: ${s.walkAddFrameSize}; Pickets: ${s.walkAddPicketSize}; Latch: ${s.walkAddLatch}; Hinges: ${s.walkAddHinges}`);
+      }
+
+      if(!isWood && s.painting === 'Spot Paint Welds'){
+        let sectionSpotWelds = 0;
+        if(isRepair){
+          const replacePostTotal = Object.values(replaceCounts || {}).reduce((sum, value)=> sum + (parseInt(value, 10) || 0), 0);
+          const realignPostTotal = Object.values(realignCounts || {}).reduce((sum, value)=> sum + (parseInt(value, 10) || 0), 0);
+          sectionSpotWelds =
+            picketReplaceCount +
+            puppyPicketReplaceCount +
+            weldRedoCount +
+            sectionPatchTotal +
+            sectionReplTotal +
+            sectionGapTotal +
+            braceTotalQty +
+            replacePostTotal +
+            realignPostTotal +
+            realignCutWeld;
+        } else if(installInfo){
+          const installPanelQty = Array.isArray(installInfo.panels)
+            ? installInfo.panels.reduce((sum, panel)=> sum + (parseInt(panel?.qty, 10) || 0), 0)
+            : (parseInt(installInfo.spanCount, 10) || 0);
+          const installPostTotal = Object.values(installInfo.postCounts || {}).reduce((sum, value)=> sum + (parseInt(value, 10) || 0), 0);
+          sectionSpotWelds = installPanelQty + installPostTotal;
+        }
+        if(sectionSpotWelds <= 0){
+          const fallbackLength = parseInt(s.length || 0, 10) || 0;
+          sectionSpotWelds = fallbackLength > 0 ? Math.max(1, Math.ceil(fallbackLength / 8)) : 0;
+        }
+        spotPaintWeldCount += sectionSpotWelds;
       }
 
       const driveGateChainReplace = isRepair ? i(s.driveGateChainReplace) : 0;
@@ -8850,11 +8881,12 @@ document.addEventListener('DOMContentLoaded', function(){
     let primerCans = 0;
 
     const replacePostCounts = totals.postsReplace || zeroPostCounts();
+    const RAIL_PATCH_MINUTES = 11.25;
     const weldRepairHours = (
       totals.wiPickets*12 +
       totals.puppyPickets*12 +
       totals.diagonalBraces*12 +
-      totals.wiPatches*20 +
+      totals.wiPatches*RAIL_PATCH_MINUTES +
       totals.wiRails*30 +
       totals.wiRailGaps*20 +
       totals.weldRedos*5 +
@@ -9556,8 +9588,15 @@ document.addEventListener('DOMContentLoaded', function(){
     helperHours += paintingHours + primePaintReturnHours;
     welderHours += sprayBaseHours + sprayFinishHours;
 
+    const spotPaintHours = spotPaintWeldCount * (20/3600); // 20 seconds per weld spot
+    if(spotPaintHours > 0){
+      manHours += spotPaintHours;
+      helperHours += spotPaintHours;
+    }
+
+    const setupTeardownCrewHours = JOB_SETUP_TEARDOWN_HOURS > 0 ? JOB_SETUP_TEARDOWN_HOURS : 0;
+    const setupTeardownManHours = setupTeardownCrewHours * ONSITE_CREW_SIZE;
     if(JOB_SETUP_TEARDOWN_HOURS > 0){
-      const setupTeardownManHours = JOB_SETUP_TEARDOWN_HOURS * ONSITE_CREW_SIZE;
       manHours += setupTeardownManHours;
       helperHours += setupTeardownManHours;
     }
@@ -9602,7 +9641,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const stainReturnHours = hasWoodWash ? stainHours : 0;
     const day2Hours = primePaintReturnHours + stainReturnHours;
     const helperHoursDay2 = day2Hours;
-    const helperHoursDay1 = Math.max(0, helperHours - helperHoursDay2 - washHours);
+    const helperHoursDay1 = Math.max(0, helperHours - helperHoursDay2 - washHours - setupTeardownManHours);
     const washHoursDay1 = Math.max(0, washHours);
     const stainHoursDay1 = Math.max(0, hasWoodWash ? 0 : stainHours);
     const finishWelderHours = sprayFinishHours;
@@ -9624,7 +9663,8 @@ document.addEventListener('DOMContentLoaded', function(){
         crewCount = MAX_CREW_PER_DAY;
       }
       const usedWashHours = Math.min(remainingWashHours, washerCount * HOURS_PER_PERSON);
-      washDays.push({ crew: crewCount, welderCount: 0, stainerCount: 0, helperCount: crewCount, hours: usedWashHours });
+      const washCrewHours = washerCount > 0 ? (usedWashHours / washerCount) : 0;
+      washDays.push({ crew: crewCount, welderCount: 0, stainerCount: 0, helperCount: crewCount, hours: usedWashHours, crewHours: washCrewHours });
       remainingWashHours = Math.max(0, remainingWashHours - usedWashHours);
       if(washerCount === 0 && crewCount === 0){
         break;
@@ -9638,8 +9678,12 @@ document.addEventListener('DOMContentLoaded', function(){
     while(remainingWelderHours > 0.01 || remainingHelperHours > 0.01 || remainingStainHours > 0.01){
       let welderCount = 0;
       if(remainingWelderHours > 0.01){
-        const welderNeeded = Math.ceil(remainingWelderHours / HOURS_PER_PERSON);
-        welderCount = Math.max(1, Math.min(welderNeeded, MAX_BASE_WELDERS, MAX_CREW_PER_DAY));
+        if(hasWroughtRepair){
+          welderCount = Math.max(1, Math.min(MAX_BASE_WELDERS, MAX_CREW_PER_DAY));
+        } else {
+          const welderNeeded = Math.ceil(remainingWelderHours / HOURS_PER_PERSON);
+          welderCount = Math.max(1, Math.min(welderNeeded, MAX_BASE_WELDERS, MAX_CREW_PER_DAY));
+        }
       }
       let stainerCount = 0;
       if(remainingStainHours > 0.01){
@@ -9678,14 +9722,20 @@ document.addEventListener('DOMContentLoaded', function(){
         helperHoursWelderCanCover + Math.max(0, helperCount - stainerCount) * HOURS_PER_PERSON
       );
       const usedHours = usedWelderHours + usedStainerHours + usedHelperHours;
-      baseDays.push({ crew: crewCount, welderCount, stainerCount, helperCount, hours: usedHours });
-      remainingWelderHours = Math.max(0, remainingWelderHours - welderCount * HOURS_PER_PERSON);
-      const helperHoursHandledByWeldersFinal = Math.min(remainingHelperHours, helperHoursWelderCanCover);
-      remainingStainHours = Math.max(0, remainingStainHours - stainerCount * HOURS_PER_PERSON);
-      remainingHelperHours = Math.max(
-        0,
-        remainingHelperHours - helperHoursHandledByWeldersFinal - Math.max(0, (helperCount - stainerCount)) * HOURS_PER_PERSON
-      );
+      const welderSpareCapacity = Math.max(0, welderCount * HOURS_PER_PERSON - usedWelderHours);
+      const helperHoursCoveredByWelders = Math.min(usedHelperHours, welderSpareCapacity);
+      const helperHoursDedicated = Math.max(0, usedHelperHours - helperHoursCoveredByWelders);
+      const dedicatedHelperCount = Math.max(0, helperCount - stainerCount);
+      const welderCrewHours = welderCount > 0
+        ? (usedWelderHours + helperHoursCoveredByWelders) / welderCount
+        : 0;
+      const stainerCrewHours = stainerCount > 0 ? (usedStainerHours / stainerCount) : 0;
+      const helperCrewHours = dedicatedHelperCount > 0 ? (helperHoursDedicated / dedicatedHelperCount) : 0;
+      const crewHours = Math.max(welderCrewHours, stainerCrewHours, helperCrewHours);
+      baseDays.push({ crew: crewCount, welderCount, stainerCount, helperCount, hours: usedHours, crewHours });
+      remainingWelderHours = Math.max(0, remainingWelderHours - usedWelderHours);
+      remainingStainHours = Math.max(0, remainingStainHours - usedStainerHours);
+      remainingHelperHours = Math.max(0, remainingHelperHours - usedHelperHours);
       if(welderCount === 0 && stainerCount === 0 && helperCount === 0){
         break;
       }
@@ -9722,10 +9772,29 @@ document.addEventListener('DOMContentLoaded', function(){
       if(welderCount + helperCount < crewCount){
         helperCount = crewCount - welderCount;
       }
-      finishDays.push({ crew: crewCount, welderCount, stainerCount: 0, helperCount });
-      remainingFinishWelderHours = Math.max(0, remainingFinishWelderHours - welderCount * HOURS_PER_PERSON);
-      const helperHoursHandledByWelders = Math.min(remainingFinishHelperHours, helperHoursWelderCanCover);
-      remainingFinishHelperHours = Math.max(0, remainingFinishHelperHours - helperHoursHandledByWelders - helperCount * HOURS_PER_PERSON);
+      const usedFinishWelderHours = Math.min(remainingFinishWelderHours, welderCount * HOURS_PER_PERSON);
+      const usedFinishHelperHours = Math.min(
+        remainingFinishHelperHours,
+        helperHoursWelderCanCover + helperCount * HOURS_PER_PERSON
+      );
+      const finishWelderSpare = Math.max(0, welderCount * HOURS_PER_PERSON - usedFinishWelderHours);
+      const finishHelperByWelders = Math.min(usedFinishHelperHours, finishWelderSpare);
+      const finishHelperDedicated = Math.max(0, usedFinishHelperHours - finishHelperByWelders);
+      const finishWelderCrewHours = welderCount > 0
+        ? (usedFinishWelderHours + finishHelperByWelders) / welderCount
+        : 0;
+      const finishHelperCrewHours = helperCount > 0 ? (finishHelperDedicated / helperCount) : 0;
+      const finishCrewHours = Math.max(finishWelderCrewHours, finishHelperCrewHours);
+      finishDays.push({
+        crew: crewCount,
+        welderCount,
+        stainerCount: 0,
+        helperCount,
+        hours: usedFinishWelderHours + usedFinishHelperHours,
+        crewHours: finishCrewHours
+      });
+      remainingFinishWelderHours = Math.max(0, remainingFinishWelderHours - usedFinishWelderHours);
+      remainingFinishHelperHours = Math.max(0, remainingFinishHelperHours - usedFinishHelperHours);
       if(welderCount === 0 && helperCount === 0){
         break;
       }
@@ -9737,10 +9806,17 @@ document.addEventListener('DOMContentLoaded', function(){
       const washHoursToCombine = firstWash.hours || 0;
       const baseHours = firstBase.hours || 0;
       const baseCapacity = (firstBase.crew || 0) * HOURS_PER_PERSON;
+      const washCrewHoursToCombine = firstWash.crewHours || 0;
+      const baseCrewHours = firstBase.crewHours || 0;
       if(washHoursToCombine > 0
         && firstWash.crew <= firstBase.crew
         && (baseHours + washHoursToCombine) <= baseCapacity){
-        baseDays[0] = { ...firstBase, hasWash: true, hours: baseHours + washHoursToCombine };
+        baseDays[0] = {
+          ...firstBase,
+          hasWash: true,
+          hours: baseHours + washHoursToCombine,
+          crewHours: baseCrewHours + washCrewHoursToCombine
+        };
         washDays.shift();
       }
     }
@@ -9774,7 +9850,11 @@ document.addEventListener('DOMContentLoaded', function(){
       };
     });
 
-    const estimatedOnsiteHours = ONSITE_CREW_SIZE > 0 ? manHours / ONSITE_CREW_SIZE : 0;
+    const scheduledCrewHours = crewSchedule.reduce((sum, day)=>{
+      const dayCrewHours = isFinite(day.crewHours) ? day.crewHours : 0;
+      return sum + Math.max(0, dayCrewHours);
+    }, 0);
+    const estimatedOnsiteHours = setupTeardownCrewHours + scheduledCrewHours;
     const formatHours = (hours) => {
       if (!isFinite(hours) || hours <= 0) return '';
       const rounded = Math.round(hours * 10) / 10;
