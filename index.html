@@ -8527,7 +8527,12 @@ document.addEventListener('DOMContentLoaded', function(){
             const heightFt = Math.max(0, woodHeightFt || feetFromStr(s.height));
             const sidesMultiplier = stainSelection.side === 'both' ? 2 : 1;
             const normalizedLengthFt = Math.max(0, sectionLengthFt);
-            const stainSqft = Math.max(0, Math.round(normalizedLengthFt * heightFt * sidesMultiplier));
+            const hasTopCap = !!s.woodAddTopCap || topCapLf > 0;
+            const hasKickBoard = !!s.woodAddKickBoard || kickLf > 0;
+            const addOnSqftPerLfPerSide = (hasTopCap ? 0.5 : 0) + (hasKickBoard ? 0.5 : 0);
+            const stainSqftBase = normalizedLengthFt * heightFt * sidesMultiplier;
+            const stainSqftAddOn = normalizedLengthFt * sidesMultiplier * addOnSqftPerLfPerSide;
+            const stainSqft = Math.max(0, Math.round(stainSqftBase + stainSqftAddOn));
             if(stainSelection.wash !== 'none'){
               hasWoodWashSelection = true;
             }
@@ -8537,8 +8542,6 @@ document.addEventListener('DOMContentLoaded', function(){
               woodStainSqftByBrand.set(stainBrand, (woodStainSqftByBrand.get(stainBrand) || 0) + stainSqft);
               const lfPerHour = sidesMultiplier === 2 ? 25 : 50;
               const baseHours = lfPerHour > 0 ? normalizedLengthFt / lfPerHour : 0;
-              const topCapLf = parseFloat(s.woodRepairTopCapReplaceLf||0) || 0;
-              const hasTopCap = !!s.woodAddTopCap || topCapLf > 0;
               const topCapHours = hasTopCap ? normalizedLengthFt * (0.5/60) : 0;
               const hours = baseHours + topCapHours;
               woodManHours += hours * 2;
