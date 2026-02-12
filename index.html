@@ -6101,6 +6101,10 @@ document.addEventListener('DOMContentLoaded', function(){
   function isRoundSteelPost(post){
     return /round steel/i.test(String(post||''));
   }
+  function woodRoundSteelPostLabelForHeight(heightFt){
+    const normalizedHeight = Math.max(0, parseFloat(heightFt || 0) || 0);
+    return normalizedHeight >= 8 ? '12ft round steel' : '9ft round steel';
+  }
   function defaultTieForWoodPost(post){
     return isPostmasterPost(post) ? NO_TIES_OPTION : SIMPSON_TIE_OPTIONS[0];
   }
@@ -8835,9 +8839,8 @@ document.addEventListener('DOMContentLoaded', function(){
         const totalTies = replaceCount * tiesPerPost;
         const rawPostLabel = s.woodPost || 'Wood post';
         const isRoundSteel = /round steel/i.test(rawPostLabel);
-        const isEightFoot = heightFt === 8;
-        const postLabel = isRoundSteel && isEightFoot
-          ? '12ft round steel'
+        const postLabel = isRoundSteel
+          ? woodRoundSteelPostLabelForHeight(heightFt)
           : normalizeLabelText(rawPostLabel);
         addMat(materials, `${postLabel} posts`, replaceCount);
         const capLabel = normalizeLabelText(s.woodRepairPostReplaceCap || '');
@@ -8868,9 +8871,8 @@ document.addEventListener('DOMContentLoaded', function(){
         const totalTies = installCount * tiesPerPost;
         const rawPostLabel = s.woodPost || 'Wood post';
         const isRoundSteel = /round steel/i.test(rawPostLabel);
-        const isEightFoot = heightFt === 8;
-        const postLabel = isRoundSteel && isEightFoot
-          ? '12ft round steel'
+        const postLabel = isRoundSteel
+          ? woodRoundSteelPostLabelForHeight(heightFt)
           : normalizeLabelText(rawPostLabel);
         addMat(materials, `${postLabel} posts`, installCount);
         const tieSelection = (s.woodRepairPostInstallTie || defaultTieForWoodPost(s.woodPost) || '');
@@ -9031,7 +9033,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
         let postLabel = normalizeLabelText(s.woodPost || '') || 'Wood 4x4';
         if(isRoundSteel){
-          postLabel = heightFt >= 8 ? '12ft round steel' : '9ft round steel';
+          postLabel = woodRoundSteelPostLabelForHeight(heightFt);
         }
         addMat(materials, `${postLabel} posts`, postsTotal);
 
