@@ -6399,8 +6399,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'Simpson 2 piece ties': 1.81,
     'lag screws': 0.075,
     'lag screw bags (100)': 7.50,
-    'ring shank nails': 0,
-    'postmaster screw bags (100)': 0,
+    'ring shank nails': 0.04,
+    'postmaster screw boxes (170)': 16.65,
     'Skid steer rental': 500,
     'wood walk gate hinge': 35,
     'wood walk gate latch': 20,
@@ -6435,10 +6435,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood rail (2x4)': 10.81,
     'wood rail': 10.81
   };
-  const PRICE_MISC_UNPRICED_LABELS = new Set([
-    'ring shank nails',
-    'postmaster screw bags (100)'
-  ]);
+  const PRICE_MISC_UNPRICED_LABELS = new Set();
 
   const WOOD_BOARD_PIECE_PRICING = {
     // Per-piece pricing and piece length (feet) for wood detail boards.
@@ -8935,7 +8932,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     function addWoodInstallReplacementMaterials(){
       const RAILS_PER_SPAN = 3;
-      const FASTENER_BAG_QTY = 100;
+      const LAG_SCREW_BAG_QTY = 100;
+      const POSTMASTER_SCREW_BOX_QTY = 170;
       const parseStack = (value)=>{
         const stack = parseInt(value, 10) || 0;
         return stack > 0 ? stack : 1;
@@ -9042,7 +9040,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const totalTies = postsTotal * tiesPerPost;
           if(totalTies > 0){
             addMat(materials, 'Simpson 1 piece ties', totalTies);
-            const lagScrewBags = Math.ceil((totalTies * 4) / FASTENER_BAG_QTY);
+            const lagScrewBags = Math.ceil((totalTies * 4) / LAG_SCREW_BAG_QTY);
             if(lagScrewBags > 0){
               addMat(materials, 'lag screw bags (100)', lagScrewBags);
             }
@@ -9053,9 +9051,9 @@ document.addEventListener('DOMContentLoaded', function(){
           const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
           addMat(materials, 'Maximizer bags of concrete', postsTotal * bagsPerPost);
         } else if(isPostmaster){
-          const postmasterScrewBags = Math.ceil((totalRails * 6) / FASTENER_BAG_QTY);
-          if(postmasterScrewBags > 0){
-            addMat(materials, 'postmaster screw bags (100)', postmasterScrewBags);
+          const postmasterScrewBoxes = Math.ceil((totalRails * 6) / POSTMASTER_SCREW_BOX_QTY);
+          if(postmasterScrewBoxes > 0){
+            addMat(materials, 'postmaster screw boxes (170)', postmasterScrewBoxes);
           }
         }
 
