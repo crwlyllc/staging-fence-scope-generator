@@ -8528,8 +8528,35 @@ document.addEventListener('DOMContentLoaded', function(){
             const sidesMultiplier = stainSelection.side === 'both' ? 2 : 1;
             const normalizedLengthFt = Math.max(0, sectionLengthFt);
             const hasTopCap = !!s.woodAddTopCap || topCapLf > 0;
-            const hasKickBoard = !!s.woodAddKickBoard || kickLf > 0;
-            const addOnSqftPerLfPerSide = (hasTopCap ? 0.5 : 0) + (hasKickBoard ? 0.5 : 0);
+            const parseBoardHeightInches = (size, fallbackInches = 0)=>{
+              const match = String(size || '').match(/x\s*(\d+(?:\.\d+)?)/i);
+              const inches = match ? parseFloat(match[1]) : NaN;
+              if(isFinite(inches) && inches > 0){
+                return inches;
+              }
+              const fallback = parseFloat(fallbackInches);
+              return isFinite(fallback) && fallback > 0 ? fallback : 0;
+            };
+            const normalizeBoardStack = (value)=>{
+              const stack = parseInt(value, 10) || 0;
+              return stack > 0 ? stack : 1;
+            };
+            let kickBoardHeightInches = 0;
+            let kickBoardStackCount = 0;
+            if(s.woodAddKickBoard){
+              kickBoardHeightInches = parseBoardHeightInches(s.woodKickBoardSize, 6);
+              kickBoardStackCount = normalizeBoardStack(s.woodKickBoardStack);
+            } else if(kickLf > 0){
+              const repairKickSize = s.woodRepairKickReplaceSize || s.woodKickBoardSize;
+              const repairKickStack = s.woodRepairKickReplaceStack || s.woodKickBoardStack;
+              kickBoardHeightInches = parseBoardHeightInches(repairKickSize, 6);
+              kickBoardStackCount = normalizeBoardStack(repairKickStack);
+            }
+            const kickBoardVerticalInches = kickBoardHeightInches * kickBoardStackCount;
+            const kickBoardSqftPerLfPerSide = kickBoardVerticalInches > 0
+              ? (kickBoardVerticalInches / 12)
+              : 0;
+            const addOnSqftPerLfPerSide = (hasTopCap ? 0.5 : 0) + kickBoardSqftPerLfPerSide;
             const stainSqftBase = normalizedLengthFt * heightFt * sidesMultiplier;
             const stainSqftAddOn = normalizedLengthFt * sidesMultiplier * addOnSqftPerLfPerSide;
             const stainSqft = Math.max(0, Math.round(stainSqftBase + stainSqftAddOn));
