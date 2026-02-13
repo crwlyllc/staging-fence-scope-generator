@@ -10038,17 +10038,22 @@ document.addEventListener('DOMContentLoaded', function(){
       : (primePaintScheduled ? ' (return for finish coat)' : (hasWoodWash ? ' (return for staining)' : ''));
     const scheduleEntries = crewSchedule.map((day, idx) => {
       const crewLabel = crewLabelWithMix(day.crew);
-      const suffix = day.kind === 'wood-posts'
-        ? ' (set wood posts)'
-        : (day.kind === 'wood-build'
-          ? ' (install wood rails & pickets)'
-          : (day.kind === 'wash'
-        ? ' (pressure wash)'
-        : (day.kind === 'finish'
-          ? returnSuffix
-          : (day.hasWash
-            ? (primePaintScheduled ? ' (prime/repairs, then pressure wash)' : ' (repairs, then pressure wash)')
-            : (primePaintScheduled ? ' (prime/repairs)' : ''))));
+      let suffix = '';
+      if(day.kind === 'wood-posts'){
+        suffix = ' (set wood posts)';
+      } else if(day.kind === 'wood-build'){
+        suffix = ' (install wood rails & pickets)';
+      } else if(day.kind === 'wash'){
+        suffix = ' (pressure wash)';
+      } else if(day.kind === 'finish'){
+        suffix = returnSuffix;
+      } else if(day.hasWash){
+        suffix = primePaintScheduled
+          ? ' (prime/repairs, then pressure wash)'
+          : ' (repairs, then pressure wash)';
+      } else if(primePaintScheduled){
+        suffix = ' (prime/repairs)';
+      }
       return {
         number: idx + 1,
         crewLabel,
