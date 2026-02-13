@@ -1312,14 +1312,13 @@ document.addEventListener('DOMContentLoaded', function(){
   const CUSTOMER_TYPES = ['Residential','Commercial','City'];
   const WROUGHT_CURRENT_COLOR_OPTIONS = [
     'Black',
-    'Brown',
-    'Bronze',
-    'White',
     'Gray',
-    'Green',
+    'White',
+    'Brown',
     'Blue',
+    'Yellow',
     'Red',
-    'Rust/Weathered'
+    'Orange'
   ];
   const WROUGHT_PAINT_COLOR_OPTIONS = [
     'Black Gloss',
@@ -6214,6 +6213,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(raw.includes('blue')) return 'blue';
     if(raw.includes('yellow')) return 'yellow';
     if(raw.includes('red')) return 'red';
+    if(raw.includes('orange')) return 'orange';
     if(raw.includes('rust') || raw.includes('weather')) return 'rust/weathered';
     return raw;
   }
