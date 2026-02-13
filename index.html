@@ -6541,10 +6541,55 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const RATES = {
     overhead:   0.25,
+    overheadCap: 10000,
+    overheadHighRevenueThreshold: 100000,
+    overheadHighRevenueRate: 0.10,
     commission: 0.25,
     // Combined overhead + MCOR flat rate
     mcor:       0.00
   };
+
+  function overheadAmountForRevenue(revenue){
+    const value = Number(revenue);
+    if(!isFinite(value) || value <= 0) return 0;
+    if(value > RATES.overheadHighRevenueThreshold){
+      return value * RATES.overheadHighRevenueRate;
+    }
+    return Math.min(value * RATES.overhead, RATES.overheadCap);
+  }
+
+  function grossProfitForRevenue(revenue, directCosts){
+    const rev = Number(revenue);
+    const costs = Number(directCosts);
+    if(!isFinite(rev) || !isFinite(costs)) return NaN;
+    return rev - costs - overheadAmountForRevenue(rev);
+  }
+
+  function solveRevenueForTargetGross(directCosts, targetGross){
+    const costs = Number(directCosts);
+    const target = Number(targetGross);
+    if(!isFinite(costs) || costs < 0) return NaN;
+    if(!isFinite(target)) return NaN;
+    const required = costs + target;
+    const baseDenom = 1 - RATES.overhead;
+    const highDenom = 1 - RATES.overheadHighRevenueRate;
+    if(baseDenom <= 0 || highDenom <= 0) return NaN;
+
+    const capStartRevenue = (RATES.overhead > 0)
+      ? (RATES.overheadCap / RATES.overhead)
+      : Infinity;
+    const candidateBase = required / baseDenom;
+    if(isFinite(candidateBase) && candidateBase <= capStartRevenue){
+      return candidateBase;
+    }
+
+    const candidateCapped = required + RATES.overheadCap;
+    if(isFinite(candidateCapped) && candidateCapped <= RATES.overheadHighRevenueThreshold){
+      return candidateCapped;
+    }
+
+    return required / highDenom;
+  }
 
   function computeTargetGross(hours, targetPerHour = PRICING.grossProfitTargetPerHour, minimum = getGrossProfitMinimum()){
     const h = Number(hours);
@@ -6562,20 +6607,28 @@ document.addEventListener('DOMContentLoaded', function(){
     const hours = Number(totalHours);
     if(!isFinite(cost) || cost < 0) return { revenue: NaN, mode: 'invalid' };
     if(!isFinite(hours) || hours <= 0) return { revenue: NaN, mode: 'invalid-hours' };
-    const denom = 1 - RATES.overhead;
-    if(denom <= 0) return { revenue: NaN, mode: 'invalid' };
 
     let targetGross = computeTargetGross(hours);
-    let revenue = (cost + targetGross) / denom;
+    let revenue = solveRevenueForTargetGross(cost, targetGross);
+    if(!isFinite(revenue) || revenue < 0){
+      return { revenue: NaN, mode: 'invalid' };
+    }
     const revenueMinimum = getRevenueMinimum();
     if(isFinite(revenueMinimum) && revenueMinimum > 0 && revenue < revenueMinimum){
       revenue = revenueMinimum;
-      const minTargetGross = (revenue * denom) - cost;
+      const minTargetGross = grossProfitForRevenue(revenue, cost);
       if(isFinite(minTargetGross)){
         targetGross = Math.max(targetGross, minTargetGross);
       }
     }
-    return { revenue, mode: 'gross-per-hour', targetGross, hours, revenueMinimum };
+    return {
+      revenue,
+      mode: 'gross-per-hour',
+      targetGross,
+      hours,
+      revenueMinimum,
+      overheadAmount: overheadAmountForRevenue(revenue)
+    };
   }
 
   function setManualModal(open){
@@ -6669,8 +6722,10 @@ document.addEventListener('DOMContentLoaded', function(){
     manualStatusEl.dataset.state = 'success';
 
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
-    const commissionValue = RATES.commission * (((1 - RATES.overhead) * revenueExcludingMcor) - totalCost);
-    const grossProfit = revenue - totalCost - (revenue * RATES.overhead);
+    const overheadAmount = overheadAmountForRevenue(revenue);
+    const overheadAmountForCommission = overheadAmountForRevenue(revenueExcludingMcor);
+    const commissionValue = RATES.commission * (revenueExcludingMcor - overheadAmountForCommission - totalCost);
+    const grossProfit = revenue - totalCost - overheadAmount;
     const netProfit = grossProfit - commissionValue;
 
     if(manualGrossOutput) manualGrossOutput.textContent = '$' + money(grossProfit);
@@ -6844,6 +6899,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const lines = [];
     const SERVICE_BUCKET_LABELS = {
       installation: 'Wrought Iron Installation',
+      woodInstallation: 'Fence Installation',
       replacement: 'Wrought Iron Replacement',
       repairs: 'Wrought Iron Repairs',
       driveGateOperator: 'Drive Gate Operator Replacement',
@@ -6860,6 +6916,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }, {});
     const SERVICE_NAME_TO_BUCKET = {
       'Wrought Iron Fence Installation': 'installation',
+      'Wood Fence Installation': 'woodInstallation',
       'Install New Fence Sections': 'installation',
       'Add Single Walk Gate': 'installation',
       'Add Double Walk Gate': 'installation',
@@ -6900,27 +6957,42 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!name || !desc) return;
       const normalizedName = name.trim();
       const bucket = SERVICE_NAME_TO_BUCKET[normalizedName]
+        || (/^Fence Installation:/i.test(normalizedName) ? 'woodInstallation' : null)
         || (normalizedName.includes('Paint') ? 'painting' : 'repairs');
       const sentence = ensureSentence(desc);
       if(!sentence) return;
       if(!serviceBuckets[bucket]){
         serviceBuckets[bucket] = [];
       }
+      if(bucket === 'woodInstallation'){
+        serviceBuckets[bucket].push({ name: normalizedName, desc: sentence });
+        return;
+      }
       serviceBuckets[bucket].push(sentence);
     }
     function buildServiceLineOutput(){
-      return Object.entries(SERVICE_BUCKET_LABELS)
-        .map(([key, label])=>{
-          const parts = serviceBuckets[key] || [];
-          if(!parts.length) return null;
-          let desc = parts.join(' ');
-          if(key === 'repairs'){
-            const disclaimer = 'The repairs listed are based on what was identified at the time of this estimate. Additional repairs may be required that were not visible or discoverable during inspection. If our crew identifies any additional issues on site, we will notify you for approval prior to proceeding, and any extra work will be billed at an additional cost.';
-            desc = desc ? `${desc}\n\n${disclaimer}` : disclaimer;
-          }
-          return { name: label, desc };
-        })
-        .filter(Boolean);
+      const output = [];
+      Object.entries(SERVICE_BUCKET_LABELS).forEach(([key, label])=>{
+        const parts = serviceBuckets[key] || [];
+        if(!parts.length) return;
+        if(key === 'woodInstallation'){
+          parts.forEach(item=>{
+            const title = (item && item.name) ? String(item.name).trim() : label;
+            const desc = ensureSentence(item && item.desc ? String(item.desc) : '');
+            if(title && desc){
+              output.push({ name: title, desc });
+            }
+          });
+          return;
+        }
+        let desc = parts.join(' ');
+        if(key === 'repairs'){
+          const disclaimer = 'The repairs listed are based on what was identified at the time of this estimate. Additional repairs may be required that were not visible or discoverable during inspection. If our crew identifies any additional issues on site, we will notify you for approval prior to proceeding, and any extra work will be billed at an additional cost.';
+          desc = desc ? `${desc}\n\n${disclaimer}` : disclaimer;
+        }
+        output.push({ name: label, desc });
+      });
+      return output;
     }
     function describeCount(count, singular, plural){
       const n = parseInt(count,10) || 0;
@@ -6960,6 +7032,41 @@ document.addEventListener('DOMContentLoaded', function(){
       const actionPrefix = includeRemoval ? 'Remove existing fence and install new' : 'Install';
       const label = fenceTypeLabel(type);
       return `${actionPrefix} ${label.toLowerCase()} fence. Posts will be set in concrete 36\" deep.`;
+    }
+    function buildWoodInstallationServiceLineTitle(sections){
+      if(!Array.isArray(sections) || !sections.length){
+        return 'Fence Installation';
+      }
+      const heights = new Set();
+      const woodTypes = new Set();
+      const constructions = new Set();
+      const finishes = new Set();
+      sections.forEach(section=>{
+        const heightLabel = normalizeLabelText(section?.woodHeight || section?.height || '');
+        const typeLabel = normalizeLabelText(section?.woodType || '');
+        const constructionLabel = normalizeLabelText(section?.woodStyle || '');
+        const finishLabel = normalizeLabelText(section?.woodFinish || '');
+        if(heightLabel) heights.add(heightLabel);
+        if(typeLabel) woodTypes.add(typeLabel);
+        if(constructionLabel) constructions.add(constructionLabel);
+        if(finishLabel) finishes.add(finishLabel);
+      });
+      const descriptor = [
+        joinParts(Array.from(heights)),
+        joinParts(Array.from(woodTypes)),
+        joinParts(Array.from(constructions))
+      ].filter(Boolean).join(' ').trim();
+      const finishPart = joinParts(Array.from(finishes));
+      if(descriptor && finishPart){
+        return `Fence Installation: ${descriptor} (${finishPart})`;
+      }
+      if(descriptor){
+        return `Fence Installation: ${descriptor}`;
+      }
+      if(finishPart){
+        return `Fence Installation (${finishPart})`;
+      }
+      return 'Fence Installation';
     }
     function groupSectionsByFenceType(sections){
       const map = new Map();
@@ -7047,7 +7154,11 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         const rCount = parseInt(section.railsCount,10) || (Array.isArray(section.rails) ? section.rails.length : 0);
         if(rCount > 0){ rails.add(`${rCount} rail${rCount === 1 ? '' : 's'}`); }
-        if(Array.isArray(section.rails) && section.rails.length){
+        if(isWood && section.woodRailSize){
+          const normalized = normalizeSize(section.woodRailSize);
+          railSizes.add(normalized);
+          group.railSizes.add(normalized);
+        } else if(Array.isArray(section.rails) && section.rails.length){
           section.rails.forEach(r=>{
             if(r && r.size){
               const normalized = normalizeSize(r.size);
@@ -7069,10 +7180,6 @@ document.addEventListener('DOMContentLoaded', function(){
             railSizes.add(normalizedStack);
             group.railSizes.add(normalizedStack);
           }
-        } else if(isWood && section.woodRailSize){
-          const normalized = normalizeSize(section.woodRailSize);
-          railSizes.add(normalized);
-          group.railSizes.add(normalized);
         }
         const postSizeVal = isWood ? section.woodPost : section.postSize;
         if(postSizeVal){
@@ -7146,7 +7253,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       let railSentence = '';
-      if(railSizeValues.length){
+      if(!isWood && railSizeValues.length){
         railSentence = `Rails will use ${joinParts(railSizeValues)}.`;
       }
 
@@ -8203,7 +8310,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const installGroups = groupSectionsByFenceType(installSectionsOnly);
     installGroups.forEach((sections, type)=>{
       const detail = buildInstallServiceDescription(sections, false);
-      addServiceLine(`${fenceTypeLabel(type)} Fence Installation`, detail || fenceTypeDefaultDetail(type, false));
+      const serviceTitle = type === 'wood'
+        ? buildWoodInstallationServiceLineTitle(sections)
+        : `${fenceTypeLabel(type)} Fence Installation`;
+      addServiceLine(serviceTitle, detail || fenceTypeDefaultDetail(type, false));
     });
 
     const paintingSummary = state.sections.reduce((acc, s)=>{
@@ -10349,8 +10459,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const revenueRes = computeChargeRevenue(directCosts, totalHours);
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
+    const overheadAmount = overheadAmountForRevenue(revenue);
+    const overheadAmountForCommission = overheadAmountForRevenue(revenueExcludingMcor);
     const commissionFormula$ = isFinite(revenue)
-      ? (RATES.commission * (((1 - RATES.overhead) * revenueExcludingMcor) - directCosts))
+      ? (RATES.commission * (revenueExcludingMcor - overheadAmountForCommission - directCosts))
       : NaN;
 
     const cost = [];
@@ -10392,7 +10504,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!isFinite(revenue)){
       cost.push('⚠️ Pricing inputs produce an invalid result. Check overhead rate and ensure total hours > 0.');
     } else {
-      const grossProfit = revenue - directCosts - (revenue * RATES.overhead);
+      const grossProfit = revenue - directCosts - overheadAmount;
       const netProfit = grossProfit - commissionFormula$;
       const netProfitPct = revenue !== 0 ? (netProfit / revenue) * 100 : NaN;
       cost.push('- Price to charge: $'+money(revenue));
@@ -10401,7 +10513,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const hoursLabel = totalHoursLabel || (isFinite(totalHours) && totalHours > 0 ? `${totalHours.toFixed(1)} hours` : 'time TBD');
         cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}, $${money(getGrossProfitMinimum())} min): $${money(revenueRes.targetGross)}`);
       }
-      cost.push('- Overhead amount: $'+money(revenue * RATES.overhead));
+      cost.push('- Overhead amount: $'+money(overheadAmount));
       cost.push('- Gross profit: $'+money(grossProfit));
       cost.push('- Commission (per formula): $'+money(commissionFormula$));
       cost.push('- Net profit: $'+money(netProfit));
