@@ -1322,14 +1322,18 @@ document.addEventListener('DOMContentLoaded', function(){
     'Rust/Weathered'
   ];
   const WROUGHT_PAINT_COLOR_OPTIONS = [
-    'Gloss Black',
-    'Satin Black',
-    'Flat Black',
-    'Brown',
-    'Bronze',
-    'White',
-    'Gray',
-    'Green'
+    'Black Gloss',
+    'Black Flat',
+    'White Gloss',
+    'Aluminum Gloss',
+    'Smoke Gray Gloss',
+    'Hunter Green Gloss',
+    'Yellow Gloss',
+    'Safety Red Gloss',
+    'Regal Red Gloss',
+    'Blue Gloss',
+    'Leather Brown Gloss',
+    'Dark Brown Gloss'
   ];
 
   const GATE = {
@@ -6204,9 +6208,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(raw.includes('brown')) return 'brown';
     if(raw.includes('bronze')) return 'bronze';
     if(raw.includes('white')) return 'white';
+    if(raw.includes('aluminum')) return 'aluminum';
     if(raw.includes('gray') || raw.includes('grey')) return 'gray';
     if(raw.includes('green')) return 'green';
     if(raw.includes('blue')) return 'blue';
+    if(raw.includes('yellow')) return 'yellow';
     if(raw.includes('red')) return 'red';
     if(raw.includes('rust') || raw.includes('weather')) return 'rust/weathered';
     return raw;
