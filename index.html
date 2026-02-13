@@ -6921,6 +6921,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Add Single Walk Gate': 'installation',
       'Add Double Walk Gate': 'installation',
       'Wrought Iron Fence Replacement': 'replacement',
+      'Wood Fence Replacement': 'woodInstallation',
       'Remove Fence Sections': 'replacement',
       'Surface Preparation & Painting': 'painting',
       'Dig Out Encroaching Soil': 'repairs',
@@ -7117,6 +7118,12 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!Array.isArray(sections) || !sections.length) return '';
       const fenceType = (sections[0]?.fenceType || 'Wrought Iron').toLowerCase();
       const isWood = fenceType === 'wood';
+      const WOOD_RAIL_COUNT = 3;
+      const parseStackCount = (value)=>{
+        const stack = parseInt(value, 10) || 0;
+        return stack > 0 ? stack : 1;
+      };
+      const formatStackLabel = (stack)=> `${stack} stack${stack === 1 ? '' : 's'}`;
       let totalLength = 0;
       const heights = new Set();
       const styles = new Set();
@@ -7125,6 +7132,9 @@ document.addEventListener('DOMContentLoaded', function(){
       const spacing = new Set();
       const postSizes = new Set();
       const styleGroups = new Map();
+      const woodKickBoards = new Set();
+      const woodTopCaps = new Set();
+      const woodTrims = new Set();
 
       sections.forEach(section=>{
         const len = parseInt(section.length,10) || 0;
@@ -7145,15 +7155,22 @@ document.addEventListener('DOMContentLoaded', function(){
             style: sectionStyle ? String(sectionStyle).trim() : '',
             postSizes: new Set(),
             picketSizes: new Set(),
-            railSizes: new Set()
+            railSizes: new Set(),
+            kickBoards: new Set(),
+            topCaps: new Set(),
+            trims: new Set()
           });
         }
         const group = styleGroups.get(groupKey);
         if(len > 0){
           group.length += len;
         }
-        const rCount = parseInt(section.railsCount,10) || (Array.isArray(section.rails) ? section.rails.length : 0);
-        if(rCount > 0){ rails.add(`${rCount} rail${rCount === 1 ? '' : 's'}`); }
+        if(isWood){
+          rails.add(`${WOOD_RAIL_COUNT} rails`);
+        } else {
+          const rCount = parseInt(section.railsCount,10) || (Array.isArray(section.rails) ? section.rails.length : 0);
+          if(rCount > 0){ rails.add(`${rCount} rail${rCount === 1 ? '' : 's'}`); }
+        }
         if(isWood && section.woodRailSize){
           const normalized = normalizeSize(section.woodRailSize);
           railSizes.add(normalized);
@@ -7191,6 +7208,27 @@ document.addEventListener('DOMContentLoaded', function(){
           if(section.woodPicketWidth){
             group.picketSizes.add(normalizeSize(section.woodPicketWidth));
           }
+          if(section.woodAddKickBoard){
+            const kickSize = normalizeSize(section.woodKickBoardSize || '2x6') || '2x6';
+            const kickStack = parseStackCount(section.woodKickBoardStack);
+            const kickLabel = `${kickSize}, ${formatStackLabel(kickStack)}`;
+            group.kickBoards.add(kickLabel);
+            woodKickBoards.add(kickLabel);
+          }
+          if(section.woodAddTopCap){
+            const topCapSize = normalizeSize(section.woodTopCapSize || '2x6') || '2x6';
+            group.topCaps.add(topCapSize);
+            woodTopCaps.add(topCapSize);
+          }
+          if(section.woodAddTrim){
+            const trimSizes = splitWoodTrimSizes(section.woodTrimType || '1x4');
+            trimSizes.forEach(size=>{
+              const trimSize = normalizeSize(size || '');
+              if(!trimSize) return;
+              group.trims.add(trimSize);
+              woodTrims.add(trimSize);
+            });
+          }
         } else if(section.picketSize){
           group.picketSizes.add(normalizeSize(section.picketSize));
         }
@@ -7222,7 +7260,10 @@ document.addEventListener('DOMContentLoaded', function(){
           const postDetail = item.postSizes.size ? `posts: ${joinParts(Array.from(item.postSizes))}` : '';
           const picketDetail = item.picketSizes.size ? `pickets: ${joinParts(Array.from(item.picketSizes))}` : '';
           const railDetail = item.railSizes.size ? `rails: ${joinParts(Array.from(item.railSizes).map(v=> `${v}`))}` : '';
-          const detailParts = [postDetail, picketDetail, railDetail].filter(Boolean);
+          const kickDetail = isWood && item.kickBoards.size ? `kick board: ${joinParts(Array.from(item.kickBoards))}` : '';
+          const topCapDetail = isWood && item.topCaps.size ? `top cap: ${joinParts(Array.from(item.topCaps))}` : '';
+          const trimDetail = isWood && item.trims.size ? `trim: ${joinParts(Array.from(item.trims))}` : '';
+          const detailParts = [postDetail, picketDetail, railDetail, kickDetail, topCapDetail, trimDetail].filter(Boolean);
           const detailText = detailParts.length ? ` (${detailParts.join('; ')})` : '';
           return `${item.length}ft of ${phraseParts.join(' ')}${detailText}`;
         });
@@ -7257,7 +7298,24 @@ document.addEventListener('DOMContentLoaded', function(){
         railSentence = `Rails will use ${joinParts(railSizeValues)}.`;
       }
 
-      return [firstSentence, postsSentence, railSentence].filter(Boolean).join(' ');
+      let woodAddOnSentence = '';
+      if(isWood && !breakdownParts.length){
+        const addOnParts = [];
+        if(woodKickBoards.size){
+          addOnParts.push(`kick board (${joinParts(Array.from(woodKickBoards))})`);
+        }
+        if(woodTopCaps.size){
+          addOnParts.push(`top cap (${joinParts(Array.from(woodTopCaps))})`);
+        }
+        if(woodTrims.size){
+          addOnParts.push(`trim (${joinParts(Array.from(woodTrims))})`);
+        }
+        if(addOnParts.length){
+          woodAddOnSentence = `Include wood add-ons: ${addOnParts.join('; ')}.`;
+        }
+      }
+
+      return [firstSentence, postsSentence, railSentence, woodAddOnSentence].filter(Boolean).join(' ');
     }
     const zeroPostCounts = ()=>({ posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 });
     const countWoodRealignMethods = (entries=[])=>{
@@ -10229,29 +10287,24 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.woodPostRealignCutWeld > 0) sub.push('- Wood posts to realign (cut & weld): '+totals.woodPostRealignCutWeld);
     if (totals.woodPostRealignDig > 0) sub.push('- Wood posts to realign (dig): '+totals.woodPostRealignDig);
     pushPostLinesSub('Posts to set (new sections)', totals.postsInstall || zeroPostCounts());
-    if (totals.replaceSections > 0) sub.push('- Sections to replace: '+totals.replaceSections);
-    if (totals.installSections > 0) sub.push('- New sections to install: '+totals.installSections);
-    if (woodInstallPlan.sections > 0){
-      sub.push(`- Wood install/replace sections: ${woodInstallPlan.sections}`);
+    const nonWoodReplacementSections = replacementSectionsOnly.filter(section=> ((section.fenceType || '').toLowerCase() !== 'wood'));
+    const nonWoodInstallSections = installSectionsOnly.filter(section=> ((section.fenceType || '').toLowerCase() !== 'wood'));
+    if (nonWoodReplacementSections.length > 0) sub.push('- Sections to replace: '+nonWoodReplacementSections.length);
+    if (nonWoodInstallSections.length > 0) sub.push('- New sections to install: '+nonWoodInstallSections.length);
+    const woodScopeServiceLines = [];
+    const woodReplacementSections = replacementGroups.get('wood') || [];
+    if (woodReplacementSections.length > 0){
+      const detail = buildInstallServiceDescription(woodReplacementSections, true) || fenceTypeDefaultDetail('wood', true);
+      const sentence = ensureSentence(detail);
+      if(sentence) woodScopeServiceLines.push(sentence);
     }
-    if (woodInstallPlan.totalPosts > 0){
-      sub.push(`- Wood posts to set: ${woodInstallPlan.totalPosts}`);
+    const woodInstallSections = installGroups.get('wood') || [];
+    if (woodInstallSections.length > 0){
+      const detail = buildInstallServiceDescription(woodInstallSections, false) || fenceTypeDefaultDetail('wood', false);
+      const sentence = ensureSentence(detail);
+      if(sentence) woodScopeServiceLines.push(sentence);
     }
-    if (woodInstallPlan.totalRails > 0){
-      sub.push(`- Wood rails to install: ${woodInstallPlan.totalRails}`);
-    }
-    if (woodInstallPlan.totalPickets > 0){
-      sub.push(`- Wood pickets to install: ${woodInstallPlan.totalPickets}`);
-    }
-    if (woodInstallPlan.postDays > 0){
-      sub.push(`- Wood post-set days (4-man crew): ${woodInstallPlan.postDays}`);
-    }
-    if (woodInstallPlan.buildDays > 0){
-      sub.push(`- Wood build days (4-man crew): ${woodInstallPlan.buildDays}`);
-    }
-    if (woodInstallPlan.skidDays > 0){
-      sub.push(`- Skid steer rental days: ${woodInstallPlan.skidDays}`);
-    }
+    woodScopeServiceLines.forEach(detail=> sub.push(`- ${detail}`));
     if (totals.removalLf > 0)       sub.push(`- Removal & haul away: ${totals.removalLf} lf (sub paid $${money(totals.removalCost)})`);
     if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
     if (totals.puppyPickets > 0){
