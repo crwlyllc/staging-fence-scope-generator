@@ -1310,6 +1310,27 @@ document.addEventListener('DOMContentLoaded', function(){
   const PUPPY_INSERT_SIZES = ['1/2"','5/8"'];
   const PANEL_REPLACEMENT_STYLES = [...SEED.style, 'Flat Top w/ Puppy Picket Insert'];
   const CUSTOMER_TYPES = ['Residential','Commercial','City'];
+  const WROUGHT_CURRENT_COLOR_OPTIONS = [
+    'Black',
+    'Brown',
+    'Bronze',
+    'White',
+    'Gray',
+    'Green',
+    'Blue',
+    'Red',
+    'Rust/Weathered'
+  ];
+  const WROUGHT_PAINT_COLOR_OPTIONS = [
+    'Gloss Black',
+    'Satin Black',
+    'Flat Black',
+    'Brown',
+    'Bronze',
+    'White',
+    'Gray',
+    'Green'
+  ];
 
   const GATE = {
     latchTypes: [
@@ -1616,6 +1637,18 @@ document.addEventListener('DOMContentLoaded', function(){
       const prepMatch = line.match(/^-\s*Prep\s*needs:\s*(.+)$/i);
       if(prepMatch){
         current.paintingPrepExtra = /more|extra|yes|true/i.test(prepMatch[1]);
+        return;
+      }
+
+      const currentColorMatch = line.match(/^-\s*Current\s*(?:fence\s*)?color:\s*(.+)$/i);
+      if(currentColorMatch){
+        current.paintingCurrentColor = currentColorMatch[1].trim();
+        return;
+      }
+
+      const paintColorMatch = line.match(/^-\s*(?:Paint|Painting)\s*color:\s*(.+)$/i);
+      if(paintColorMatch){
+        current.paintingTargetColor = paintColorMatch[1].trim();
         return;
       }
 
@@ -2274,6 +2307,8 @@ document.addEventListener('DOMContentLoaded', function(){
       painting: defaultPainting,
       paintingApplication: 'By Hand',
       paintingPrepExtra: false,
+      paintingCurrentColor: WROUGHT_CURRENT_COLOR_OPTIONS[0],
+      paintingTargetColor: WROUGHT_PAINT_COLOR_OPTIONS[0],
       woodHeight: '6ft',
       woodStyle: 'Side by Side',
       woodPicketWidth: '5.5"',
@@ -3271,6 +3306,14 @@ document.addEventListener('DOMContentLoaded', function(){
               <option value="Spray">Spray</option>
             </select>
           </div>
+          <div class="sp-field col-3" data-painting-colors style="display:none">
+            <label class="sp-label">Current Fence Color</label>
+            <select class="sp-select" data-field="paintingCurrentColor">${createSelect(WROUGHT_CURRENT_COLOR_OPTIONS)}</select>
+          </div>
+          <div class="sp-field col-3" data-painting-colors style="display:none">
+            <label class="sp-label">Paint Color</label>
+            <select class="sp-select" data-field="paintingTargetColor">${createSelect(WROUGHT_PAINT_COLOR_OPTIONS)}</select>
+          </div>
           <div class="sp-field col-3" data-painting-prep style="display:none">
             <label class="sp-label">Prep Needs</label>
             <label class="sp-row" style="gap:6px">
@@ -3639,7 +3682,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const STYLE_FIELDS = [
     'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','installFinialStyle','railsCount','rails',
-    'picketSize','picketHeight','puppy','puppyPicketSize','puppyPicketHeight','puppyPicketReplace','painting','paintingApplication','paintingPrepExtra','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
+    'picketSize','picketHeight','puppy','puppyPicketSize','puppyPicketHeight','puppyPicketReplace','painting','paintingApplication','paintingPrepExtra','paintingCurrentColor','paintingTargetColor','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','woodRepairStainBrand','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
@@ -4021,6 +4064,12 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
     const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
     const paintingPrepExtra = paintingSelection === 'Paint Section' ? val('paintingPrepExtra') : false;
+    const paintingCurrentColor = normalizedFence === 'wood'
+      ? ''
+      : (val('paintingCurrentColor') || WROUGHT_CURRENT_COLOR_OPTIONS[0]);
+    const paintingTargetColor = normalizedFence === 'wood'
+      ? ''
+      : (val('paintingTargetColor') || WROUGHT_PAINT_COLOR_OPTIONS[0]);
     updateMapLengthOverrideFromCard(card);
     const mapLengthOverride = parsePositiveInt(card.dataset.mapLengthOverride);
     const mapMeasuredLength = parsePositiveInt(card.dataset.mapMeasuredLength);
@@ -4057,6 +4106,8 @@ document.addEventListener('DOMContentLoaded', function(){
       painting: paintingSelection,
       paintingApplication: paintingMethod,
       paintingPrepExtra,
+      paintingCurrentColor,
+      paintingTargetColor,
       woodHeight: val('woodHeight'),
       woodStyle: val('woodStyle'),
       woodPicketWidth: val('woodPicketWidth'),
@@ -4239,6 +4290,8 @@ document.addEventListener('DOMContentLoaded', function(){
     set('painting', defaultPainting);
     set('paintingApplication', data.paintingApplication || 'By Hand');
     set('paintingPrepExtra', Boolean(data.paintingPrepExtra));
+    set('paintingCurrentColor', data.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0]);
+    set('paintingTargetColor', data.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]);
     set('woodHeight', data.woodHeight || '6ft');
     set('woodStyle', data.woodStyle || 'Side by Side');
     set('woodPicketWidth', data.woodPicketWidth || '5.5"');
@@ -5572,13 +5625,17 @@ document.addEventListener('DOMContentLoaded', function(){
   function updatePaintingApplicationUI(card){
     const wrap = card.querySelector('[data-painting-application]');
     const prepWrap = card.querySelector('[data-painting-prep]');
-    if(!wrap) return;
+    const colorWraps = card.querySelectorAll('[data-painting-colors]');
     const paintingSel = card.querySelector('[data-field="painting"]');
     const methodSel = card.querySelector('[data-field="paintingApplication"]');
     const prepSel = card.querySelector('[data-field="paintingPrepExtra"]');
     const paintingVal = paintingSel ? paintingSel.value : '';
-    const show = paintingVal === 'Paint Section' || paintingVal === 'Prime and Paint';
-    wrap.style.display = show ? '' : 'none';
+    const showMethod = paintingVal === 'Paint Section' || paintingVal === 'Prime and Paint';
+    if(wrap){
+      wrap.style.display = showMethod ? '' : 'none';
+    }
+    const showColors = paintingVal === 'Paint Section' || paintingVal === 'Prime and Paint' || paintingVal === 'Spot Paint Welds';
+    colorWraps.forEach(el=>{ el.style.display = showColors ? '' : 'none'; });
     if(prepWrap){
       const showPrep = paintingVal === 'Paint Section';
       prepWrap.style.display = showPrep ? '' : 'none';
@@ -5586,7 +5643,7 @@ document.addEventListener('DOMContentLoaded', function(){
         prepSel.checked = false;
       }
     }
-    if(show){
+    if(showMethod){
       if(methodSel && !methodSel.value){
         methodSel.value = 'By Hand';
       }
@@ -6139,6 +6196,26 @@ document.addEventListener('DOMContentLoaded', function(){
       .replace(/\u2018|‘/g,"'")
       .replace(/×/g,'x')
       .trim();
+  }
+  function normalizePaintColorKey(value){
+    const raw = normalizeLabelText(value || '').toLowerCase();
+    if(!raw) return '';
+    if(raw.includes('black')) return 'black';
+    if(raw.includes('brown')) return 'brown';
+    if(raw.includes('bronze')) return 'bronze';
+    if(raw.includes('white')) return 'white';
+    if(raw.includes('gray') || raw.includes('grey')) return 'gray';
+    if(raw.includes('green')) return 'green';
+    if(raw.includes('blue')) return 'blue';
+    if(raw.includes('red')) return 'red';
+    if(raw.includes('rust') || raw.includes('weather')) return 'rust/weathered';
+    return raw;
+  }
+  function paintCoatCountForSection(section){
+    const current = normalizePaintColorKey(section?.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0]);
+    const target = normalizePaintColorKey(section?.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]);
+    if(!current || !target) return 1;
+    return current === target ? 1 : 2;
   }
   function normalizeWoodStainBrand(value){
     const raw = String(value || '').trim().toLowerCase();
@@ -7910,6 +7987,16 @@ document.addEventListener('DOMContentLoaded', function(){
             ? 'None'
             : paintingDefault;
           lines.push(`- Painting: ${paintingLabel}`);
+          if(paintingLabel !== 'None'){
+            const currentColor = s.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0];
+            const targetColor = s.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0];
+            const paintCoats = paintCoatCountForSection(s);
+            lines.push(`- Current fence color: ${currentColor}`);
+            lines.push(`- Paint color: ${targetColor}`);
+            if(paintCoats > 1){
+              lines.push('- Paint coats: 2 (color change)');
+            }
+          }
           if(paintingLabel === 'Paint Section' || paintingLabel === 'Prime and Paint'){
             const application = s.paintingApplication || 'By Hand';
             lines.push(`- Paint application: ${application}`);
@@ -8552,20 +8639,35 @@ document.addEventListener('DOMContentLoaded', function(){
       if(len > 0){
         const hardscape = parseInt(s.hardscape||0,10) || 0;
         const trim = parseInt(s.trim||0,10) || 0;
+        const coatCount = paintCoatCountForSection(s);
         if(s.painting === 'Paint Section'){
           acc.full.len += len;
           acc.full.hardscape += hardscape;
           acc.full.trim += trim;
+          if(coatCount > 1){
+            acc.full.colorChangeLen += len;
+          }
         } else if (s.painting === 'Prime and Paint'){
           acc.primePaint.len += len;
           acc.primePaint.hardscape += hardscape;
           acc.primePaint.trim += trim;
+          if(coatCount > 1){
+            acc.primePaint.colorChangeLen += len;
+          }
         } else if (s.painting === 'Spot Paint Welds'){
           acc.spot += len;
+          if(coatCount > 1){
+            acc.spotColorChangeLen += len;
+          }
         }
       }
       return acc;
-    }, { full: { len: 0, hardscape: 0, trim: 0 }, primePaint: { len: 0, hardscape: 0, trim: 0 }, spot: 0 });
+    }, {
+      full: { len: 0, hardscape: 0, trim: 0, colorChangeLen: 0 },
+      primePaint: { len: 0, hardscape: 0, trim: 0, colorChangeLen: 0 },
+      spot: 0,
+      spotColorChangeLen: 0
+    });
 
     if (paintingSummary.full.len || paintingSummary.primePaint.len || paintingSummary.spot){
       const paintingMethodSet = new Set();
@@ -8590,10 +8692,67 @@ document.addEventListener('DOMContentLoaded', function(){
           methodNote += ' By hand allows a thicker coat of paint to be applied, which is great for protection, and leaves a more textured finish from the gloves.';
         }
       }
+      const currentColorCounts = new Map();
+      const targetColorCounts = new Map();
+      state.sections.forEach(s=>{
+        const fenceType = (s.fenceType || '').toLowerCase();
+        if(fenceType && fenceType !== 'wrought iron') return;
+        if(s.painting === 'Paint Section' || s.painting === 'Prime and Paint' || s.painting === 'Spot Paint Welds'){
+          const currentColor = normalizeLabelText(s.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0]) || WROUGHT_CURRENT_COLOR_OPTIONS[0];
+          const targetColor = normalizeLabelText(s.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]) || WROUGHT_PAINT_COLOR_OPTIONS[0];
+          currentColorCounts.set(currentColor, (currentColorCounts.get(currentColor) || 0) + 1);
+          targetColorCounts.set(targetColor, (targetColorCounts.get(targetColor) || 0) + 1);
+        }
+      });
+      const singleCurrentColor = currentColorCounts.size === 1 ? Array.from(currentColorCounts.keys())[0] : '';
+      const singleTargetColor = targetColorCounts.size === 1 ? Array.from(targetColorCounts.keys())[0] : '';
+      const summarizeColorCounts = (map)=>{
+        const parts = [];
+        map.forEach((count, label)=>{
+          if(!label) return;
+          parts.push(count > 1 ? `${count} × ${label}` : label);
+        });
+        return parts.join('; ');
+      };
+      let colorNote = '';
+      if(singleCurrentColor && singleTargetColor){
+        colorNote = `Current fence color: ${singleCurrentColor}. Paint color: ${singleTargetColor}.`;
+      }else{
+        const currentMix = summarizeColorCounts(currentColorCounts);
+        const targetMix = summarizeColorCounts(targetColorCounts);
+        if(currentMix){
+          colorNote += `Current fence color mix: ${currentMix}.`;
+        }
+        if(targetMix){
+          colorNote += `${colorNote ? ' ' : ''}Paint color mix: ${targetMix}.`;
+        }
+      }
+      const paintColorPhrase = singleTargetColor
+        ? `${singleTargetColor} oil-based paint`
+        : 'the selected oil-based paint color';
+      const colorChangeTotalLen =
+        (paintingSummary.full.colorChangeLen || 0) +
+        (paintingSummary.primePaint.colorChangeLen || 0) +
+        (paintingSummary.spotColorChangeLen || 0);
+      let coatRuleNote = '';
+      if(colorChangeTotalLen > 0){
+        const coatParts = [];
+        if(paintingSummary.full.colorChangeLen > 0){
+          coatParts.push(`paint section ${paintingSummary.full.colorChangeLen} lf`);
+        }
+        if(paintingSummary.primePaint.colorChangeLen > 0){
+          coatParts.push(`prime and paint ${paintingSummary.primePaint.colorChangeLen} lf`);
+        }
+        if(paintingSummary.spotColorChangeLen > 0){
+          coatParts.push(`spot paint welds ${paintingSummary.spotColorChangeLen} lf`);
+        }
+        const coatDetail = coatParts.length ? ` (${coatParts.join('; ')})` : '';
+        coatRuleNote = `Two paint coats are included where the selected paint color differs from the current fence color${coatDetail}.`;
+      }
 
       const segments = [];
       if(paintingSummary.full.len){
-        let detail = `Scrape and brush off loose rust and debris, then apply gloss black oil-based paint to approximately ${paintingSummary.full.len} linear feet of fence`;
+        let detail = `Scrape and brush off loose rust and debris, then apply ${paintColorPhrase} to approximately ${paintingSummary.full.len} linear feet of fence`;
         const extras = [];
         if(paintingSummary.full.hardscape) extras.push(`${paintingSummary.full.hardscape} lf over hardscape`);
         if(paintingSummary.full.trim) extras.push(`${paintingSummary.full.trim} lf of trim detail`);
@@ -8601,7 +8760,7 @@ document.addEventListener('DOMContentLoaded', function(){
         segments.push(detail);
       }
       if(paintingSummary.primePaint.len){
-        let detail = `Prime with red oxide primer, then apply gloss black oil-based paint to approximately ${paintingSummary.primePaint.len} linear feet of fence`;
+        let detail = `Prime with red oxide primer, then apply ${paintColorPhrase} to approximately ${paintingSummary.primePaint.len} linear feet of fence`;
         const extras = [];
         if(paintingSummary.primePaint.hardscape) extras.push(`${paintingSummary.primePaint.hardscape} lf over hardscape`);
         if(paintingSummary.primePaint.trim) extras.push(`${paintingSummary.primePaint.trim} lf of trim detail`);
@@ -8610,9 +8769,15 @@ document.addEventListener('DOMContentLoaded', function(){
         segments.push(detail);
       }
       if(paintingSummary.spot){
-        segments.push(`Spot prep and apply gloss black oil-based paint to weld areas along ${paintingSummary.spot} linear feet`);
+        segments.push(`Spot prep and apply ${paintColorPhrase} to weld areas along ${paintingSummary.spot} linear feet`);
       }
       let desc = segments.join('; ') + '.';
+      if(colorNote){
+        desc += ` ${colorNote}`;
+      }
+      if(coatRuleNote){
+        desc += ` ${coatRuleNote}`;
+      }
       if(methodNote){
         desc += ` ${methodNote}`;
       }
@@ -9893,27 +10058,33 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Paint estimates
     let totalLenPaint = 0;
+    let totalLenPaintByCoat = 0;
     let totalLenPrimePaint = 0;
     let totalLenSpot  = 0;
+    let totalLenSpotByCoat = 0;
     state.sections.forEach(s=>{
       const len = (parseInt(s.length||0,10) || 0);
       if(!len) return;
+      const coatCount = paintCoatCountForSection(s);
       if (s.painting === 'Paint Section') {
         totalLenPaint += len;
+        totalLenPaintByCoat += (len * coatCount);
       } else if (s.painting === 'Prime and Paint') {
         totalLenPaint += len;
+        totalLenPaintByCoat += (len * coatCount);
         totalLenPrimePaint += len;
       } else if (s.painting === 'Spot Paint Welds') {
         totalLenSpot += len;
+        totalLenSpotByCoat += (len * coatCount);
       }
     });
     paintLenTotal = totalLenPaint;
-    paintGallons  = Math.ceil(totalLenPaint / 100);
+    paintGallons  = Math.ceil(totalLenPaintByCoat / 100);
     if (paintGallons > 0) paintCans += Math.ceil(paintGallons * 0.5);
     primerGallons = Math.ceil(totalLenPrimePaint / 100);
     if (primerGallons > 0) primerCans += Math.ceil(primerGallons * 0.5);
     if (totalLenSpot > 0) {
-      const unitsSpot = Math.ceil(totalLenSpot / 100);
+      const unitsSpot = Math.ceil(totalLenSpotByCoat / 100);
       paintCans += Math.max(1, Math.ceil(unitsSpot * 0.5));
     }
     if (paintGallons > 0) addMat(materials, 'gallons of gloss black paint', paintGallons);
@@ -10179,6 +10350,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (s.painting !== 'Paint Section' && s.painting !== 'Prime and Paint') return acc;
       const len = parseInt(s.length||0,10) || 0;
       const method = s.paintingApplication || 'By Hand';
+      const paintCoats = paintCoatCountForSection(s);
       let totalSectionHours = 0;
       if(method === 'Spray'){
         let panelCount = 0;
@@ -10208,15 +10380,20 @@ document.addEventListener('DOMContentLoaded', function(){
         totalSectionHours *= 1.25;
       }
       if(method === 'Spray'){
-        sprayBaseHours += totalSectionHours;
-      }
-      if (s.painting === 'Prime and Paint'){
-        primePaintReturnHours += totalSectionHours;
-        if(method === 'Spray'){
-          sprayFinishHours += totalSectionHours;
+        if(s.painting === 'Prime and Paint'){
+          sprayBaseHours += totalSectionHours;
+        }else{
+          sprayBaseHours += totalSectionHours * paintCoats;
         }
       }
-      return acc + totalSectionHours;
+      if (s.painting === 'Prime and Paint'){
+        primePaintReturnHours += totalSectionHours * paintCoats;
+        if(method === 'Spray'){
+          sprayFinishHours += totalSectionHours * paintCoats;
+        }
+        return acc + totalSectionHours;
+      }
+      return acc + (totalSectionHours * paintCoats);
     }, 0);
     manHours += paintingHours + primePaintReturnHours;
     helperHours += paintingHours + primePaintReturnHours;
@@ -10656,7 +10833,47 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
     if (totals.panelsInstallCustom > 0) sub.push('- New custom panels: '+totals.panelsInstallCustom);
     if (totals.retainingWallSqft > 0) sub.push(`- Retaining wall: ${totals.retainingWallSqft.toFixed(2)} sq ft ($${money(totals.retainingWallCost)}). In-House 4 pours the wall (wall materials & labor included; post materials separate) and Jesus' crew installs the fence. Posts on the wall set in the pour—no extra concrete bags.`);
-    if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then hand paint '+paintLenTotal+' ft of fence');
+    const paintedSections = state.sections.filter(section=>{
+      const fenceType = (section.fenceType || '').toLowerCase();
+      if(fenceType && fenceType !== 'wrought iron') return false;
+      return section.painting === 'Paint Section' || section.painting === 'Prime and Paint' || section.painting === 'Spot Paint Welds';
+    });
+    if(paintedSections.length){
+      const summarizeColorCounts = (map)=>{
+        const parts = [];
+        map.forEach((count, label)=>{
+          if(!label) return;
+          parts.push(count > 1 ? `${count} × ${label}` : label);
+        });
+        return parts.join('; ');
+      };
+      const currentColorCounts = new Map();
+      const targetColorCounts = new Map();
+      let colorChangeLf = 0;
+      paintedSections.forEach(section=>{
+        const currentColor = normalizeLabelText(section.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0]) || WROUGHT_CURRENT_COLOR_OPTIONS[0];
+        const targetColor = normalizeLabelText(section.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]) || WROUGHT_PAINT_COLOR_OPTIONS[0];
+        currentColorCounts.set(currentColor, (currentColorCounts.get(currentColor) || 0) + 1);
+        targetColorCounts.set(targetColor, (targetColorCounts.get(targetColor) || 0) + 1);
+        if(paintCoatCountForSection(section) > 1){
+          colorChangeLf += parseInt(section.length || 0, 10) || 0;
+        }
+      });
+      const singleCurrentColor = currentColorCounts.size === 1 ? Array.from(currentColorCounts.keys())[0] : '';
+      const singleTargetColor = targetColorCounts.size === 1 ? Array.from(targetColorCounts.keys())[0] : '';
+      if(singleCurrentColor && singleTargetColor){
+        sub.push(`- Painting colors: ${singleCurrentColor} to ${singleTargetColor}`);
+      }else{
+        const currentMix = summarizeColorCounts(currentColorCounts);
+        const targetMix = summarizeColorCounts(targetColorCounts);
+        if(currentMix) sub.push(`- Current fence color mix: ${currentMix}`);
+        if(targetMix) sub.push(`- Paint color mix: ${targetMix}`);
+      }
+      if(colorChangeLf > 0){
+        sub.push(`- Two-coat paint rule: ${colorChangeLf} lf requires 2 coats because paint color differs from existing color`);
+      }
+    }
+    if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then paint '+paintLenTotal+' ft of fence');
     if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
     if (totals.woodPicketReplace > 0) sub.push('- Wood pickets to replace: '+totals.woodPicketReplace);
     if (totals.woodPicketInstall > 0) sub.push('- Wood pickets to install: '+totals.woodPicketInstall);
