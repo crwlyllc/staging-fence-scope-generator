@@ -6218,6 +6218,8 @@ document.addEventListener('DOMContentLoaded', function(){
     return raw;
   }
   function paintCoatCountForSection(section){
+    const fenceType = String(section?.fenceType || '').toLowerCase();
+    if(fenceType && fenceType !== 'wrought iron') return 1;
     const current = normalizePaintColorKey(section?.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0]);
     const target = normalizePaintColorKey(section?.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]);
     if(!current || !target) return 1;
