@@ -9639,11 +9639,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if(wroughtPostReplacements > 0){
       // Post replacement workflow per post:
       // 1 guy x (20 min pull + 20 min clean/depth + 20 min set in concrete),
-      // then a welder spends 20 min welding panels back to the post.
+      // then a welder spends 10 min cutting existing panels off,
+      // 20 min welding panels back to the post, and 10 min cutting the
+      // post back to height after rewelding.
       // Up to four posts can run in parallel with a four-man crew, so elapsed
       // time scales in scheduling while total man-hours remain additive.
       const crewManHoursPerPost = 60/60;
-      const welderHoursPerPost = 20/60;
+      const welderHoursPerPost = 40/60;
       const postReplacementCrewManHours = wroughtPostReplacements * crewManHoursPerPost;
       const postReplacementWelderHours = wroughtPostReplacements * welderHoursPerPost;
       manHours += postReplacementCrewManHours + postReplacementWelderHours;
