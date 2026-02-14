@@ -10720,6 +10720,35 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push(`- Estimated onsite time (${onsiteCrewLabel}): ${estimatedOnsiteLabel}`);
     }
     sub.push('');
+    sub.push('PROCESS');
+    sub.push('- 1) Walk the full property, confirm section tags, and stage all materials/tools by work zone before demo starts.');
+    if (totals.removalLf > 0) {
+      sub.push('- 2) Complete all removal/haul-off first so install areas are clear and measurements stay consistent.');
+    } else {
+      sub.push('- 2) Start with layout, mark all post locations, and verify gate swings/clearances before setting anything.');
+    }
+    const hasPostWork = (
+      (totals.postsReplace && Object.values(totals.postsReplace).some(count => (parseInt(count, 10) || 0) > 0)) ||
+      (totals.postsInstall && Object.values(totals.postsInstall).some(count => (parseInt(count, 10) || 0) > 0)) ||
+      totals.postsRealign2x2 > 0 ||
+      totals.postsRealign3x3 > 0 ||
+      totals.postsRealignCutWeld > 0 ||
+      totals.woodPostRealignCutWeld > 0 ||
+      totals.woodPostRealignDig > 0
+    );
+    if (hasPostWork) {
+      sub.push('- 3) Handle all post work next (replace/realign/set), plumb and brace, then let sets cure before hanging panels/rails.');
+    } else {
+      sub.push('- 3) Run line and height checks across each section before panel, rail, or picket work begins.');
+    }
+    const hasGateWork = totals.walkGates > 0 || totals.walkGateAddsSingle > 0 || totals.walkGateAddsDouble > 0 || totals.woodWalkGateAdds > 0 || totals.driveGates > 0;
+    if (hasGateWork) {
+      sub.push('- 4) Build/repair fence runs first, then complete gate installs and hardware tuning last for final alignment.');
+    } else {
+      sub.push('- 4) Complete fence repairs/installs section-by-section from one end of the project to the other to reduce rework.');
+    }
+    sub.push('- 5) Finish with touch-up, hardware tightening, debris cleanup, and final QC walk-through with photos before leaving site.');
+    sub.push('');
     sub.push('SCOPE (Totals)');
     const pushPostLinesSub = (label, counts)=>{
       const parts = [];
