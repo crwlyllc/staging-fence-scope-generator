@@ -9618,6 +9618,12 @@ document.addEventListener('DOMContentLoaded', function(){
     let primerCans = 0;
 
     const replacePostCounts = totals.postsReplace || zeroPostCounts();
+    const wroughtPostReplacements = (
+      (replacePostCounts.posts1p5 || 0) +
+      (replacePostCounts.posts2x2 || 0) +
+      (replacePostCounts.posts3x3 || 0) +
+      (replacePostCounts.posts4x4 || 0)
+    );
     const weldRepairHours = (
       totals.wiPickets*12 +
       totals.puppyPickets*12 +
@@ -9626,14 +9632,24 @@ document.addEventListener('DOMContentLoaded', function(){
       totals.wiRails*30 +
       totals.wiRailGaps*20 +
       totals.weldRedos*5 +
-      (replacePostCounts.posts1p5 || 0)*60 +
-      (replacePostCounts.posts2x2 || 0)*60 +
-      (replacePostCounts.posts3x3 || 0)*90 +
-      (replacePostCounts.posts4x4 || 0)*120 +
       (totals.postsRealign2x2 + totals.postsRealign3x3)*30
     )/60;
     manHours += weldRepairHours;
     welderHours += weldRepairHours;
+    if(wroughtPostReplacements > 0){
+      // Post replacement workflow per post:
+      // 1 guy x (20 min pull + 20 min clean/depth + 20 min set in concrete),
+      // then a welder spends 20 min welding panels back to the post.
+      // Up to four posts can run in parallel with a four-man crew, so elapsed
+      // time scales in scheduling while total man-hours remain additive.
+      const crewManHoursPerPost = 60/60;
+      const welderHoursPerPost = 20/60;
+      const postReplacementCrewManHours = wroughtPostReplacements * crewManHoursPerPost;
+      const postReplacementWelderHours = wroughtPostReplacements * welderHoursPerPost;
+      manHours += postReplacementCrewManHours + postReplacementWelderHours;
+      helperHours += postReplacementCrewManHours;
+      welderHours += postReplacementWelderHours;
+    }
     const installPostCounts = totals.postsInstall || zeroPostCounts();
     const wallPostCountsForLabor = totals.retainingWallPosts || zeroPostCounts();
     const installPostsNeedingCrew = (
