@@ -10620,7 +10620,18 @@ document.addEventListener('DOMContentLoaded', function(){
       if(welderCount + helperCount < crewCount){
         helperCount = crewCount - welderCount;
       }
-      finishDays.push({ crew: crewCount, welderCount, stainerCount: 0, helperCount });
+      const usedFinishWelderHours = Math.min(remainingFinishWelderHours, welderCount * HOURS_PER_PERSON);
+      const usedFinishHelperHours = Math.min(
+        remainingFinishHelperHours,
+        helperHoursWelderCanCover + helperCount * HOURS_PER_PERSON
+      );
+      finishDays.push({
+        crew: crewCount,
+        welderCount,
+        stainerCount: 0,
+        helperCount,
+        hours: usedFinishWelderHours + usedFinishHelperHours
+      });
       remainingFinishWelderHours = Math.max(0, remainingFinishWelderHours - welderCount * HOURS_PER_PERSON);
       const helperHoursHandledByWelders = Math.min(remainingFinishHelperHours, helperHoursWelderCanCover);
       remainingFinishHelperHours = Math.max(0, remainingFinishHelperHours - helperHoursHandledByWelders - helperCount * HOURS_PER_PERSON);
@@ -10720,12 +10731,12 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push(`- Estimated onsite time (${onsiteCrewLabel}): ${estimatedOnsiteLabel}`);
     }
     sub.push('');
-    sub.push('PROCESS');
-    sub.push('- 1) Walk the full property, confirm section tags, and stage all materials/tools by work zone before demo starts.');
+    sub.push('PROCESS (Crew-Lead Delegation Plan)');
+    sub.push('- 1) Crew lead does a 20-minute kickoff: confirm section tags, safety hazards, and tool/material staging by work zone.');
     if (totals.removalLf > 0) {
-      sub.push('- 2) Complete all removal/haul-off first so install areas are clear and measurements stay consistent.');
+      sub.push('- 2) Start with removal/haul-off so install and repair zones stay clear for accurate layout and clean production flow.');
     } else {
-      sub.push('- 2) Start with layout, mark all post locations, and verify gate swings/clearances before setting anything.');
+      sub.push('- 2) Start with layout: mark post locations and verify all gate swings/clearances before any set or build work starts.');
     }
     const hasPostWork = (
       (totals.postsReplace && Object.values(totals.postsReplace).some(count => (parseInt(count, 10) || 0) > 0)) ||
@@ -10737,17 +10748,45 @@ document.addEventListener('DOMContentLoaded', function(){
       totals.woodPostRealignDig > 0
     );
     if (hasPostWork) {
-      sub.push('- 3) Handle all post work next (replace/realign/set), plumb and brace, then let sets cure before hanging panels/rails.');
+      sub.push('- 3) Complete all post work next (replace/realign/set), plumb/brace immediately, then respect cure time before panels/rails.');
     } else {
-      sub.push('- 3) Run line and height checks across each section before panel, rail, or picket work begins.');
+      sub.push('- 3) Run line/height checks across each section before panel, rail, or picket work to avoid rework later in the day.');
     }
     const hasGateWork = totals.walkGates > 0 || totals.walkGateAddsSingle > 0 || totals.walkGateAddsDouble > 0 || totals.woodWalkGateAdds > 0 || totals.driveGates > 0;
     if (hasGateWork) {
-      sub.push('- 4) Build/repair fence runs first, then complete gate installs and hardware tuning last for final alignment.');
+      sub.push('- 4) Build/repair fence runs first, then finish gates/hardware at the end for final alignment and latch tuning.');
     } else {
-      sub.push('- 4) Complete fence repairs/installs section-by-section from one end of the project to the other to reduce rework.');
+      sub.push('- 4) Run repairs/installs section-by-section from one end of the project to the other to minimize walking and reset time.');
     }
-    sub.push('- 5) Finish with touch-up, hardware tightening, debris cleanup, and final QC walk-through with photos before leaving site.');
+    sub.push('- 5) Close out with touch-up, hardware tightening, cleanup, and final QC photos before demobilizing.');
+    if (crewSchedule.length) {
+      const describeDayTask = (day)=>{
+        if(day.kind === 'wood-posts') return 'Set wood posts, square corners, and brace for cure.';
+        if(day.kind === 'wood-build') return 'Install wood rails/pickets and complete wood section build-out.';
+        if(day.kind === 'wash') return 'Pressure wash fence surfaces and prep for stain return.';
+        if(day.kind === 'finish'){
+          if(primePaintScheduled && hasWoodWash) return 'Return day: finish coat + wood staining, then final adjustments.';
+          if(primePaintScheduled) return 'Return day: finish coat and punch-list completion.';
+          if(hasWoodWash) return 'Return day: stain application and final punch-list completion.';
+          return 'Finish and final punch-list completion.';
+        }
+        if(day.hasWash) return 'Fence repairs/installs first, then pressure wash remaining sections.';
+        if(primePaintScheduled) return 'Fence repairs/installs and primer application on completed metal work.';
+        return 'Fence repairs/installs and section-level QC as work is completed.';
+      };
+      const roleSummary = (day)=>{
+        const roles = [];
+        if((day.welderCount||0) > 0) roles.push(`${day.welderCount} lead/welder`);
+        if((day.stainerCount||0) > 0) roles.push(`${day.stainerCount} stain tech`);
+        if((day.helperCount||0) > 0) roles.push(`${day.helperCount} installer/helper`);
+        return roles.length ? roles.join(', ') : `${day.crew || ONSITE_CREW_SIZE} installer/helper`;
+      };
+      sub.push('- Daily assignments (delegate by role and time):');
+      crewSchedule.forEach((day, idx)=>{
+        const hoursLabel = formatHours(day.hours || 0) || formatHours(HOURS_PER_PERSON);
+        sub.push(`  - Day ${idx + 1}: ${roleSummary(day)} (~${hoursLabel}) — ${describeDayTask(day)}`);
+      });
+    }
     sub.push('');
     sub.push('SCOPE (Totals)');
     const pushPostLinesSub = (label, counts)=>{
