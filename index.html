@@ -10809,11 +10809,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!welderNames.length && crewNames.length){
       welderNames.push(crewNames[0]);
     }
-    const displayCrewName = (name)=> name === leadName ? `${name} (lead)` : name;
-    sub.push(`- ${displayCrewName(leadName)} handles customer communication and approval decisions throughout all stages.`);
-    sub.push('');
     const formatNameList = (names)=>{
-      const list = (Array.isArray(names) ? names : []).filter(Boolean).map(displayCrewName);
+      const list = (Array.isArray(names) ? names : []).filter(Boolean);
       if(!list.length) return 'Crew';
       if(list.length === 1) return list[0];
       if(list.length === 2) return `${list[0]} and ${list[1]}`;
