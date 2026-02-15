@@ -10846,6 +10846,125 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       return names;
     };
+    const personAvailableAt = {};
+    crewNames.forEach(name=>{
+      personAvailableAt[name] = 0;
+    });
+    const getPersonAvailableAt = (name)=>{
+      const value = Number(personAvailableAt[name]);
+      return isFinite(value) && value > 0 ? value : 0;
+    };
+    const reservePeopleUntil = (names, until)=>{
+      const endTime = Math.max(0, Number(until) || 0);
+      (Array.isArray(names) ? names : []).forEach(name=>{
+        if(!name) return;
+        personAvailableAt[name] = Math.max(getPersonAvailableAt(name), endTime);
+      });
+    };
+    const scheduleWorkByAvailability = ({ names, totalHours, earliestStart = 0, latestEnd = null })=>{
+      const roster = Array.from(new Set((Array.isArray(names) ? names : []).filter(Boolean)));
+      const allocations = {};
+      roster.forEach(name=>{
+        allocations[name] = 0;
+      });
+      let remaining = Math.max(0, Number(totalHours) || 0);
+      let cursor = Math.max(0, Number(earliestStart) || 0);
+      const boundedEnd = isFinite(Number(latestEnd)) ? Number(latestEnd) : null;
+      let startedAt = null;
+
+      if(!roster.length || remaining <= 0){
+        return {
+          startTime: cursor,
+          endTime: cursor,
+          elapsed: 0,
+          workDone: 0,
+          remainingHours: remaining,
+          participants: [],
+          allocations
+        };
+      }
+
+      const releases = roster.map(name=>({ name, time: getPersonAvailableAt(name) }));
+      while(remaining > 0.0001){
+        const active = releases
+          .filter(item=> item.time <= (cursor + 1e-9))
+          .map(item=> item.name);
+        if(!active.length){
+          const nextRelease = Math.min(...releases.filter(item=> item.time > (cursor + 1e-9)).map(item=> item.time));
+          if(!isFinite(nextRelease)) break;
+          cursor = Math.max(cursor, nextRelease);
+          if(boundedEnd !== null && cursor >= (boundedEnd - 1e-9)){
+            cursor = boundedEnd;
+            break;
+          }
+          continue;
+        }
+
+        if(startedAt === null) startedAt = cursor;
+        let nextBoundary = Math.min(...releases.filter(item=> item.time > (cursor + 1e-9)).map(item=> item.time));
+        if(!isFinite(nextBoundary)) nextBoundary = Infinity;
+        if(boundedEnd !== null){
+          nextBoundary = Math.min(nextBoundary, boundedEnd);
+        }
+        if(!(nextBoundary > (cursor + 1e-9))){
+          if(boundedEnd !== null && cursor >= (boundedEnd - 1e-9)){
+            cursor = boundedEnd;
+            break;
+          }
+          break;
+        }
+
+        const span = nextBoundary - cursor;
+        const capacity = active.length * span;
+        if(capacity >= (remaining - 1e-9)){
+          const eachWork = remaining / active.length;
+          active.forEach(name=>{
+            allocations[name] += eachWork;
+          });
+          cursor += eachWork;
+          remaining = 0;
+          break;
+        }
+
+        active.forEach(name=>{
+          allocations[name] += span;
+        });
+        remaining -= capacity;
+        cursor = nextBoundary;
+        if(boundedEnd !== null && cursor >= (boundedEnd - 1e-9)){
+          cursor = boundedEnd;
+          break;
+        }
+      }
+
+      if(startedAt === null) startedAt = cursor;
+      const participants = roster.filter(name=> (allocations[name] || 0) > (1/120));
+      const workDone = participants.reduce((sum, name)=> sum + (allocations[name] || 0), 0);
+      return {
+        startTime: startedAt,
+        endTime: cursor,
+        elapsed: Math.max(0, cursor - startedAt),
+        workDone,
+        remainingHours: Math.max(0, remaining),
+        participants,
+        allocations
+      };
+    };
+    const reserveScheduledPeople = (schedule)=>{
+      if(!schedule || !Array.isArray(schedule.participants) || !schedule.participants.length) return;
+      reservePeopleUntil(schedule.participants, schedule.endTime);
+    };
+    const contributorSplitNote = (schedule, names)=>{
+      if(!schedule || !Array.isArray(names) || names.length < 2) return '';
+      const worked = names
+        .map(name=> ({ name, hours: Number(schedule.allocations?.[name] || 0) }))
+        .filter(item=> item.hours > (1/120));
+      if(worked.length < 2) return '';
+      const maxHours = Math.max(...worked.map(item=> item.hours));
+      const minHours = Math.min(...worked.map(item=> item.hours));
+      if((maxHours - minHours) < (5/60)) return '';
+      return `; split: ${worked.map(item=> `${item.name} ${formatTaskHours(item.hours)}`).join(', ')}`;
+    };
     const compactPostSummary = (counts)=>{
       if(!counts) return '';
       const parts = [];
@@ -11037,6 +11156,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const postStageWelderNames = assignWelderLaneNames(welderBuckets.length);
     const helperTaskParts = [];
     let helperTaskManHours = 0;
+    let postLaneReadyAt = 0;
     if(hasPostLane){
       helperTaskParts.push(...postTaskParts);
       helperTaskManHours += postHelperManHours;
@@ -11049,10 +11169,15 @@ document.addEventListener('DOMContentLoaded', function(){
       const helperCount = hasWelderLane ? helperLaneParallel : helperLaneFullCrew;
       const helperNamesForStage = pickCrewNames(helperCount, hasWelderLane ? postStageWelderNames : []);
       const helperDuration = helperTaskManHours / helperCount;
+      if(hasPostLane && postHelperManHours > 0){
+        postLaneReadyAt = postHelperManHours / helperCount;
+      }
+      reservePeopleUntil(helperNamesForStage, helperDuration);
       postAndWeldLines.push(`${formatNameList(helperNamesForStage)}: ${helperTaskParts.join('; ')} (${formatTaskHours(helperDuration)}).`);
     }
     welderBuckets.forEach((bucket, idx)=>{
       const welderName = postStageWelderNames[idx] || `Welder ${idx + 1}`;
+      reservePeopleUntil([welderName], bucket.hours);
       postAndWeldLines.push(`${formatNameList([welderName])}: ${bucket.tasks.join('; ')} (${formatTaskHours(bucket.hours)}).`);
     });
     if(postAndWeldLines.length){
@@ -11073,27 +11198,46 @@ document.addEventListener('DOMContentLoaded', function(){
     const hasPanelTieIns = postPanelTieInWelderHours > 0;
     const hasPaintPrep = paintLenTotal > 0;
     let tieInWelderNames = [];
-    let tieInStageDuration = 0;
+    let tieInSchedule = null;
+    let prepSchedule = null;
     let paintPrepConsumedManHours = 0;
     const paintPrepEligibleManHours = Math.max(0, paintingHours);
     const paintLaborTotalManHours = Math.max(0, paintingHours + primePaintReturnHours);
     if(postPanelTieInWelderHours > 0){
       const tieInWelders = Math.max(1, Math.min(weldLaneCount, wroughtPostReplacements || 1));
-      tieInWelderNames = assignWelderLaneNames(tieInWelders);
-      const tieInDuration = postPanelTieInWelderHours / tieInWelders;
-      tieInStageDuration = tieInDuration;
-      tieInLines.push(`${formatNameList(tieInWelderNames)}: weld panels back to ${wroughtPostReplacements} replacement ${plural(wroughtPostReplacements, 'post')}, trim tops of posts to be 2" above the panel, and put a matching post cap on each post (${formatTaskHours(tieInDuration)}).`);
+      const tieInCandidates = assignWelderLaneNames(tieInWelders);
+      const tieInStartGate = hasPostLane ? postLaneReadyAt : 0;
+      tieInSchedule = scheduleWorkByAvailability({
+        names: tieInCandidates,
+        totalHours: postPanelTieInWelderHours,
+        earliestStart: tieInStartGate
+      });
+      tieInWelderNames = tieInSchedule.participants.length ? tieInSchedule.participants : tieInCandidates;
+      if(tieInSchedule.workDone > 0){
+        reserveScheduledPeople(tieInSchedule);
+        const tieInDurationLabel = formatTaskHours(tieInSchedule.elapsed);
+        const tieInSplit = contributorSplitNote(tieInSchedule, tieInWelderNames);
+        const tieInSuffix = tieInDurationLabel ? ` (${tieInDurationLabel}${tieInSplit})` : '';
+        tieInLines.push(`${formatNameList(tieInWelderNames)}: weld panels back to ${wroughtPostReplacements} replacement ${plural(wroughtPostReplacements, 'post')}, trim tops of posts to be 2" above the panel, and put a matching post cap on each post${tieInSuffix}.`);
+      }
     }
     if(hasPanelTieIns && paintLenTotal > 0 && paintPrepEligibleManHours > 0){
       const prepCrew = postPanelTieInWelderHours > 0 ? helperLaneParallel : helperLaneFullCrew;
       const prepNames = pickCrewNames(prepCrew, tieInWelderNames);
-      const prepDurationRaw = paintPrepEligibleManHours / prepCrew;
-      const prepDuration = postPanelTieInWelderHours > 0
-        ? Math.min(prepDurationRaw, tieInStageDuration)
-        : prepDurationRaw;
-      paintPrepConsumedManHours = Math.min(paintPrepEligibleManHours, prepDuration * prepCrew);
-      const prepDurationLabel = prepDuration > 0 ? ` (${formatTaskHours(prepDuration)})` : '';
-      tieInLines.push(`${formatNameList(prepNames)}: scrape loose rust and debris on ${paintLenTotal} ft to prep for paint${prepDurationLabel}.`);
+      const prepStartGate = tieInSchedule ? tieInSchedule.startTime : (hasPostLane ? postLaneReadyAt : 0);
+      const prepEndGate = tieInSchedule ? tieInSchedule.endTime : null;
+      prepSchedule = scheduleWorkByAvailability({
+        names: prepNames,
+        totalHours: paintPrepEligibleManHours,
+        earliestStart: prepStartGate,
+        latestEnd: prepEndGate
+      });
+      paintPrepConsumedManHours = prepSchedule.workDone;
+      if(prepSchedule.workDone > 0){
+        reserveScheduledPeople(prepSchedule);
+        const prepDurationLabel = prepSchedule.elapsed > 0 ? ` (${formatTaskHours(prepSchedule.elapsed)})` : '';
+        tieInLines.push(`${formatNameList(prepSchedule.participants.length ? prepSchedule.participants : prepNames)}: scrape loose rust and debris on ${paintLenTotal} ft to prep for paint${prepDurationLabel}.`);
+      }
     }
     if(tieInLines.length){
       let tieInTitleBase = 'Paint prep';
@@ -11105,21 +11249,40 @@ document.addEventListener('DOMContentLoaded', function(){
       pushStage(tieInTitleBase, tieInLines);
     }
 
+    const tieInEndAt = tieInSchedule && tieInSchedule.workDone > 0 ? tieInSchedule.endTime : 0;
+    const prepEndAt = prepSchedule && prepSchedule.workDone > 0 ? prepSchedule.endTime : 0;
+    const gateStartGate = Math.max(tieInEndAt, prepEndAt);
     const gateOperatorManHours = driveGateOperatorHours + driveGateOperatorInstallHours;
     const gateWelderHours = gateRepairHours + wroughtAddedGateHours;
     const gateHelperManHours = woodAddedGateHours + woodGateRepairManHours + driveGateChainManHours + gateOperatorManHours;
     const gateLines = [];
     let gateWelderNames = [];
+    let gateEndAt = gateStartGate;
     if(gateWelderHours > 0){
       const gateWelders = Math.max(1, Math.min(weldLaneCount, 2));
-      gateWelderNames = assignWelderLaneNames(gateWelders);
-      const gateWelderDuration = gateWelderHours / gateWelders;
-      gateLines.push(`${formatNameList(gateWelderNames)}: gate realign/hardware/rebuild and wrought gate adds (${formatTaskHours(gateWelderDuration)}).`);
+      const gateWelderCandidates = assignWelderLaneNames(gateWelders);
+      const gateWelderSchedule = scheduleWorkByAvailability({
+        names: gateWelderCandidates,
+        totalHours: gateWelderHours,
+        earliestStart: gateStartGate
+      });
+      gateWelderNames = gateWelderSchedule.participants.length ? gateWelderSchedule.participants : gateWelderCandidates;
+      if(gateWelderSchedule.workDone > 0){
+        reserveScheduledPeople(gateWelderSchedule);
+        gateEndAt = Math.max(gateEndAt, gateWelderSchedule.endTime);
+        const gateWelderDuration = gateWelderSchedule.elapsed;
+        const gateWelderSplit = contributorSplitNote(gateWelderSchedule, gateWelderNames);
+        gateLines.push(`${formatNameList(gateWelderNames)}: gate realign/hardware/rebuild and wrought gate adds (${formatTaskHours(gateWelderDuration)}${gateWelderSplit}).`);
+      }
     }
     if(gateHelperManHours > 0){
       const gateHelpers = gateWelderHours > 0 ? helperLaneParallel : helperLaneFullCrew;
-      const gateHelperNames = pickCrewNames(gateHelpers, gateWelderNames);
-      const gateHelperDuration = gateHelperManHours / gateHelpers;
+      const gateHelperCandidates = pickCrewNames(gateHelpers, gateWelderNames);
+      const gateHelperSchedule = scheduleWorkByAvailability({
+        names: gateHelperCandidates,
+        totalHours: gateHelperManHours,
+        earliestStart: gateStartGate
+      });
       const gateScopeParts = [];
       if(totals.woodWalkGateAdds > 0){
         gateScopeParts.push(`${totals.woodWalkGateAdds} wood walk gate ${plural(totals.woodWalkGateAdds, 'add')}`);
@@ -11134,12 +11297,19 @@ document.addEventListener('DOMContentLoaded', function(){
         gateScopeParts.push(`${totals.driveGateOperators + totals.driveGateOperatorInstalls} drive operator ${plural(totals.driveGateOperators + totals.driveGateOperatorInstalls, 'task')}`);
       }
       const gateScope = gateScopeParts.length ? gateScopeParts.join('; ') : 'gate and operator tasks';
-      gateLines.push(`${formatNameList(gateHelperNames)}: ${gateScope} (${formatTaskHours(gateHelperDuration)}).`);
+      const gateHelperNames = gateHelperSchedule.participants.length ? gateHelperSchedule.participants : gateHelperCandidates;
+      if(gateHelperSchedule.workDone > 0){
+        reserveScheduledPeople(gateHelperSchedule);
+        gateEndAt = Math.max(gateEndAt, gateHelperSchedule.endTime);
+        const gateHelperDuration = gateHelperSchedule.elapsed;
+        gateLines.push(`${formatNameList(gateHelperNames)}: ${gateScope} (${formatTaskHours(gateHelperDuration)}).`);
+      }
     }
     if(gateLines.length){
       pushStage('Gate and operator work', gateLines);
     }
 
+    const coatingStartGate = Math.max(tieInEndAt, prepEndAt, gateEndAt);
     const remainingPaintManHours = Math.max(0, paintLaborTotalManHours - paintPrepConsumedManHours);
     const coatingTotalManHours = remainingPaintManHours + washHours + stainManHours;
     if(coatingTotalManHours > 0){
@@ -11147,29 +11317,67 @@ document.addEventListener('DOMContentLoaded', function(){
       let sprayNames = [];
       if((sprayBaseHours + sprayFinishHours) > 0){
         const sprayCrew = Math.max(1, Math.min(weldLaneCount, 2));
-        sprayNames = assignWelderLaneNames(sprayCrew);
-        const sprayDuration = (sprayBaseHours + sprayFinishHours) / sprayCrew;
-        coatingLines.push(`${formatNameList(sprayNames)}: spray coats on scheduled metal sections (${formatTaskHours(sprayDuration)}).`);
+        const sprayCandidates = assignWelderLaneNames(sprayCrew);
+        const spraySchedule = scheduleWorkByAvailability({
+          names: sprayCandidates,
+          totalHours: (sprayBaseHours + sprayFinishHours),
+          earliestStart: coatingStartGate
+        });
+        sprayNames = spraySchedule.participants.length ? spraySchedule.participants : sprayCandidates;
+        if(spraySchedule.workDone > 0){
+          reserveScheduledPeople(spraySchedule);
+          const sprayDuration = spraySchedule.elapsed;
+          const spraySplit = contributorSplitNote(spraySchedule, sprayNames);
+          coatingLines.push(`${formatNameList(sprayNames)}: spray coats on scheduled metal sections (${formatTaskHours(sprayDuration)}${spraySplit}).`);
+        }
       }
       if(paintLenTotal > 0 && remainingPaintManHours > 0){
         const paintCrew = (sprayBaseHours + sprayFinishHours) > 0 ? helperLaneParallel : helperLaneFullCrew;
-        const paintNames = pickCrewNames(paintCrew, sprayNames);
-        const paintDuration = remainingPaintManHours / paintCrew;
-        const primeNote = primePaintScheduled ? ' (prime + return finish coat)' : '';
-        const durationNote = paintDuration > 0 ? ` (${formatTaskHours(paintDuration)})` : '';
-        coatingLines.push(`${formatNameList(paintNames)}: paint ${paintLenTotal} ft of fence${primeNote}${durationNote}.`);
+        const paintCandidates = pickCrewNames(paintCrew, sprayNames);
+        const paintSchedule = scheduleWorkByAvailability({
+          names: paintCandidates,
+          totalHours: remainingPaintManHours,
+          earliestStart: coatingStartGate
+        });
+        const paintNames = paintSchedule.participants.length ? paintSchedule.participants : paintCandidates;
+        if(paintSchedule.workDone > 0){
+          reserveScheduledPeople(paintSchedule);
+          const paintDuration = paintSchedule.elapsed;
+          const paintSplit = contributorSplitNote(paintSchedule, paintNames);
+          const primeNote = primePaintScheduled ? ' (prime + return finish coat)' : '';
+          const durationNote = paintDuration > 0 ? ` (${formatTaskHours(paintDuration)}${paintSplit})` : '';
+          coatingLines.push(`${formatNameList(paintNames)}: paint ${paintLenTotal} ft of fence${primeNote}${durationNote}.`);
+        }
       }
       if(washHours > 0){
         const washCrew = helperLaneFullCrew;
-        const washNames = pickCrewNames(washCrew, sprayNames);
-        const washDuration = washHours / washCrew;
-        coatingLines.push(`${formatNameList(washNames)}: power wash wood sections (${formatTaskHours(washDuration)}).`);
+        const washCandidates = pickCrewNames(washCrew, sprayNames);
+        const washSchedule = scheduleWorkByAvailability({
+          names: washCandidates,
+          totalHours: washHours,
+          earliestStart: coatingStartGate
+        });
+        const washNames = washSchedule.participants.length ? washSchedule.participants : washCandidates;
+        if(washSchedule.workDone > 0){
+          reserveScheduledPeople(washSchedule);
+          const washDuration = washSchedule.elapsed;
+          coatingLines.push(`${formatNameList(washNames)}: power wash wood sections (${formatTaskHours(washDuration)}).`);
+        }
       }
       if(stainHours > 0){
         const stainCrew = Math.max(1, peakStainers || 1);
-        const stainNames = pickCrewNames(stainCrew, sprayNames);
-        const stainDuration = stainHours / stainCrew;
-        coatingLines.push(`${formatNameList(stainNames)}: stain wood sections (${formatTaskHours(stainDuration)}).`);
+        const stainCandidates = pickCrewNames(stainCrew, sprayNames);
+        const stainSchedule = scheduleWorkByAvailability({
+          names: stainCandidates,
+          totalHours: stainHours,
+          earliestStart: coatingStartGate
+        });
+        const stainNames = stainSchedule.participants.length ? stainSchedule.participants : stainCandidates;
+        if(stainSchedule.workDone > 0){
+          reserveScheduledPeople(stainSchedule);
+          const stainDuration = stainSchedule.elapsed;
+          coatingLines.push(`${formatNameList(stainNames)}: stain wood sections (${formatTaskHours(stainDuration)}).`);
+        }
       }
       const coatingTitleBase = (paintLenTotal > 0 && !hasWoodStaining && !hasWoodWash)
         ? 'Paint the fence'
