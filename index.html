@@ -11088,6 +11088,16 @@ document.addEventListener('DOMContentLoaded', function(){
       )
     );
     const postPanelTieInWelderHours = wroughtPostReplacements * (20/60);
+    const hasByHandPaintScope = state.sections.some(section=>{
+      const fenceType = (section.fenceType || '').toLowerCase();
+      if(fenceType && fenceType !== 'wrought iron') return false;
+      const isFullSectionPaint = section.painting === 'Paint Section' || section.painting === 'Prime and Paint';
+      if(!isFullSectionPaint) return false;
+      const method = String(section.paintingApplication || 'By Hand').trim().toLowerCase();
+      return method !== 'spray';
+    });
+    const paintPrepEligibleManHours = Math.max(0, paintingHours);
+    const paintLaborTotalManHours = Math.max(0, paintingHours + primePaintReturnHours);
 
     const postHelperManHours =
       postReplacementCrewManHours +
@@ -11192,6 +11202,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const helperLaneParallel = Math.max(1, ONSITE_CREW_SIZE - Math.min(weldLaneCount, Math.max(0, ONSITE_CREW_SIZE - 1)));
 
     const postAndWeldLines = [];
+    let stageOneEndAt = 0;
+    let stageOnePaintConsumedManHours = 0;
     const hasPostLane = postHelperManHours > 0 && postTaskParts.length > 0;
     const productionHelperManHours =
       bracketPanelHours +
@@ -11245,19 +11257,49 @@ document.addEventListener('DOMContentLoaded', function(){
         postLaneReadyAt = postHelperManHours / helperCount;
       }
       reservePeopleUntil(helperNamesForStage, helperDuration);
+      stageOneEndAt = Math.max(stageOneEndAt, helperDuration);
       postAndWeldLines.push(`${formatNameList(helperNamesForStage)}: ${helperTaskParts.join('; ')} (${formatTaskHours(helperDuration)}).`);
     }
     welderBuckets.forEach((bucket, idx)=>{
       const welderName = postStageWelderNames[idx] || `Welder ${idx + 1}`;
       reservePeopleUntil([welderName], bucket.hours);
+      stageOneEndAt = Math.max(stageOneEndAt, bucket.hours);
       postAndWeldLines.push(`${formatNameList([welderName])}: ${bucket.tasks.join('; ')} (${formatTaskHours(bucket.hours)}).`);
     });
+    if(
+      hasWelderLane &&
+      !helperTaskParts.length &&
+      hasByHandPaintScope &&
+      paintLenTotal > 0 &&
+      paintPrepEligibleManHours > 0 &&
+      stageOneEndAt > 0
+    ){
+      const stageOneHelperPaintCrew = Math.max(1, helperLaneParallel);
+      const stageOneHelperPaintCandidates = pickCrewNames(stageOneHelperPaintCrew, postStageWelderNames);
+      const stageOneHelperPaintSchedule = scheduleWorkByAvailability({
+        names: stageOneHelperPaintCandidates,
+        totalHours: paintPrepEligibleManHours,
+        earliestStart: 0,
+        latestEnd: stageOneEndAt
+      });
+      stageOnePaintConsumedManHours = stageOneHelperPaintSchedule.workDone;
+      if(stageOneHelperPaintSchedule.workDone > 0){
+        reserveScheduledPeople(stageOneHelperPaintSchedule);
+        const stageOneHelperPaintNames = stageOneHelperPaintSchedule.participants.length
+          ? stageOneHelperPaintSchedule.participants
+          : stageOneHelperPaintCandidates;
+        postAndWeldLines.push(`${formatNameList(stageOneHelperPaintNames)}: scrape loose rust and debris and hand paint ${paintLenTotal} ft of fence (${formatTaskHours(stageOneHelperPaintSchedule.elapsed)}).`);
+      }
+    }
     if(postAndWeldLines.length){
       let stageTitleBase = 'Fence production';
+      const hasStageOneHelperPaint = stageOnePaintConsumedManHours > 0;
       if(hasPostLane && hasWelderLane){
         stageTitleBase = 'Posts + weld repairs in parallel';
       } else if(hasPostLane){
         stageTitleBase = 'Post work';
+      } else if(hasWelderLane && hasStageOneHelperPaint){
+        stageTitleBase = 'Weld repairs + paint prep in parallel';
       } else if(hasWelderLane && hasHelperProductionLane){
         stageTitleBase = 'Fence production in parallel';
       } else if(hasWelderLane){
@@ -11269,14 +11311,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const tieInLines = [];
     const hasPanelTieIns = postPanelTieInWelderHours > 0;
     const hasPaintPrep = paintLenTotal > 0;
-    const hasByHandPaintScope = state.sections.some(section=>{
-      const fenceType = (section.fenceType || '').toLowerCase();
-      if(fenceType && fenceType !== 'wrought iron') return false;
-      const isFullSectionPaint = section.painting === 'Paint Section' || section.painting === 'Prime and Paint';
-      if(!isFullSectionPaint) return false;
-      const method = String(section.paintingApplication || 'By Hand').trim().toLowerCase();
-      return method !== 'spray';
-    });
     let tieInWelderNames = [];
     let tieInSchedule = null;
     let prepSchedule = null;
@@ -11289,9 +11323,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const prepDurationLabel = prepLineHours > 0 ? ` (${formatTaskHours(prepLineHours)})` : '';
       return `${formatNameList(prepLineNames)}: ${prepLineAction}${prepDurationLabel}.`;
     };
-    let paintPrepConsumedManHours = 0;
-    const paintPrepEligibleManHours = Math.max(0, paintingHours);
-    const paintLaborTotalManHours = Math.max(0, paintingHours + primePaintReturnHours);
+    let paintPrepConsumedManHours = stageOnePaintConsumedManHours;
     if(postPanelTieInWelderHours > 0){
       const tieInWelders = Math.max(1, Math.min(weldLaneCount, wroughtPostReplacements || 1));
       const tieInCandidates = assignWelderLaneNames(tieInWelders);
@@ -11310,18 +11342,19 @@ document.addEventListener('DOMContentLoaded', function(){
         tieInLines.push(`${formatNameList(tieInWelderNames)}: weld panels back to ${wroughtPostReplacements} replacement ${plural(wroughtPostReplacements, 'post')}, trim tops of posts to be 2" above the panel, and put a matching post cap on each post${tieInSuffix}.`);
       }
     }
-    if(hasPanelTieIns && paintLenTotal > 0 && paintPrepEligibleManHours > 0){
+    const remainingPrepEligibleManHours = Math.max(0, paintPrepEligibleManHours - paintPrepConsumedManHours);
+    if(hasPanelTieIns && paintLenTotal > 0 && remainingPrepEligibleManHours > 0){
       const prepCrew = postPanelTieInWelderHours > 0 ? helperLaneParallel : helperLaneFullCrew;
       const prepNames = pickCrewNames(prepCrew, tieInWelderNames);
       const prepStartGate = tieInSchedule ? tieInSchedule.startTime : (hasPostLane ? postLaneReadyAt : 0);
       const prepEndGate = tieInSchedule ? tieInSchedule.endTime : null;
       prepSchedule = scheduleWorkByAvailability({
         names: prepNames,
-        totalHours: paintPrepEligibleManHours,
+        totalHours: remainingPrepEligibleManHours,
         earliestStart: prepStartGate,
         latestEnd: prepEndGate
       });
-      paintPrepConsumedManHours = prepSchedule.workDone;
+      paintPrepConsumedManHours += prepSchedule.workDone;
       if(prepSchedule.workDone > 0){
         reserveScheduledPeople(prepSchedule);
         prepLineNames = prepSchedule.participants.length ? prepSchedule.participants : prepNames;
