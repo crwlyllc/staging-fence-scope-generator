@@ -10875,6 +10875,15 @@ document.addEventListener('DOMContentLoaded', function(){
       if(list.length === 2) return `${list[0]} and ${list[1]}`;
       return `${list.slice(0, -1).join(', ')}, and ${list[list.length - 1]}`;
     };
+    const sameNameSet = (a, b)=>{
+      const setA = new Set((Array.isArray(a) ? a : []).filter(Boolean));
+      const setB = new Set((Array.isArray(b) ? b : []).filter(Boolean));
+      if(!setA.size || setA.size !== setB.size) return false;
+      for(const name of setA){
+        if(!setB.has(name)) return false;
+      }
+      return true;
+    };
     const pickCrewNames = (count, excluded=[])=>{
       const qty = Math.max(1, parseInt(count, 10) || 1);
       const used = new Set((Array.isArray(excluded) ? excluded : []).filter(Boolean));
@@ -11375,6 +11384,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if(coatingTotalManHours > 0){
       const coatingLines = [];
       let sprayNames = [];
+      let paintSchedule = null;
+      let paintNames = [];
       if((sprayBaseHours + sprayFinishHours) > 0){
         const sprayCrew = Math.max(1, Math.min(weldLaneCount, 2));
         const sprayCandidates = assignWelderLaneNames(sprayCrew);
@@ -11394,19 +11405,28 @@ document.addEventListener('DOMContentLoaded', function(){
       if(paintLenTotal > 0 && remainingPaintManHours > 0){
         const paintCrew = (sprayBaseHours + sprayFinishHours) > 0 ? helperLaneParallel : helperLaneFullCrew;
         const paintCandidates = pickCrewNames(paintCrew, sprayNames);
-        const paintSchedule = scheduleWorkByAvailability({
+        paintSchedule = scheduleWorkByAvailability({
           names: paintCandidates,
           totalHours: remainingPaintManHours,
           earliestStart: coatingStartGate
         });
-        const paintNames = paintSchedule.participants.length ? paintSchedule.participants : paintCandidates;
+        paintNames = paintSchedule.participants.length ? paintSchedule.participants : paintCandidates;
         if(paintSchedule.workDone > 0){
           reserveScheduledPeople(paintSchedule);
-          const paintDuration = paintSchedule.elapsed;
-          const paintSplit = contributorSplitNote(paintSchedule, paintNames);
-          const primeNote = primePaintScheduled ? ' (prime + return finish coat)' : '';
-          const durationNote = paintDuration > 0 ? ` (${formatTaskHours(paintDuration)}${paintSplit})` : '';
-          coatingLines.push(`${formatNameList(paintNames)}: paint ${paintLenTotal} ft of fence${primeNote}${durationNote}.`);
+          const continuingByHandCrew =
+            hasByHandPaintScope &&
+            prepSchedule && prepSchedule.workDone > 0 &&
+            (sprayBaseHours + sprayFinishHours) <= 0 &&
+            washHours <= 0 &&
+            stainHours <= 0 &&
+            sameNameSet(paintNames, prepSchedule.participants);
+          if(!continuingByHandCrew){
+            const paintDuration = paintSchedule.elapsed;
+            const paintSplit = contributorSplitNote(paintSchedule, paintNames);
+            const primeNote = primePaintScheduled ? ' (prime + return finish coat)' : '';
+            const durationNote = paintDuration > 0 ? ` (${formatTaskHours(paintDuration)}${paintSplit})` : '';
+            coatingLines.push(`${formatNameList(paintNames)}: paint ${paintLenTotal} ft of fence${primeNote}${durationNote}.`);
+          }
         }
       }
       if(washHours > 0){
