@@ -7665,6 +7665,8 @@ document.addEventListener('DOMContentLoaded', function(){
     let manHours = 0;
     let welderHours = 0;
     let helperHours = 0;
+    let weldedPanelHours = 0;
+    let bracketPanelHours = 0;
     let woodHelperHours = 0;
     let woodWelderHours = 0;
     let woodManHours = 0;
@@ -8191,7 +8193,13 @@ document.addEventListener('DOMContentLoaded', function(){
           manHours += panelHours;
           const attachment = (source === 'install') ? (extra.attachment || 'Welding') : 'Welding';
           const usesBrackets = attachment === 'Brackets';
-          if(!usesBrackets){ welderHours += panelHours; }
+          if(!usesBrackets){
+            welderHours += panelHours;
+            weldedPanelHours += panelHours;
+          }else{
+            helperHours += panelHours;
+            bracketPanelHours += panelHours;
+          }
           if(eligible){
             totals.panelsPrefab += qty;
             if(source === 'install') totals.panelsInstallPrefab += qty;
@@ -9636,6 +9644,8 @@ document.addEventListener('DOMContentLoaded', function(){
     )/60;
     manHours += weldRepairHours;
     welderHours += weldRepairHours;
+    let postReplacementCrewManHours = 0;
+    let postReplacementWelderHours = 0;
     if(wroughtPostReplacements > 0){
       // Post replacement workflow per post:
       // 1 guy x (20 min pull + 20 min clean/depth + 20 min set in concrete),
@@ -9646,8 +9656,8 @@ document.addEventListener('DOMContentLoaded', function(){
       // time scales in scheduling while total man-hours remain additive.
       const crewManHoursPerPost = 60/60;
       const welderHoursPerPost = 40/60;
-      const postReplacementCrewManHours = wroughtPostReplacements * crewManHoursPerPost;
-      const postReplacementWelderHours = wroughtPostReplacements * welderHoursPerPost;
+      postReplacementCrewManHours = wroughtPostReplacements * crewManHoursPerPost;
+      postReplacementWelderHours = wroughtPostReplacements * welderHoursPerPost;
       manHours += postReplacementCrewManHours + postReplacementWelderHours;
       helperHours += postReplacementCrewManHours;
       welderHours += postReplacementWelderHours;
@@ -9660,15 +9670,17 @@ document.addEventListener('DOMContentLoaded', function(){
       Math.max(0, (installPostCounts.posts3x3 || 0) - (wallPostCountsForLabor.posts3x3 || 0)) +
       Math.max(0, (installPostCounts.posts4x4 || 0) - (wallPostCountsForLabor.posts4x4 || 0))
     );
+    let postInstallManHours = 0;
+    let cureManHours = 0;
     if(installPostsNeedingCrew > 0){
       const crewHours = installPostsNeedingCrew * (20/60);
-      const postInstallManHours = crewHours * ONSITE_CREW_SIZE;
+      postInstallManHours = crewHours * ONSITE_CREW_SIZE;
       manHours += postInstallManHours;
       helperHours += postInstallManHours;
     }
     if(installPostsNeedingCrew > 0){
       const cureCrewHours = installPostsNeedingCrew * 2;
-      const cureManHours = cureCrewHours * ONSITE_CREW_SIZE;
+      cureManHours = cureCrewHours * ONSITE_CREW_SIZE;
       manHours += cureManHours;
       helperHours += cureManHours;
     }
@@ -9712,8 +9724,9 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     // Sliding drive gate chain replacement: 1 crew hour each
     const driveGateChainCrewHours = totals.driveGateChainReplacements * 1;
+    let driveGateChainManHours = 0;
     if(driveGateChainCrewHours > 0){
-      const driveGateChainManHours = driveGateChainCrewHours * ONSITE_CREW_SIZE;
+      driveGateChainManHours = driveGateChainCrewHours * ONSITE_CREW_SIZE;
       manHours += driveGateChainManHours;
       helperHours += driveGateChainManHours;
     }
@@ -9730,6 +9743,7 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorHours = totals.driveGateOperators * 3;
     }
     manHours += driveGateOperatorHours;
+    helperHours += driveGateOperatorHours;
 
     let driveGateOperatorInstallHours = 0;
     if(totals.driveGateOperatorInstallTypes && typeof totals.driveGateOperatorInstallTypes.forEach === 'function'){
@@ -9747,6 +9761,7 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorInstallHours += totals.driveGateOperatorInstallPlatforms * 2;
     }
     manHours += driveGateOperatorInstallHours;
+    helperHours += driveGateOperatorInstallHours;
 
     // posts (1.5" x 1.5" raw sticks)
     let raw1p5Total = 0;
@@ -10732,11 +10747,66 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     sub.push('');
     sub.push('PROCESS (Crew-Lead Delegation Plan)');
-    sub.push('- 1) Crew lead does a 20-minute kickoff: confirm section tags, safety hazards, and tool/material staging by work zone.');
+    sub.push('- Sequence below is job-specific and tied directly to the labor-hour math used in pricing.');
+    const formatHoursCompact = (hours)=>{
+      if(!isFinite(hours) || hours <= 0) return '';
+      const rounded = Math.round(hours * 10) / 10;
+      return Math.abs(rounded - Math.round(rounded)) < 0.05
+        ? `${Math.round(rounded)}h`
+        : `${rounded.toFixed(1)}h`;
+    };
+    const formatLaborWindow = (manHoursValue)=>{
+      if(!isFinite(manHoursValue) || manHoursValue <= 0) return '';
+      const crewHours = manHoursValue / Math.max(1, ONSITE_CREW_SIZE || 1);
+      return `${formatHoursCompact(crewHours)} crew time (${formatHoursCompact(manHoursValue)} labor time)`;
+    };
+    const rolePeakCount = (field)=>{
+      if(!Array.isArray(crewSchedule) || !crewSchedule.length) return 0;
+      return crewSchedule.reduce((max, day)=> Math.max(max, parseInt(day?.[field] || 0, 10) || 0), 0);
+    };
+    const peakWelders = rolePeakCount('welderCount');
+    const peakStainers = rolePeakCount('stainerCount');
+    const peakHelpers = rolePeakCount('helperCount');
+    const formatRoleWindow = (roleHours, peakCount, label)=>{
+      if(!isFinite(roleHours) || roleHours <= 0) return '';
+      const normalizedPeak = Math.max(1, peakCount || 0);
+      const clockHours = roleHours / normalizedPeak;
+      const plural = normalizedPeak === 1 ? '' : 's';
+      return `${formatHoursCompact(clockHours)} with ${normalizedPeak} ${label}${plural} (${formatHoursCompact(roleHours)} ${label}-hrs)`;
+    };
+    const postCountSummary = (counts)=>{
+      if(!counts) return '';
+      const parts = [];
+      const post1p5 = parseInt(counts.posts1p5 || 0, 10) || 0;
+      const post2x2 = parseInt(counts.posts2x2 || 0, 10) || 0;
+      const post3x3 = parseInt(counts.posts3x3 || 0, 10) || 0;
+      const post4x4 = parseInt(counts.posts4x4 || 0, 10) || 0;
+      if(post1p5 > 0) parts.push(`${post1p5} × 1 1/2" x 1 1/2"`);
+      if(post2x2 > 0) parts.push(`${post2x2} × 2x2`);
+      if(post3x3 > 0) parts.push(`${post3x3} × 3x3`);
+      if(post4x4 > 0) parts.push(`${post4x4} × 4x4`);
+      return parts.join(', ');
+    };
+    const pushProcessStep = (step, title, detailLines=[])=>{
+      sub.push(`- ${step}) ${title}`);
+      detailLines.filter(Boolean).forEach(line=> sub.push(`  - ${line}`));
+    };
+    let processStep = 1;
+    const setupManHours = JOB_SETUP_HOURS * ONSITE_CREW_SIZE;
+    const teardownManHours = JOB_TEARDOWN_HOURS * ONSITE_CREW_SIZE;
+    pushProcessStep(processStep++, 'Kickoff and staging by zone before any production work starts.', [
+      'Crew lead: verify section labels, safety hazards, swing clearances, and material/tool staging by work zone.',
+      setupManHours > 0 ? `Time target: ${formatLaborWindow(setupManHours)}.` : ''
+    ]);
     if (totals.removalLf > 0) {
-      sub.push('- 2) Start with removal/haul-off so install and repair zones stay clear for accurate layout and clean production flow.');
+      pushProcessStep(processStep++, 'Remove and haul off marked fence first so production lanes stay clear.', [
+        `Scope: ${totals.removalLf} lf scheduled for removal (sub paid $${money(totals.removalCost)}).`,
+        'Crew lead assigns active install/repair zones only after removal lane is clear.'
+      ]);
     } else {
-      sub.push('- 2) Start with layout: mark post locations and verify all gate swings/clearances before any set or build work starts.');
+      pushProcessStep(processStep++, 'Layout first: mark post locations and confirm gate swing/clearance dimensions.', [
+        'Helpers snap line/grade references while lead verifies hinge/latch clearances and offsets.'
+      ]);
     }
     const hasPostWork = (
       (totals.postsReplace && Object.values(totals.postsReplace).some(count => (parseInt(count, 10) || 0) > 0)) ||
@@ -10745,20 +10815,199 @@ document.addEventListener('DOMContentLoaded', function(){
       totals.postsRealign3x3 > 0 ||
       totals.postsRealignCutWeld > 0 ||
       totals.woodPostRealignCutWeld > 0 ||
-      totals.woodPostRealignDig > 0
+      totals.woodPostRealignDig > 0 ||
+      totals.woodPostReplace6 > 0 ||
+      totals.woodPostReplace8 > 0 ||
+      totals.woodPostInstall > 0 ||
+      woodInstallPlan.postDays > 0
     );
+    const woodPostReplaceManHours = ((totals.woodPostReplace6 || 0) * 2) + ((totals.woodPostReplace8 || 0) * 3);
+    const woodPostRealignDigManHours = (totals.woodPostRealignDig || 0) * (45/60);
+    const woodPostCutWeldWelderHours = (totals.woodPostRealignCutWeld || 0) * (20/60);
+    const woodPostCutWeldHelperHours = (totals.woodPostRealignCutWeld || 0) * (20/60);
+    const woodPostInstallManHours = (totals.woodPostInstall || 0) * (45/60);
+    const woodInstallPostManHours = woodInstallPlan.postDays * ONSITE_CREW_SIZE * HOURS_PER_PERSON;
+    const totalPostManHours =
+      postReplacementCrewManHours +
+      postReplacementWelderHours +
+      postInstallManHours +
+      cureManHours +
+      cutWeldWelderHours +
+      cutWeldHelperHours +
+      woodPostReplaceManHours +
+      woodPostRealignDigManHours +
+      woodPostCutWeldWelderHours +
+      woodPostCutWeldHelperHours +
+      woodPostInstallManHours +
+      woodInstallPostManHours;
     if (hasPostWork) {
-      sub.push('- 3) Complete all post work next (replace/realign/set), plumb/brace immediately, then respect cure time before panels/rails.');
+      const postScopeParts = [];
+      const replacePostSummary = postCountSummary(totals.postsReplace || zeroPostCounts());
+      if(replacePostSummary) postScopeParts.push(`replace posts (${replacePostSummary})`);
+      const installPostSummary = postCountSummary(totals.postsInstall || zeroPostCounts());
+      if(installPostSummary) postScopeParts.push(`set new posts (${installPostSummary})`);
+      if(totals.postsRealign2x2 > 0 || totals.postsRealign3x3 > 0){
+        postScopeParts.push(`realign ${totals.postsRealign2x2 + totals.postsRealign3x3} metal posts with concrete`);
+      }
+      if(totals.postsRealignCutWeld > 0){
+        postScopeParts.push(`cut/weld realign ${totals.postsRealignCutWeld} metal posts`);
+      }
+      if((totals.woodPostReplace6 || 0) > 0 || (totals.woodPostReplace8 || 0) > 0){
+        postScopeParts.push(`replace ${totals.woodPostReplace6 + totals.woodPostReplace8} wood posts`);
+      }
+      if(totals.woodPostInstall > 0){
+        postScopeParts.push(`install ${totals.woodPostInstall} wood posts`);
+      }
+      if(totals.woodPostRealignDig > 0 || totals.woodPostRealignCutWeld > 0){
+        postScopeParts.push(`realign ${totals.woodPostRealignDig + totals.woodPostRealignCutWeld} wood posts`);
+      }
+      const postWelderHours =
+        postReplacementWelderHours +
+        cutWeldWelderHours +
+        woodPostCutWeldWelderHours;
+      const postHelperHours =
+        postReplacementCrewManHours +
+        postInstallManHours +
+        cureManHours +
+        cutWeldHelperHours +
+        woodPostReplaceManHours +
+        woodPostRealignDigManHours +
+        woodPostCutWeldHelperHours +
+        woodPostInstallManHours +
+        woodInstallPostManHours;
+      pushProcessStep(processStep++, 'Complete all post work before panel/rail production.', [
+        postScopeParts.length ? `Scope: ${postScopeParts.join('; ')}.` : '',
+        postWelderHours > 0 ? `Lead/welder lane: ${formatRoleWindow(postWelderHours, peakWelders, 'welder')}.` : '',
+        postHelperHours > 0 ? `Installer/helper lane: ${formatRoleWindow(postHelperHours, peakHelpers, 'installer/helper')}.` : '',
+        totalPostManHours > 0 ? `Time target: ${formatLaborWindow(totalPostManHours)}.` : '',
+        'Parallel rule: while concrete cures in one zone, move the next crew lane to active repair/build zones.'
+      ]);
     } else {
-      sub.push('- 3) Run line/height checks across each section before panel, rail, or picket work to avoid rework later in the day.');
+      pushProcessStep(processStep++, 'Run line and height control checks before structural production.', [
+        'Crew lead confirms plumb/grade references so panel and rail tasks run without rework.'
+      ]);
     }
-    const hasGateWork = totals.walkGates > 0 || totals.walkGateAddsSingle > 0 || totals.walkGateAddsDouble > 0 || totals.woodWalkGateAdds > 0 || totals.driveGates > 0;
+    const woodInstallBuildManHours = woodInstallPlan.buildDays * ONSITE_CREW_SIZE * HOURS_PER_PERSON;
+    const woodGateRepairManHours = (totals.woodGateRepair * 2) + (totals.woodGateStrengthen * 1) + (totals.woodGateReplace * 3);
+    const stainManHours = stainHours * 2;
+    const woodCoreRepairManHours = Math.max(
+      0,
+      woodManHours - (
+        woodPostReplaceManHours +
+        woodPostRealignDigManHours +
+        woodPostCutWeldWelderHours +
+        woodPostCutWeldHelperHours +
+        woodPostInstallManHours +
+        woodGateRepairManHours +
+        woodAddedGateHours +
+        stainManHours +
+        washHours
+      )
+    );
+    const structuralManHours =
+      weldRepairHours +
+      weldedPanelHours +
+      bracketPanelHours +
+      digHours +
+      finialHours +
+      capHours +
+      puppyInsertManHours +
+      woodInstallBuildManHours +
+      woodCoreRepairManHours;
+    if(structuralManHours > 0){
+      const scopeParts = [];
+      if(totals.wiPickets > 0) scopeParts.push(`${totals.wiPickets} pickets`);
+      if(totals.puppyPickets > 0) scopeParts.push(`${totals.puppyPickets} puppy pickets`);
+      if(totals.wiPatches > 0) scopeParts.push(`${totals.wiPatches} rail patches`);
+      if(totals.wiRails > 0) scopeParts.push(`${totals.wiRails} full rail replacements`);
+      if(totals.wiRailGaps > 0) scopeParts.push(`${totals.wiRailGaps} rail gap fillers`);
+      if(totals.panelsPrefab > 0 || totals.panelsCustom > 0){
+        scopeParts.push(`${totals.panelsPrefab} prefab + ${totals.panelsCustom} custom panels`);
+      }
+      if(woodInstallPlan.buildDays > 0){
+        scopeParts.push(`${woodInstallPlan.buildDays} wood build day(s)`);
+      }
+      if(woodCoreRepairManHours > 0){
+        scopeParts.push(`wood repair production (${formatHoursCompact(woodCoreRepairManHours)} labor)`);
+      }
+      const structuralWelderHours = weldRepairHours + weldedPanelHours + finialHours + puppyInsertWelderHours;
+      const structuralHelperHours = bracketPanelHours + digHours + capHours + puppyInsertHelperHours + woodInstallBuildManHours + woodCoreRepairManHours;
+      pushProcessStep(processStep++, 'Run fence production section-by-section from one end to the other.', [
+        scopeParts.length ? `Scope: ${scopeParts.join('; ')}.` : '',
+        structuralWelderHours > 0 ? `Lead/welder lane: ${formatRoleWindow(structuralWelderHours, peakWelders, 'welder')}.` : '',
+        structuralHelperHours > 0 ? `Installer/helper lane: ${formatRoleWindow(structuralHelperHours, peakHelpers, 'installer/helper')}.` : '',
+        structuralManHours > 0 ? `Time target: ${formatLaborWindow(structuralManHours)}.` : '',
+        'Parallel rule: helpers stay one section ahead on cuts/staging while welding and final tie-ins happen in the active section.'
+      ]);
+    }
+    const gateOperatorManHours = driveGateOperatorHours + driveGateOperatorInstallHours;
+    const gateManHours =
+      gateRepairHours +
+      wroughtAddedGateHours +
+      woodAddedGateHours +
+      woodGateRepairManHours +
+      driveGateChainManHours +
+      gateOperatorManHours;
+    const hasGateWork = totals.walkGates > 0
+      || totals.walkGateAddsSingle > 0
+      || totals.walkGateAddsDouble > 0
+      || totals.woodWalkGateAdds > 0
+      || totals.driveGateOperators > 0
+      || totals.driveGateOperatorInstalls > 0
+      || totals.driveGateChainReplacements > 0
+      || totals.woodGateRepair > 0
+      || totals.woodGateStrengthen > 0
+      || totals.woodGateReplace > 0;
     if (hasGateWork) {
-      sub.push('- 4) Build/repair fence runs first, then finish gates/hardware at the end for final alignment and latch tuning.');
-    } else {
-      sub.push('- 4) Run repairs/installs section-by-section from one end of the project to the other to minimize walking and reset time.');
+      const gateScopeParts = [];
+      if(totals.walkRealign > 0) gateScopeParts.push(`${totals.walkRealign} walk gate realignments`);
+      if(totals.walkHardware > 0) gateScopeParts.push(`${totals.walkHardware} walk gate hardware swaps`);
+      if(totals.walkRebuild > 0) gateScopeParts.push(`${totals.walkRebuild} walk gate rebuilds`);
+      if(totals.walkGateAddsSingle > 0 || totals.walkGateAddsDouble > 0){
+        gateScopeParts.push(`${totals.walkGateAddsSingle} single + ${totals.walkGateAddsDouble} double wrought walk gate adds`);
+      }
+      if(totals.woodWalkGateAddsSingle > 0 || totals.woodWalkGateAddsDouble > 0){
+        gateScopeParts.push(`${totals.woodWalkGateAddsSingle} single + ${totals.woodWalkGateAddsDouble} double wood walk gate adds`);
+      }
+      if(totals.woodGateRepair > 0 || totals.woodGateStrengthen > 0 || totals.woodGateReplace > 0){
+        gateScopeParts.push(`${totals.woodGateRepair} wood gate repairs, ${totals.woodGateStrengthen} strengthens, ${totals.woodGateReplace} replacements`);
+      }
+      if(totals.driveGateChainReplacements > 0){
+        gateScopeParts.push(`${totals.driveGateChainReplacements} sliding drive gate chain replacements`);
+      }
+      if(totals.driveGateOperators > 0 || totals.driveGateOperatorInstalls > 0){
+        gateScopeParts.push(`${totals.driveGateOperators} drive operator replacements + ${totals.driveGateOperatorInstalls} new drive operator installs`);
+      }
+      pushProcessStep(processStep++, 'Finish gates, hardware, and operators after fence lines are stable.', [
+        gateScopeParts.length ? `Scope: ${gateScopeParts.join('; ')}.` : '',
+        (gateRepairHours + wroughtAddedGateHours) > 0 ? `Lead/welder lane: ${formatRoleWindow(gateRepairHours + wroughtAddedGateHours, peakWelders, 'welder')}.` : '',
+        (woodAddedGateHours + woodGateRepairManHours + driveGateChainManHours + gateOperatorManHours) > 0
+          ? `Installer/helper lane: ${formatRoleWindow(woodAddedGateHours + woodGateRepairManHours + driveGateChainManHours + gateOperatorManHours, peakHelpers, 'installer/helper')}.`
+          : '',
+        gateManHours > 0 ? `Time target: ${formatLaborWindow(gateManHours)}.` : ''
+      ]);
     }
-    sub.push('- 5) Close out with touch-up, hardware tightening, cleanup, and final QC photos before demobilizing.');
+    const coatingManHours = paintingHours + primePaintReturnHours + washHours + stainManHours;
+    if(coatingManHours > 0){
+      const coatingScope = [];
+      if(paintingHours > 0) coatingScope.push('paint/prime base work');
+      if(primePaintReturnHours > 0) coatingScope.push('finish-coat return work');
+      if(washHours > 0) coatingScope.push('wood wash');
+      if(stainHours > 0) coatingScope.push('wood staining');
+      pushProcessStep(processStep++, 'Run coating sequence after structural tasks are complete in each section.', [
+        coatingScope.length ? `Scope: ${coatingScope.join('; ')}.` : '',
+        (sprayBaseHours + sprayFinishHours) > 0 ? `Lead/welder spray lane: ${formatRoleWindow(sprayBaseHours + sprayFinishHours, peakWelders, 'welder')}.` : '',
+        (paintingHours + primePaintReturnHours + washHours + stainHours) > 0
+          ? `Installer/helper prep lane: ${formatRoleWindow(paintingHours + primePaintReturnHours + washHours + stainHours, peakHelpers, 'installer/helper')}.`
+          : '',
+        stainHours > 0 ? `Stain tech lane: ${formatRoleWindow(stainHours, peakStainers || 1, 'stain tech')}.` : '',
+        coatingManHours > 0 ? `Time target: ${formatLaborWindow(coatingManHours)}.` : ''
+      ]);
+    }
+    pushProcessStep(processStep++, 'Close out punch list, QA photos, and site cleanup before demobilizing.', [
+      'Crew lead: final walk with gate swing/latch check, hardware torque check, and completed-photo capture.',
+      teardownManHours > 0 ? `Time target: ${formatLaborWindow(teardownManHours)}.` : ''
+    ]);
     if (crewSchedule.length) {
       const describeDayTask = (day)=>{
         if(day.kind === 'wood-posts') return 'Set wood posts, square corners, and brace for cure.';
@@ -10781,10 +11030,40 @@ document.addEventListener('DOMContentLoaded', function(){
         if((day.helperCount||0) > 0) roles.push(`${day.helperCount} installer/helper`);
         return roles.length ? roles.join(', ') : `${day.crew || ONSITE_CREW_SIZE} installer/helper`;
       };
+      const dayParallelAssignments = (day)=>{
+        const details = [];
+        if((day.welderCount||0) > 0){
+          if(day.kind === 'finish' && primePaintScheduled){
+            details.push('Lead/welder: finish coat, metal touch-up, and final gate/latch tuning.');
+          }else if(day.kind === 'wood-posts' || day.kind === 'wood-build'){
+            details.push('Lead/welder: layout/QC checks and any required cut/weld corrections.');
+          }else{
+            details.push('Lead/welder: weld repairs, panel tie-ins, and metal gate alignment.');
+          }
+        }
+        if((day.stainerCount||0) > 0){
+          details.push('Stain tech: stain application with back-brush coverage checks section-by-section.');
+        }
+        if((day.helperCount||0) > 0){
+          if(day.kind === 'wash'){
+            details.push('Installer/helpers: pressure wash active sections and protect adjacent surfaces/landscape.');
+          }else if(day.kind === 'wood-posts'){
+            details.push('Installer/helpers: set/plumb/brace posts and stage concrete/hardware.');
+          }else if(day.kind === 'wood-build'){
+            details.push('Installer/helpers: cut/install rails and pickets, then set hardware.');
+          }else if(day.kind === 'finish'){
+            details.push('Installer/helpers: punch-list fixes, cleanup, and final hardware tightening.');
+          }else{
+            details.push('Installer/helpers: stay one section ahead on layout, cuts, and material staging while weld lane runs.');
+          }
+        }
+        return details;
+      };
       sub.push('- Daily assignments (delegate by role and time):');
       crewSchedule.forEach((day, idx)=>{
         const hoursLabel = formatHours(day.hours || 0) || formatHours(HOURS_PER_PERSON);
         sub.push(`  - Day ${idx + 1}: ${roleSummary(day)} (~${hoursLabel}) — ${describeDayTask(day)}`);
+        dayParallelAssignments(day).forEach(line=> sub.push(`    - ${line}`));
       });
     }
     sub.push('');
