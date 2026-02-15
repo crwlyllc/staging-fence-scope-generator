@@ -9655,11 +9655,12 @@ document.addEventListener('DOMContentLoaded', function(){
     let postReplacementWelderHours = 0;
     if(wroughtPostReplacements > 0){
       // Post replacement workflow per post:
-      // Helpers handle pull/clean/set plus panel cut-off and top trim.
+      // Helpers handle pull/clean/set plus panel cut-off and loading
+      // removed post/concrete into the truck bed.
       // Welder time is only for welding panels back to the new post.
       // Up to four posts can run in parallel with a four-man crew, so elapsed
       // time scales in scheduling while total man-hours remain additive.
-      const crewManHoursPerPost = 80/60;
+      const crewManHoursPerPost = 85/60;
       const welderHoursPerPost = 20/60;
       postReplacementCrewManHours = wroughtPostReplacements * crewManHoursPerPost;
       postReplacementWelderHours = wroughtPostReplacements * welderHoursPerPost;
@@ -9690,11 +9691,10 @@ document.addEventListener('DOMContentLoaded', function(){
       helperHours += cureManHours;
     }
     const cutWeldWelderHours = totals.postsRealignCutWeld * 0.5;
-    const cutWeldHelperHours = totals.postsRealignCutWeld * 0.5;
+    const cutWeldHelperHours = 0;
     if(totals.postsRealignCutWeld > 0){
-      manHours += cutWeldWelderHours + cutWeldHelperHours;
+      manHours += cutWeldWelderHours;
       welderHours += cutWeldWelderHours;
-      helperHours += cutWeldHelperHours;
     }
     const gateRepairHours = totals.walkRealign * 1 + totals.walkHardware * 1 + totals.walkRebuild * 3;
     manHours += gateRepairHours;
@@ -10914,13 +10914,16 @@ document.addEventListener('DOMContentLoaded', function(){
     const replacePostSummary = compactPostSummary(totals.postsReplace || zeroPostCounts());
     const installPostSummary = compactPostSummary(totals.postsInstall || zeroPostCounts());
     const postTaskParts = [];
-    if(replacePostSummary) postTaskParts.push(`identify and replace ${replacePostSummary} posts`);
+    if(replacePostSummary){
+      if(wroughtPostReplacements > 0){
+        postTaskParts.push(`identify ${replacePostSummary} posts to replace, cut off existing panels, replace posts, and load old posts/concrete into the truck bed`);
+      }else{
+        postTaskParts.push(`identify and replace ${replacePostSummary} posts`);
+      }
+    }
     if(installPostSummary) postTaskParts.push(`set ${installPostSummary} new posts`);
     if((totals.postsRealign2x2 + totals.postsRealign3x3) > 0){
       postTaskParts.push(`realign ${totals.postsRealign2x2 + totals.postsRealign3x3} metal posts (dig/straighten/concrete)`);
-    }
-    if(totals.postsRealignCutWeld > 0){
-      postTaskParts.push(`cut/weld realign ${totals.postsRealignCutWeld} metal posts`);
     }
     if((totals.woodPostReplace6 + totals.woodPostReplace8) > 0){
       postTaskParts.push(`replace ${totals.woodPostReplace6 + totals.woodPostReplace8} wood posts`);
@@ -10930,9 +10933,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if((totals.woodPostRealignDig + totals.woodPostRealignCutWeld) > 0){
       postTaskParts.push(`realign ${totals.woodPostRealignDig + totals.woodPostRealignCutWeld} wood posts`);
-    }
-    if(wroughtPostReplacements > 0){
-      postTaskParts.push(`cut off existing panels and trim tops on ${wroughtPostReplacements} replacement ${plural(wroughtPostReplacements, 'post')}`);
     }
 
     const patchWelderHours = totals.wiPatches * (20/60);
@@ -11069,7 +11069,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const tieInWelders = Math.max(1, Math.min(weldLaneCount, wroughtPostReplacements || 1));
       tieInWelderNames = assignWelderLaneNames(tieInWelders);
       const tieInDuration = postPanelTieInWelderHours / tieInWelders;
-      tieInLines.push(`${formatNameList(tieInWelderNames)}: weld panels back to ${wroughtPostReplacements} replacement ${plural(wroughtPostReplacements, 'post')} (${formatTaskHours(tieInDuration)}).`);
+      tieInLines.push(`${formatNameList(tieInWelderNames)}: weld panels back to ${wroughtPostReplacements} replacement ${plural(wroughtPostReplacements, 'post')} and trim tops of posts to be 2" above the panel (${formatTaskHours(tieInDuration)}).`);
     }
     if(paintLenTotal > 0){
       const prepCrew = postPanelTieInWelderHours > 0 ? helperLaneParallel : helperLaneFullCrew;
