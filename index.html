@@ -1121,8 +1121,8 @@
         <div class="sp-card-header">
           <div class="sp-card-title">Notes</div>
           <div class="sp-row">
-            <span class="sp-chip" id="sp-totals-chip" title="Auto-calculated across sections">Totals included</span>
             <button class="sp-btn" id="sp-copy" type="button">Copy Notes</button>
+            <button class="sp-btn" id="sp-copy-reload" type="button">Copy Reload Key</button>
             <button class="sp-btn primary" id="sp-push-hcp" type="button">Push Notes to HCP</button>
           </div>
         </div>
@@ -11668,6 +11668,24 @@ document.addEventListener('DOMContentLoaded', function(){
       .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
   }
 
+  function copyReloadKey(){
+    const btn = document.getElementById('sp-copy-reload');
+    if(!notesEl || !btn) return;
+    const notesText = notesEl.value || '';
+    const encodedData = extractEmbeddedNotesData(notesText);
+    if(!encodedData){
+      flashButton(btn, 'No key found', { revertMs: 1600, disable: false });
+      return;
+    }
+    const keyBlock = [
+      'Reload key (for Scope Generator, do not edit)',
+      `${NOTES_DATA_START}${encodedData}${NOTES_DATA_END}`,
+    ].join('\n');
+    copyTextToClipboard(keyBlock)
+      .then(()=>flashButton(btn))
+      .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
+  }
+
   function copySubNotes(){
     const btn = document.getElementById('sp-copy-sub');
     if(!notesSubEl || !btn) return;
@@ -11930,6 +11948,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const quickDupLastBtn = document.getElementById('sp-quick-dup-last');
   if(quickDupLastBtn){ quickDupLastBtn.addEventListener('click', ()=>{ duplicateLatestSectionStyle(); persist(); }); }
   document.getElementById('sp-copy').addEventListener('click', copyNotes);
+  document.getElementById('sp-copy-reload').addEventListener('click', copyReloadKey);
   document.getElementById('sp-copy-sub').addEventListener('click', copySubNotes);
   if(estimateNumberInput){
     estimateNumberInput.addEventListener('input', ()=>{
