@@ -11130,7 +11130,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const picketWelderHours = totals.wiPickets * (12/60);
     const puppyPicketWelderHours = totals.puppyPickets * (12/60);
     const weldRedoWelderHours = totals.weldRedos * (5/60);
-    const concreteRealignWelderHours = (totals.postsRealign2x2 + totals.postsRealign3x3) * (30/60);
+    const concreteRealignCount = totals.postsRealign2x2 + totals.postsRealign3x3;
     const welderTaskGroups = [];
     if(totals.wiPatches > 0){
       welderTaskGroups.push({ hours: patchWelderHours, label: `${totals.wiPatches}x rail ${plural(totals.wiPatches, 'patch', 'patches')}` });
@@ -11160,8 +11160,19 @@ document.addEventListener('DOMContentLoaded', function(){
     if(totals.weldRedos > 0){
       welderTaskGroups.push({ hours: weldRedoWelderHours, label: `${totals.weldRedos}x weld ${plural(totals.weldRedos, 'redo')}` });
     }
-    if((totals.postsRealign2x2 + totals.postsRealign3x3) > 0){
-      welderTaskGroups.push({ hours: concreteRealignWelderHours, label: `metal post realign weld cleanup (${totals.postsRealign2x2 + totals.postsRealign3x3} posts)` });
+    if(concreteRealignCount > 0){
+      const splitLanes = Math.max(1, Math.min(maxWeldersConfigured, concreteRealignCount));
+      const baseCountPerLane = Math.floor(concreteRealignCount / splitLanes);
+      let remainder = concreteRealignCount % splitLanes;
+      for(let lane=0; lane<splitLanes; lane++){
+        const laneCount = baseCountPerLane + (remainder > 0 ? 1 : 0);
+        if(remainder > 0) remainder -= 1;
+        if(laneCount <= 0) continue;
+        welderTaskGroups.push({
+          hours: laneCount * (30/60),
+          label: `metal post realign weld cleanup (${laneCount} ${plural(laneCount, 'post')})`
+        });
+      }
     }
     if(totals.finials > 0){
       welderTaskGroups.push({ hours: finialHours, label: `${totals.finials}x finial ${plural(totals.finials, 'replacement')}` });
@@ -11342,6 +11353,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const gateWelderHours = gateRepairHours + wroughtAddedGateHours;
     const gateHelperManHours = woodAddedGateHours + woodGateRepairManHours + driveGateChainManHours + gateOperatorManHours;
     const gateLines = [];
+    let gateEndAt = gateStartGate;
     const gateWelderScopeParts = [];
     if(totals.walkRealign > 0){
       gateWelderScopeParts.push(`realign ${totals.walkRealign} walk ${plural(totals.walkRealign, 'gate')}`);
@@ -11375,6 +11387,7 @@ document.addEventListener('DOMContentLoaded', function(){
       gateWelderNames = gateWelderSchedule.participants.length ? gateWelderSchedule.participants : gateWelderCandidates;
       if(gateWelderSchedule.workDone > 0){
         reserveScheduledPeople(gateWelderSchedule);
+        gateEndAt = Math.max(gateEndAt, gateWelderSchedule.endTime);
         const gateWelderDuration = gateWelderSchedule.elapsed;
         const gateWelderSplit = contributorSplitNote(gateWelderSchedule, gateWelderNames);
         gateLines.push(`${formatNameList(gateWelderNames)}: ${gateWelderScope} (${formatTaskHours(gateWelderDuration)}${gateWelderSplit}).`);
@@ -11405,8 +11418,30 @@ document.addEventListener('DOMContentLoaded', function(){
       const gateHelperNames = gateHelperSchedule.participants.length ? gateHelperSchedule.participants : gateHelperCandidates;
       if(gateHelperSchedule.workDone > 0){
         reserveScheduledPeople(gateHelperSchedule);
+        gateEndAt = Math.max(gateEndAt, gateHelperSchedule.endTime);
         const gateHelperDuration = gateHelperSchedule.elapsed;
         gateLines.push(`${formatNameList(gateHelperNames)}: ${gateScope} (${formatTaskHours(gateHelperDuration)}).`);
+      }
+    }
+    let gatePaintConsumedManHours = 0;
+    if(!hasPanelTieIns && hasByHandPaintScope && paintLenTotal > 0 && gateEndAt > gateStartGate){
+      const gatePaintEligibleManHours = Math.max(0, paintPrepEligibleManHours - paintPrepConsumedManHours);
+      if(gatePaintEligibleManHours > 0){
+        const gatePaintCrew = gateWelderHours > 0 ? helperLaneParallel : helperLaneFullCrew;
+        const gatePaintCandidates = pickCrewNames(gatePaintCrew, gateWelderNames);
+        const gatePaintSchedule = scheduleWorkByAvailability({
+          names: gatePaintCandidates,
+          totalHours: gatePaintEligibleManHours,
+          earliestStart: gateStartGate,
+          latestEnd: gateEndAt
+        });
+        gatePaintConsumedManHours = gatePaintSchedule.workDone;
+        if(gatePaintSchedule.workDone > 0){
+          reserveScheduledPeople(gatePaintSchedule);
+          const gatePaintNames = gatePaintSchedule.participants.length ? gatePaintSchedule.participants : gatePaintCandidates;
+          const gatePaintDuration = gatePaintSchedule.elapsed;
+          gateLines.push(`${formatNameList(gatePaintNames)}: scrape loose rust and debris and hand paint ${paintLenTotal} ft of fence (${formatTaskHours(gatePaintDuration)}).`);
+        }
       }
     }
     if(gateLines.length){
@@ -11414,7 +11449,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const coatingStartGate = Math.max(tieInEndAt, prepEndAt);
-    const remainingPaintManHours = Math.max(0, paintLaborTotalManHours - paintPrepConsumedManHours);
+    const remainingPaintManHours = Math.max(0, paintLaborTotalManHours - paintPrepConsumedManHours - gatePaintConsumedManHours);
     const coatingTotalManHours = remainingPaintManHours + washHours + stainManHours;
     if(coatingTotalManHours > 0){
       const coatingLines = [];
