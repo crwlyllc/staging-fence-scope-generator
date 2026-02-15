@@ -1130,6 +1130,46 @@
         <div class="sp-hint">These notes are formatted for easy paste into your CRM or internal documentation.</div>
       </div>
 
+      <div class="sp-card" id="sp-quick-costs-card" style="display:none">
+        <div class="sp-card-header">
+          <div class="sp-card-title">Quick Costs</div>
+          <div class="sp-row">
+            <button class="sp-btn" id="sp-copy-costs-all" type="button" disabled>Copy All 4</button>
+          </div>
+        </div>
+        <div class="sp-grid">
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-cost-travel">Travel</label>
+            <div class="sp-copy-row">
+              <input class="sp-input" id="sp-cost-travel" type="text" readonly value="—" />
+              <button class="sp-btn ghost" id="sp-copy-cost-travel" type="button" disabled>Copy</button>
+            </div>
+          </div>
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-cost-materials">Materials</label>
+            <div class="sp-copy-row">
+              <input class="sp-input" id="sp-cost-materials" type="text" readonly value="—" />
+              <button class="sp-btn ghost" id="sp-copy-cost-materials" type="button" disabled>Copy</button>
+            </div>
+          </div>
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-cost-consumables">Consumables</label>
+            <div class="sp-copy-row">
+              <input class="sp-input" id="sp-cost-consumables" type="text" readonly value="—" />
+              <button class="sp-btn ghost" id="sp-copy-cost-consumables" type="button" disabled>Copy</button>
+            </div>
+          </div>
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-cost-labor">Labor</label>
+            <div class="sp-copy-row">
+              <input class="sp-input" id="sp-cost-labor" type="text" readonly value="—" />
+              <button class="sp-btn ghost" id="sp-copy-cost-labor" type="button" disabled>Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="sp-hint">Fast copy values for HCP: Travel, Materials, Consumables, and Labor.</div>
+      </div>
+
       <div class="sp-card" id="sp-sub">
         <div class="sp-card-header">
           <div class="sp-card-title">Notes for Sub</div>
@@ -1462,11 +1502,22 @@ document.addEventListener('DOMContentLoaded', function(){
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
   const serviceCopyAllBtn = $('#sp-copy-service');
+  const quickCostsCardEl = document.getElementById('sp-quick-costs-card');
+  const quickCostsCopyAllBtn = document.getElementById('sp-copy-costs-all');
+  const quickCostTravelInput = document.getElementById('sp-cost-travel');
+  const quickCostMaterialsInput = document.getElementById('sp-cost-materials');
+  const quickCostConsumablesInput = document.getElementById('sp-cost-consumables');
+  const quickCostLaborInput = document.getElementById('sp-cost-labor');
+  const quickCostTravelBtn = document.getElementById('sp-copy-cost-travel');
+  const quickCostMaterialsBtn = document.getElementById('sp-copy-cost-materials');
+  const quickCostConsumablesBtn = document.getElementById('sp-copy-cost-consumables');
+  const quickCostLaborBtn = document.getElementById('sp-copy-cost-labor');
   const laborRateInput = document.getElementById('sp-labor-rate');
   const estimateLookupBtnLabel = estimateLookupBtn ? estimateLookupBtn.textContent : '';
   const scopeEl = document.getElementById('sp-scope');
   let gateUnlocked = false;
   let lastServiceLines = [];
+  let lastQuickCosts = null;
   let autoGenerateTimer = null;
   let isGeneratingNotes = false;
   let estimateLookupController = null;
@@ -11739,6 +11790,14 @@ document.addEventListener('DOMContentLoaded', function(){
       cost.push('- Net profit %: '+(isFinite(netProfitPct) ? netProfitPct.toFixed(1) : 'Invalid')+'%');
     }
 
+    renderQuickCosts({
+      travel: travelCost,
+      materials: costMaterials,
+      consumables: consumablesCost,
+      labor: laborCost,
+      travelIncluded: !!travelCostResult.included
+    });
+
     const idxTotals = lines.indexOf('TOTALS');
     const outLines = (idxTotals >= 0)
       ? [...lines.slice(idxTotals), '', ...lines.slice(0, idxTotals)]
@@ -11845,6 +11904,108 @@ document.addEventListener('DOMContentLoaded', function(){
 
       serviceListEl.appendChild(lineEl);
     });
+  }
+
+  function quickCostRows(){
+    return [
+      { key: 'travel', label: 'Travel', input: quickCostTravelInput, button: quickCostTravelBtn },
+      { key: 'materials', label: 'Materials', input: quickCostMaterialsInput, button: quickCostMaterialsBtn },
+      { key: 'consumables', label: 'Consumables', input: quickCostConsumablesInput, button: quickCostConsumablesBtn },
+      { key: 'labor', label: 'Labor', input: quickCostLaborInput, button: quickCostLaborBtn },
+    ];
+  }
+
+  function resetQuickCostRow(row){
+    if(row.input){
+      row.input.value = '—';
+    }
+    if(row.button){
+      row.button.disabled = true;
+      row.button.dataset.text = '';
+    }
+  }
+
+  function renderQuickCosts(costs){
+    const rows = quickCostRows();
+    if(!quickCostsCardEl || !rows.length){
+      lastQuickCosts = null;
+      return;
+    }
+    if(!costs || typeof costs !== 'object'){
+      rows.forEach(resetQuickCostRow);
+      if(quickCostsCopyAllBtn){
+        quickCostsCopyAllBtn.disabled = true;
+      }
+      quickCostsCardEl.style.display = 'none';
+      lastQuickCosts = null;
+      return;
+    }
+
+    const normalized = {
+      travel: Number(costs.travel),
+      materials: Number(costs.materials),
+      consumables: Number(costs.consumables),
+      labor: Number(costs.labor),
+      travelIncluded: costs.travelIncluded !== false
+    };
+    let hasCopyable = false;
+    rows.forEach(row=>{
+      if(row.key === 'travel' && normalized.travelIncluded === false){
+        if(row.input){
+          row.input.value = 'Not included';
+        }
+        if(row.button){
+          row.button.disabled = true;
+          row.button.dataset.text = '';
+        }
+        return;
+      }
+      const value = normalized[row.key];
+      if(!isFinite(value)){
+        resetQuickCostRow(row);
+        return;
+      }
+      const text = `$${money(value)}`;
+      if(row.input){
+        row.input.value = text;
+      }
+      if(row.button){
+        row.button.disabled = false;
+        row.button.dataset.text = text;
+      }
+      hasCopyable = true;
+    });
+
+    if(quickCostsCopyAllBtn){
+      quickCostsCopyAllBtn.disabled = !hasCopyable;
+    }
+    quickCostsCardEl.style.display = hasCopyable ? 'block' : 'none';
+    lastQuickCosts = hasCopyable ? normalized : null;
+  }
+
+  function copyQuickCostButton(event){
+    const btn = event?.currentTarget;
+    const text = btn?.dataset?.text || '';
+    if(!btn || !text) return;
+    copyTextToClipboard(text)
+      .then(()=>flashButton(btn))
+      .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
+  }
+
+  function copyAllQuickCosts(){
+    if(!quickCostsCopyAllBtn || !lastQuickCosts){
+      return;
+    }
+    const lines = [
+      lastQuickCosts.travelIncluded === false ? 'Travel: Not included' : `Travel: $${money(lastQuickCosts.travel)}`,
+      `Materials: $${money(lastQuickCosts.materials)}`,
+      `Consumables: $${money(lastQuickCosts.consumables)}`,
+      `Labor: $${money(lastQuickCosts.labor)}`
+    ];
+    const text = lines.join('\n');
+    copyTextToClipboard(text)
+      .then(()=>flashButton(quickCostsCopyAllBtn))
+      .catch(()=>flashButton(quickCostsCopyAllBtn, 'Copy failed', { revertMs: 1600, disable: false }));
   }
 
   function copyTextToClipboard(text){
@@ -12113,6 +12274,7 @@ document.addEventListener('DOMContentLoaded', function(){
     render();
     outputEl.style.display='none';
     renderServiceLineNotes([]);
+    renderQuickCosts(null);
   }
   window._spInitializeMap = initializeMap;
   if(window._spGoogleMapsReady){
@@ -12206,6 +12368,11 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('sp-copy').addEventListener('click', copyNotes);
   document.getElementById('sp-copy-reload').addEventListener('click', copyReloadKey);
   document.getElementById('sp-copy-sub').addEventListener('click', copySubNotes);
+  if(quickCostsCopyAllBtn){ quickCostsCopyAllBtn.addEventListener('click', copyAllQuickCosts); }
+  if(quickCostTravelBtn){ quickCostTravelBtn.addEventListener('click', copyQuickCostButton); }
+  if(quickCostMaterialsBtn){ quickCostMaterialsBtn.addEventListener('click', copyQuickCostButton); }
+  if(quickCostConsumablesBtn){ quickCostConsumablesBtn.addEventListener('click', copyQuickCostButton); }
+  if(quickCostLaborBtn){ quickCostLaborBtn.addEventListener('click', copyQuickCostButton); }
   if(estimateNumberInput){
     estimateNumberInput.addEventListener('input', ()=>{
       const digits = sanitizeEstimateNumber(estimateNumberInput.value || '');
