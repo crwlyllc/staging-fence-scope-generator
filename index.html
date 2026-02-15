@@ -6182,8 +6182,10 @@ document.addEventListener('DOMContentLoaded', function(){
     return m ? parseInt(m[1],10) : 0;
   }
   function styleFactor(v){
-    if(v === 'Flat Top') return 2;
-    if(v === 'Extended Picket') return 1.75;
+    const raw = String(v || '').toLowerCase();
+    if(raw.includes('extended picket') && raw.includes('finial')) return 1.75;
+    if(raw.includes('extended picket')) return 2;
+    if(raw.includes('flat top')) return 3;
     return 1.5;
   }
   function railPacePenalty(count){
@@ -10106,20 +10108,47 @@ document.addEventListener('DOMContentLoaded', function(){
     let totalLenPrimePaint = 0;
     let totalLenSpot  = 0;
     let totalLenSpotByCoat = 0;
+    let finialSprayCanUnits = 0;
     state.sections.forEach(s=>{
       const len = (parseInt(s.length||0,10) || 0);
-      if(!len) return;
       const coatCount = paintCoatCountForSection(s);
       if (s.painting === 'Paint Section') {
-        totalLenPaint += len;
-        totalLenPaintByCoat += (len * coatCount);
+        if(len > 0){
+          totalLenPaint += len;
+          totalLenPaintByCoat += (len * coatCount);
+        }
       } else if (s.painting === 'Prime and Paint') {
-        totalLenPaint += len;
-        totalLenPaintByCoat += (len * coatCount);
-        totalLenPrimePaint += len;
+        if(len > 0){
+          totalLenPaint += len;
+          totalLenPaintByCoat += (len * coatCount);
+          totalLenPrimePaint += len;
+        }
       } else if (s.painting === 'Spot Paint Welds') {
-        totalLenSpot += len;
-        totalLenSpotByCoat += (len * coatCount);
+        if(len > 0){
+          totalLenSpot += len;
+          totalLenSpotByCoat += (len * coatCount);
+        }
+      }
+
+      const isFullSectionPaint = s.painting === 'Paint Section' || s.painting === 'Prime and Paint';
+      if(!isFullSectionPaint) return;
+
+      const styleHasFinials = /finials?/i.test(String(s.style || ''));
+      if(!styleHasFinials) return;
+
+      let panelCount = 0;
+      if(len > 0){
+        panelCount = Math.max(1, Math.ceil(len / 8));
+      }else{
+        const panelList = Array.isArray(s.panels) ? s.panels : [];
+        panelCount = panelList.reduce((sum, panel)=> sum + (parseInt(panel?.qty || 0, 10) || 0), 0);
+      }
+      if(panelCount <= 0) return;
+
+      const puppyHasFinials = /puppy.*finials?/i.test(String(s.puppy || ''));
+      finialSprayCanUnits += panelCount * 0.5;
+      if(puppyHasFinials){
+        finialSprayCanUnits += panelCount * 0.5;
       }
     });
     paintLenTotal = totalLenPaint;
@@ -10130,6 +10159,9 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totalLenSpot > 0) {
       const unitsSpot = Math.ceil(totalLenSpotByCoat / 100);
       paintCans += Math.max(1, Math.ceil(unitsSpot * 0.5));
+    }
+    if(finialSprayCanUnits > 0){
+      paintCans += Math.ceil(finialSprayCanUnits);
     }
     if (paintGallons > 0) addMat(materials, 'gallons of gloss black paint', paintGallons);
     if (paintCans > 0)    addMat(materials, 'spray cans (gloss black)', paintCans);
