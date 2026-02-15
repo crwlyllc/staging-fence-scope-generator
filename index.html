@@ -1172,7 +1172,7 @@
 
       <div class="sp-card" id="sp-sub">
         <div class="sp-card-header">
-          <div class="sp-card-title">Notes for Sub</div>
+          <div class="sp-card-title">Notes for Crew</div>
           <div class="sp-row">
             <button class="sp-btn" id="sp-copy-sub" type="button">Copy Notes</button>
           </div>
@@ -11249,6 +11249,14 @@ document.addEventListener('DOMContentLoaded', function(){
     const tieInLines = [];
     const hasPanelTieIns = postPanelTieInWelderHours > 0;
     const hasPaintPrep = paintLenTotal > 0;
+    const hasByHandPaintScope = state.sections.some(section=>{
+      const fenceType = (section.fenceType || '').toLowerCase();
+      if(fenceType && fenceType !== 'wrought iron') return false;
+      const isFullSectionPaint = section.painting === 'Paint Section' || section.painting === 'Prime and Paint';
+      if(!isFullSectionPaint) return false;
+      const method = String(section.paintingApplication || 'By Hand').trim().toLowerCase();
+      return method !== 'spray';
+    });
     let tieInWelderNames = [];
     let tieInSchedule = null;
     let prepSchedule = null;
@@ -11288,7 +11296,10 @@ document.addEventListener('DOMContentLoaded', function(){
       if(prepSchedule.workDone > 0){
         reserveScheduledPeople(prepSchedule);
         const prepDurationLabel = prepSchedule.elapsed > 0 ? ` (${formatTaskHours(prepSchedule.elapsed)})` : '';
-        tieInLines.push(`${formatNameList(prepSchedule.participants.length ? prepSchedule.participants : prepNames)}: scrape loose rust and debris on ${paintLenTotal} ft to prep for paint${prepDurationLabel}.`);
+        const prepAction = hasByHandPaintScope
+          ? `scrape loose rust and debris and hand paint ${paintLenTotal} ft of fence`
+          : `scrape loose rust and debris on ${paintLenTotal} ft to prep for paint`;
+        tieInLines.push(`${formatNameList(prepSchedule.participants.length ? prepSchedule.participants : prepNames)}: ${prepAction}${prepDurationLabel}.`);
       }
     }
     if(tieInLines.length){
