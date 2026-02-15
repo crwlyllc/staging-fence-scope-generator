@@ -104,6 +104,7 @@
   .sp-field{display:flex;flex-direction:column;gap:6px}
   .sp-label{font-size:12px;font-weight:800;color:var(--sp-muted);letter-spacing:.4px;text-transform:uppercase}
   .sp-input,.sp-select,.sp-textarea{border:1px solid var(--sp-border);border-radius:12px;padding:10px 12px;background:#fff;font-size:14px;width:100%}
+  #sp-estimate-number{font-size:16px}
   .sp-textarea{min-height:68px;resize:vertical}
   .sp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
@@ -12591,8 +12592,17 @@ document.addEventListener('DOMContentLoaded', function(){
       if(active && active !== document.body && active !== estimateNumberInput){
         return;
       }
-      estimateNumberInput.focus();
-      estimateNumberInput.select();
+      if(typeof estimateNumberInput.focus === 'function'){
+        try{
+          estimateNumberInput.focus({ preventScroll: true });
+        }catch(_err){
+          estimateNumberInput.focus();
+        }
+      }
+      if(typeof estimateNumberInput.setSelectionRange === 'function'){
+        const cursorAt = estimateNumberInput.value ? estimateNumberInput.value.length : 0;
+        estimateNumberInput.setSelectionRange(cursorAt, cursorAt);
+      }
     }, 0);
   }
 
