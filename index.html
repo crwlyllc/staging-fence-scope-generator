@@ -9640,7 +9640,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const weldRepairHours = (
       totals.wiPickets*12 +
       totals.puppyPickets*12 +
-      totals.diagonalBraces*12 +
+      totals.diagonalBraces*20 +
       totals.wiPatches*20 +
       totals.wiRails*30 +
       totals.wiRailGaps*20 +
@@ -10909,7 +10909,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const patchWelderHours = totals.wiPatches * (20/60);
     const railReplaceWelderHours = totals.wiRails * (30/60);
     const railGapWelderHours = totals.wiRailGaps * (20/60);
-    const diagonalBraceWelderHours = totals.diagonalBraces * (12/60);
+    const diagonalBraceWelderHours = totals.diagonalBraces * (20/60);
     const picketWelderHours = totals.wiPickets * (12/60);
     const puppyPicketWelderHours = totals.puppyPickets * (12/60);
     const weldRedoWelderHours = totals.weldRedos * (5/60);
