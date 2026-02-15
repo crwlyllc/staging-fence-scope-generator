@@ -11320,7 +11320,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const gateHelperManHours = woodAddedGateHours + woodGateRepairManHours + driveGateChainManHours + gateOperatorManHours;
     const gateLines = [];
     let gateWelderNames = [];
-    let gateEndAt = gateStartGate;
     if(gateWelderHours > 0){
       const gateWelders = Math.max(1, Math.min(weldLaneCount, 2));
       const gateWelderCandidates = assignWelderLaneNames(gateWelders);
@@ -11332,7 +11331,6 @@ document.addEventListener('DOMContentLoaded', function(){
       gateWelderNames = gateWelderSchedule.participants.length ? gateWelderSchedule.participants : gateWelderCandidates;
       if(gateWelderSchedule.workDone > 0){
         reserveScheduledPeople(gateWelderSchedule);
-        gateEndAt = Math.max(gateEndAt, gateWelderSchedule.endTime);
         const gateWelderDuration = gateWelderSchedule.elapsed;
         const gateWelderSplit = contributorSplitNote(gateWelderSchedule, gateWelderNames);
         gateLines.push(`${formatNameList(gateWelderNames)}: gate realign/hardware/rebuild and wrought gate adds (${formatTaskHours(gateWelderDuration)}${gateWelderSplit}).`);
@@ -11363,7 +11361,6 @@ document.addEventListener('DOMContentLoaded', function(){
       const gateHelperNames = gateHelperSchedule.participants.length ? gateHelperSchedule.participants : gateHelperCandidates;
       if(gateHelperSchedule.workDone > 0){
         reserveScheduledPeople(gateHelperSchedule);
-        gateEndAt = Math.max(gateEndAt, gateHelperSchedule.endTime);
         const gateHelperDuration = gateHelperSchedule.elapsed;
         gateLines.push(`${formatNameList(gateHelperNames)}: ${gateScope} (${formatTaskHours(gateHelperDuration)}).`);
       }
@@ -11372,7 +11369,7 @@ document.addEventListener('DOMContentLoaded', function(){
       pushStage('Gate and operator work', gateLines);
     }
 
-    const coatingStartGate = Math.max(tieInEndAt, prepEndAt, gateEndAt);
+    const coatingStartGate = Math.max(tieInEndAt, prepEndAt);
     const remainingPaintManHours = Math.max(0, paintLaborTotalManHours - paintPrepConsumedManHours);
     const coatingTotalManHours = remainingPaintManHours + washHours + stainManHours;
     if(coatingTotalManHours > 0){
