@@ -11269,6 +11269,15 @@ document.addEventListener('DOMContentLoaded', function(){
     let tieInWelderNames = [];
     let tieInSchedule = null;
     let prepSchedule = null;
+    let prepLineNames = [];
+    let prepLineAction = '';
+    let prepLineHours = 0;
+    let prepLineSubIndex = -1;
+    const buildPrepLine = ()=>{
+      if(!prepLineAction || !prepLineNames.length) return '';
+      const prepDurationLabel = prepLineHours > 0 ? ` (${formatTaskHours(prepLineHours)})` : '';
+      return `${formatNameList(prepLineNames)}: ${prepLineAction}${prepDurationLabel}.`;
+    };
     let paintPrepConsumedManHours = 0;
     const paintPrepEligibleManHours = Math.max(0, paintingHours);
     const paintLaborTotalManHours = Math.max(0, paintingHours + primePaintReturnHours);
@@ -11304,11 +11313,12 @@ document.addEventListener('DOMContentLoaded', function(){
       paintPrepConsumedManHours = prepSchedule.workDone;
       if(prepSchedule.workDone > 0){
         reserveScheduledPeople(prepSchedule);
-        const prepDurationLabel = prepSchedule.elapsed > 0 ? ` (${formatTaskHours(prepSchedule.elapsed)})` : '';
-        const prepAction = hasByHandPaintScope
+        prepLineNames = prepSchedule.participants.length ? prepSchedule.participants : prepNames;
+        prepLineAction = hasByHandPaintScope
           ? `scrape loose rust and debris and hand paint ${paintLenTotal} ft of fence`
           : `scrape loose rust and debris on ${paintLenTotal} ft to prep for paint`;
-        tieInLines.push(`${formatNameList(prepSchedule.participants.length ? prepSchedule.participants : prepNames)}: ${prepAction}${prepDurationLabel}.`);
+        prepLineHours = prepSchedule.elapsed;
+        tieInLines.push(buildPrepLine());
       }
     }
     if(tieInLines.length){
@@ -11319,6 +11329,10 @@ document.addEventListener('DOMContentLoaded', function(){
         tieInTitleBase = 'Panel tie-ins';
       }
       pushStage(tieInTitleBase, tieInLines);
+      const prepStageLine = buildPrepLine();
+      if(prepStageLine){
+        prepLineSubIndex = sub.lastIndexOf(`- ${prepStageLine}`);
+      }
     }
 
     const tieInEndAt = tieInSchedule && tieInSchedule.workDone > 0 ? tieInSchedule.endTime : 0;
@@ -11328,6 +11342,27 @@ document.addEventListener('DOMContentLoaded', function(){
     const gateWelderHours = gateRepairHours + wroughtAddedGateHours;
     const gateHelperManHours = woodAddedGateHours + woodGateRepairManHours + driveGateChainManHours + gateOperatorManHours;
     const gateLines = [];
+    const gateWelderScopeParts = [];
+    if(totals.walkRealign > 0){
+      gateWelderScopeParts.push(`realign ${totals.walkRealign} walk ${plural(totals.walkRealign, 'gate')}`);
+    }
+    if(walkHardwareSummary.total > 0){
+      const hwDetail = walkHardwareSummary.details.length ? ` (${walkHardwareSummary.details.join('; ')})` : '';
+      gateWelderScopeParts.push(`replace walk gate hinges/latch${hwDetail}`);
+    }
+    if(totals.walkRebuild > 0){
+      gateWelderScopeParts.push(`rebuild ${totals.walkRebuild} walk ${plural(totals.walkRebuild, 'gate')}`);
+    }
+    if(totals.walkGateAddsSingle > 0){
+      gateWelderScopeParts.push(`add ${totals.walkGateAddsSingle} single swing walk ${plural(totals.walkGateAddsSingle, 'gate')}`);
+    }
+    if(totals.walkGateAddsDouble > 0){
+      gateWelderScopeParts.push(`add ${totals.walkGateAddsDouble} double swing walk ${plural(totals.walkGateAddsDouble, 'gate')}`);
+    }
+    if(totals.walkGateAdds > 0 && totals.walkGateAddsSingle <= 0 && totals.walkGateAddsDouble <= 0){
+      gateWelderScopeParts.push(`add ${totals.walkGateAdds} walk ${plural(totals.walkGateAdds, 'gate')}`);
+    }
+    const gateWelderScope = gateWelderScopeParts.length ? gateWelderScopeParts.join('; ') : 'gate realign/hardware/rebuild and wrought gate adds';
     let gateWelderNames = [];
     if(gateWelderHours > 0){
       const gateWelders = Math.max(1, Math.min(weldLaneCount, 2));
@@ -11342,7 +11377,7 @@ document.addEventListener('DOMContentLoaded', function(){
         reserveScheduledPeople(gateWelderSchedule);
         const gateWelderDuration = gateWelderSchedule.elapsed;
         const gateWelderSplit = contributorSplitNote(gateWelderSchedule, gateWelderNames);
-        gateLines.push(`${formatNameList(gateWelderNames)}: gate realign/hardware/rebuild and wrought gate adds (${formatTaskHours(gateWelderDuration)}${gateWelderSplit}).`);
+        gateLines.push(`${formatNameList(gateWelderNames)}: ${gateWelderScope} (${formatTaskHours(gateWelderDuration)}${gateWelderSplit}).`);
       }
     }
     if(gateHelperManHours > 0){
@@ -11420,7 +11455,12 @@ document.addEventListener('DOMContentLoaded', function(){
             washHours <= 0 &&
             stainHours <= 0 &&
             sameNameSet(paintNames, prepSchedule.participants);
-          if(!continuingByHandCrew){
+          if(continuingByHandCrew){
+            if(prepLineSubIndex >= 0){
+              prepLineHours += paintSchedule.elapsed;
+              sub[prepLineSubIndex] = `- ${buildPrepLine()}`;
+            }
+          } else {
             const paintDuration = paintSchedule.elapsed;
             const paintSplit = contributorSplitNote(paintSchedule, paintNames);
             const primeNote = primePaintScheduled ? ' (prime + return finish coat)' : '';
@@ -11743,7 +11783,28 @@ document.addEventListener('DOMContentLoaded', function(){
     materialEntries.forEach(({ label, qty }) => {
       sub.push(`- ${qty}x ${label}`);
     });
-    if (notesSubEl) { notesSubEl.value = sub.join('\n'); }
+    const reorderProcessAfterMaterials = (lines)=>{
+      const arr = Array.isArray(lines) ? lines.slice() : [];
+      const processIdx = arr.indexOf('PROCESS');
+      const scopeIdx = arr.indexOf('SCOPE (Totals)');
+      const materialsIdx = arr.indexOf('MATERIALS');
+      if(processIdx < 0 || scopeIdx < 0 || materialsIdx < 0) return arr;
+      if(processIdx >= scopeIdx) return arr;
+      if(materialsIdx <= scopeIdx) return arr;
+
+      let processBlock = arr.slice(processIdx, scopeIdx);
+      while(processBlock.length && processBlock[processBlock.length - 1] === ''){
+        processBlock.pop();
+      }
+
+      const base = [...arr.slice(0, processIdx), ...arr.slice(scopeIdx)];
+      if(base.length && base[base.length - 1] !== ''){
+        base.push('');
+      }
+      return [...base, ...processBlock];
+    };
+    const orderedSub = reorderProcessAfterMaterials(sub);
+    if (notesSubEl) { notesSubEl.value = orderedSub.join('\n'); }
 
     const laborHoursOnsite = isFinite(estimatedOnsiteHours) ? estimatedOnsiteHours : 0;
     const laborCost = laborHoursOnsite * LABOR_RATE;
