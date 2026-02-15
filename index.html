@@ -10869,7 +10869,8 @@ document.addEventListener('DOMContentLoaded', function(){
       });
       let remaining = Math.max(0, Number(totalHours) || 0);
       let cursor = Math.max(0, Number(earliestStart) || 0);
-      const boundedEnd = isFinite(Number(latestEnd)) ? Number(latestEnd) : null;
+      const hasBoundedEnd = latestEnd !== null && latestEnd !== undefined && isFinite(Number(latestEnd));
+      const boundedEnd = hasBoundedEnd ? Number(latestEnd) : null;
       let startedAt = null;
 
       if(!roster.length || remaining <= 0){
