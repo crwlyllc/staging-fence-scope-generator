@@ -6712,7 +6712,9 @@ document.addEventListener('DOMContentLoaded', function(){
     grossProfitTargetPerHour: 125,
     grossProfitMinimumResidential: 350,
     grossProfitMinimumCommercial: 350,
-    revenueMinimumCommercial: 2500
+    revenueMinimumCommercial: 2500,
+    revenueMinimumFullDayHours: 7,
+    revenueMinimumFullDay: 2967
   };
   const MANUAL_TRAVEL_FLAT = 50;
 
@@ -6738,12 +6740,18 @@ document.addEventListener('DOMContentLoaded', function(){
     return PRICING.grossProfitMinimumResidential;
   }
 
-  function getRevenueMinimum(){
+  function getRevenueMinimum(totalHours){
+    const mins = [];
     const type = getCustomerType();
     if(type === 'Commercial' || type === 'City'){
-      return PRICING.revenueMinimumCommercial;
+      mins.push(PRICING.revenueMinimumCommercial);
     }
-    return null;
+    const hours = Number(totalHours);
+    if(isFinite(hours) && hours >= PRICING.revenueMinimumFullDayHours){
+      mins.push(PRICING.revenueMinimumFullDay);
+    }
+    if(!mins.length) return null;
+    return Math.max(...mins);
   }
 
   function getMinimumLabelAndValue(){
@@ -6845,7 +6853,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!isFinite(revenue) || revenue < 0){
       return { revenue: NaN, mode: 'invalid' };
     }
-    const revenueMinimum = getRevenueMinimum();
+    const revenueMinimum = getRevenueMinimum(totalHours);
     if(isFinite(revenueMinimum) && revenueMinimum > 0 && revenue < revenueMinimum){
       revenue = revenueMinimum;
       const minTargetGross = grossProfitForRevenue(revenue, cost);
@@ -11065,16 +11073,25 @@ document.addEventListener('DOMContentLoaded', function(){
     const hasPanelTieIns = postPanelTieInWelderHours > 0;
     const hasPaintPrep = paintLenTotal > 0;
     let tieInWelderNames = [];
+    let tieInStageDuration = 0;
+    let paintPrepConsumedManHours = 0;
+    const paintPrepEligibleManHours = Math.max(0, paintingHours);
+    const paintLaborTotalManHours = Math.max(0, paintingHours + primePaintReturnHours);
     if(postPanelTieInWelderHours > 0){
       const tieInWelders = Math.max(1, Math.min(weldLaneCount, wroughtPostReplacements || 1));
       tieInWelderNames = assignWelderLaneNames(tieInWelders);
       const tieInDuration = postPanelTieInWelderHours / tieInWelders;
-      tieInLines.push(`${formatNameList(tieInWelderNames)}: weld panels back to ${wroughtPostReplacements} replacement ${plural(wroughtPostReplacements, 'post')} and trim tops of posts to be 2" above the panel (${formatTaskHours(tieInDuration)}).`);
+      tieInStageDuration = tieInDuration;
+      tieInLines.push(`${formatNameList(tieInWelderNames)}: weld panels back to ${wroughtPostReplacements} replacement ${plural(wroughtPostReplacements, 'post')}, trim tops of posts to be 2" above the panel, and put a matching post cap on each post (${formatTaskHours(tieInDuration)}).`);
     }
-    if(paintLenTotal > 0){
+    if(hasPanelTieIns && paintLenTotal > 0 && paintPrepEligibleManHours > 0){
       const prepCrew = postPanelTieInWelderHours > 0 ? helperLaneParallel : helperLaneFullCrew;
       const prepNames = pickCrewNames(prepCrew, tieInWelderNames);
-      const prepDuration = paintingHours > 0 ? (paintingHours / prepCrew) : 0;
+      const prepDurationRaw = paintPrepEligibleManHours / prepCrew;
+      const prepDuration = postPanelTieInWelderHours > 0
+        ? Math.min(prepDurationRaw, tieInStageDuration)
+        : prepDurationRaw;
+      paintPrepConsumedManHours = Math.min(paintPrepEligibleManHours, prepDuration * prepCrew);
       const prepDurationLabel = prepDuration > 0 ? ` (${formatTaskHours(prepDuration)})` : '';
       tieInLines.push(`${formatNameList(prepNames)}: scrape loose rust and debris on ${paintLenTotal} ft to prep for paint${prepDurationLabel}.`);
     }
@@ -11123,7 +11140,8 @@ document.addEventListener('DOMContentLoaded', function(){
       pushStage('Gate and operator work', gateLines);
     }
 
-    const coatingTotalManHours = paintingHours + primePaintReturnHours + washHours + stainManHours;
+    const remainingPaintManHours = Math.max(0, paintLaborTotalManHours - paintPrepConsumedManHours);
+    const coatingTotalManHours = remainingPaintManHours + washHours + stainManHours;
     if(coatingTotalManHours > 0){
       const coatingLines = [];
       let sprayNames = [];
@@ -11133,10 +11151,10 @@ document.addEventListener('DOMContentLoaded', function(){
         const sprayDuration = (sprayBaseHours + sprayFinishHours) / sprayCrew;
         coatingLines.push(`${formatNameList(sprayNames)}: spray coats on scheduled metal sections (${formatTaskHours(sprayDuration)}).`);
       }
-      if(paintLenTotal > 0){
+      if(paintLenTotal > 0 && remainingPaintManHours > 0){
         const paintCrew = (sprayBaseHours + sprayFinishHours) > 0 ? helperLaneParallel : helperLaneFullCrew;
         const paintNames = pickCrewNames(paintCrew, sprayNames);
-        const paintDuration = (paintingHours + primePaintReturnHours) > 0 ? (paintingHours + primePaintReturnHours) / paintCrew : 0;
+        const paintDuration = remainingPaintManHours / paintCrew;
         const primeNote = primePaintScheduled ? ' (prime + return finish coat)' : '';
         const durationNote = paintDuration > 0 ? ` (${formatTaskHours(paintDuration)})` : '';
         coatingLines.push(`${formatNameList(paintNames)}: paint ${paintLenTotal} ft of fence${primeNote}${durationNote}.`);
