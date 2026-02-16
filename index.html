@@ -1135,10 +1135,17 @@
         <div class="sp-card-header">
           <div class="sp-card-title">Quick Costs</div>
           <div class="sp-row">
-            <button class="sp-btn" id="sp-copy-costs-all" type="button" disabled>Copy All 4</button>
+            <button class="sp-btn" id="sp-copy-costs-all" type="button" disabled>Copy All 5</button>
           </div>
         </div>
         <div class="sp-grid">
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-cost-charge">Price to Charge</label>
+            <div class="sp-copy-row">
+              <input class="sp-input" id="sp-cost-charge" type="text" readonly value="—" />
+              <button class="sp-btn ghost" id="sp-copy-cost-charge" type="button" disabled>Copy</button>
+            </div>
+          </div>
           <div class="sp-field col-12">
             <label class="sp-label" for="sp-cost-travel">Travel</label>
             <div class="sp-copy-row">
@@ -1168,7 +1175,7 @@
             </div>
           </div>
         </div>
-        <div class="sp-hint">Fast copy values for HCP: Travel, Materials, Consumables, and Labor.</div>
+        <div class="sp-hint">Fast copy values for HCP: Price to Charge, Travel, Materials, Consumables, and Labor.</div>
       </div>
 
       <div class="sp-card" id="sp-sub">
@@ -1505,10 +1512,12 @@ document.addEventListener('DOMContentLoaded', function(){
   const serviceCopyAllBtn = $('#sp-copy-service');
   const quickCostsCardEl = document.getElementById('sp-quick-costs-card');
   const quickCostsCopyAllBtn = document.getElementById('sp-copy-costs-all');
+  const quickCostChargeInput = document.getElementById('sp-cost-charge');
   const quickCostTravelInput = document.getElementById('sp-cost-travel');
   const quickCostMaterialsInput = document.getElementById('sp-cost-materials');
   const quickCostConsumablesInput = document.getElementById('sp-cost-consumables');
   const quickCostLaborInput = document.getElementById('sp-cost-labor');
+  const quickCostChargeBtn = document.getElementById('sp-copy-cost-charge');
   const quickCostTravelBtn = document.getElementById('sp-copy-cost-travel');
   const quickCostMaterialsBtn = document.getElementById('sp-copy-cost-materials');
   const quickCostConsumablesBtn = document.getElementById('sp-copy-cost-consumables');
@@ -11537,6 +11546,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
     let gatePaintConsumedManHours = 0;
+    let gatePaintNames = [];
     if(!hasPanelTieIns && hasByHandPaintScope && paintLenTotal > 0 && gateEndAt > gateStartGate){
       const gatePaintEligibleManHours = Math.max(0, paintPrepEligibleManHours - paintPrepConsumedManHours);
       if(gatePaintEligibleManHours > 0){
@@ -11551,7 +11561,7 @@ document.addEventListener('DOMContentLoaded', function(){
         gatePaintConsumedManHours = gatePaintSchedule.workDone;
         if(gatePaintSchedule.workDone > 0){
           reserveScheduledPeople(gatePaintSchedule);
-          const gatePaintNames = gatePaintSchedule.participants.length ? gatePaintSchedule.participants : gatePaintCandidates;
+          gatePaintNames = gatePaintSchedule.participants.length ? gatePaintSchedule.participants : gatePaintCandidates;
           const gatePaintDuration = gatePaintSchedule.elapsed;
           gateLines.push(`${formatNameList(gatePaintNames)}: scrape loose rust and debris and hand paint ${paintLenTotal} ft of fence (${formatTaskHours(gatePaintDuration)}).`);
         }
@@ -11566,6 +11576,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const coatingTotalManHours = remainingPaintManHours + washHours + stainManHours;
     if(coatingTotalManHours > 0){
       const coatingLines = [];
+      const hasSimpleByHandPaintTail =
+        hasByHandPaintScope &&
+        (sprayBaseHours + sprayFinishHours) <= 0 &&
+        washHours <= 0 &&
+        stainHours <= 0;
       let sprayNames = [];
       let paintSchedule = null;
       let paintNames = [];
@@ -11587,7 +11602,20 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       if(paintLenTotal > 0 && remainingPaintManHours > 0){
         const paintCrew = (sprayBaseHours + sprayFinishHours) > 0 ? helperLaneParallel : helperLaneFullCrew;
-        const paintCandidates = pickCrewNames(paintCrew, sprayNames);
+        const defaultPaintCandidates = pickCrewNames(paintCrew, sprayNames);
+        let paintCandidates = defaultPaintCandidates.slice();
+        if(hasSimpleByHandPaintTail && defaultPaintCandidates.length){
+          const shortTailThresholdHours = 20 / 60;
+          const estimatedFullCrewDuration = remainingPaintManHours / defaultPaintCandidates.length;
+          const preferredByHandTailCrew = (
+            (prepSchedule && prepSchedule.workDone > 0 && prepSchedule.participants.length)
+              ? prepSchedule.participants.slice()
+              : (gatePaintNames.length ? gatePaintNames.slice() : crewNames.filter(name=> !welderNames.includes(name)))
+          ).filter(name=> !sprayNames.includes(name));
+          if(estimatedFullCrewDuration <= shortTailThresholdHours && preferredByHandTailCrew.length){
+            paintCandidates = preferredByHandTailCrew;
+          }
+        }
         paintSchedule = scheduleWorkByAvailability({
           names: paintCandidates,
           totalHours: remainingPaintManHours,
@@ -12028,6 +12056,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     renderQuickCosts({
+      charge: revenue,
       travel: travelCost,
       materials: costMaterials,
       consumables: consumablesCost,
@@ -12145,6 +12174,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function quickCostRows(){
     return [
+      { key: 'charge', label: 'Price to Charge', input: quickCostChargeInput, button: quickCostChargeBtn },
       { key: 'travel', label: 'Travel', input: quickCostTravelInput, button: quickCostTravelBtn },
       { key: 'materials', label: 'Materials', input: quickCostMaterialsInput, button: quickCostMaterialsBtn },
       { key: 'consumables', label: 'Consumables', input: quickCostConsumablesInput, button: quickCostConsumablesBtn },
@@ -12179,6 +12209,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const normalized = {
+      charge: Number(costs.charge),
       travel: Number(costs.travel),
       materials: Number(costs.materials),
       consumables: Number(costs.consumables),
@@ -12234,6 +12265,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
     const lines = [
+      `Price to charge: $${money(lastQuickCosts.charge)}`,
       lastQuickCosts.travelIncluded === false ? 'Travel: Not included' : `Travel: $${money(lastQuickCosts.travel)}`,
       `Materials: $${money(lastQuickCosts.materials)}`,
       `Consumables: $${money(lastQuickCosts.consumables)}`,
@@ -12606,6 +12638,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('sp-copy-reload').addEventListener('click', copyReloadKey);
   document.getElementById('sp-copy-sub').addEventListener('click', copySubNotes);
   if(quickCostsCopyAllBtn){ quickCostsCopyAllBtn.addEventListener('click', copyAllQuickCosts); }
+  if(quickCostChargeBtn){ quickCostChargeBtn.addEventListener('click', copyQuickCostButton); }
   if(quickCostTravelBtn){ quickCostTravelBtn.addEventListener('click', copyQuickCostButton); }
   if(quickCostMaterialsBtn){ quickCostMaterialsBtn.addEventListener('click', copyQuickCostButton); }
   if(quickCostConsumablesBtn){ quickCostConsumablesBtn.addEventListener('click', copyQuickCostButton); }
