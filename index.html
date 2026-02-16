@@ -11272,6 +11272,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const helperTaskParts = [];
     let helperTaskManHours = 0;
     let helperNamesForStage = [];
+    let helperAssistOnly = false;
     let postLaneReadyAt = 0;
     if(hasPostLane){
       helperTaskParts.push(...postTaskParts);
@@ -11282,7 +11283,7 @@ document.addEventListener('DOMContentLoaded', function(){
       helperTaskManHours += productionHelperManHours;
     }
     if(helperTaskParts.length && helperTaskManHours > 0){
-      const helperAssistOnly = helperTaskParts.every(part=> /^assist welder with /i.test(String(part || '').trim()));
+      helperAssistOnly = helperTaskParts.every(part=> /^assist welder with /i.test(String(part || '').trim()));
       const helperCount = helperAssistOnly
         ? Math.max(1, Math.min(
           hasWelderLane ? postStageWelderNames.length : 1,
@@ -11300,15 +11301,31 @@ document.addEventListener('DOMContentLoaded', function(){
         .map(part=>{
           if(!/^assist welder with /i.test(String(part || '').trim())) return part;
           const welderLabel = postStageWelderNames.length ? formatNameList(postStageWelderNames) : 'welder';
+          const cutWeldMatch = String(part).match(/^assist welder with\s+(\d+)\s+cut\/weld\s+(.+?)\s+realignment(?:s)?$/i);
+          if(cutWeldMatch){
+            const count = parseInt(cutWeldMatch[1], 10) || 0;
+            const targetBase = String(cutWeldMatch[2] || '').trim();
+            const targetLabel = count === 1 ? targetBase : `${targetBase}s`;
+            return `realign ${count} ${targetLabel} via the cut and weld method`;
+          }
           return String(part).replace(/^assist welder with /i, `assist ${welderLabel} with `);
         })
         .join('; ');
-      postAndWeldLines.push(`${formatNameList(helperNamesForStage)}: ${helperTaskText} (${formatTaskHours(helperDuration)}).`);
+      const helperLineNames = helperAssistOnly
+        ? Array.from(new Set([...postStageWelderNames, ...helperNamesForStage]))
+        : helperNamesForStage;
+      postAndWeldLines.push(`${formatNameList(helperLineNames)}: ${helperTaskText} (${formatTaskHours(helperDuration)}).`);
     }
     welderBuckets.forEach((bucket, idx)=>{
       const welderName = postStageWelderNames[idx] || `Welder ${idx + 1}`;
       reservePeopleUntil([welderName], bucket.hours);
       stageOneEndAt = Math.max(stageOneEndAt, bucket.hours);
+      const cutWeldPattern = /\bcut\/weld\b/i;
+      const hasCutWeldTask = bucket.tasks.some(task=> cutWeldPattern.test(String(task || '')));
+      const hasNonCutWeldTask = bucket.tasks.some(task=> !cutWeldPattern.test(String(task || '')));
+      if(helperAssistOnly && hasCutWeldTask && !hasNonCutWeldTask){
+        return;
+      }
       postAndWeldLines.push(`${formatNameList([welderName])}: ${bucket.tasks.join('; ')} (${formatTaskHours(bucket.hours)}).`);
     });
     if(
