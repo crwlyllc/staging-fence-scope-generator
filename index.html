@@ -9776,9 +9776,10 @@ document.addEventListener('DOMContentLoaded', function(){
       helperHours += cureManHours;
     }
     const cutWeldWelderHours = totals.postsRealignCutWeld * (20/60);
-    const cutWeldHelperHours = 0;
+    const cutWeldHelperHours = totals.postsRealignCutWeld * (20/60);
     if(totals.postsRealignCutWeld > 0){
-      manHours += cutWeldWelderHours;
+      manHours += cutWeldWelderHours + cutWeldHelperHours;
+      helperHours += cutWeldHelperHours;
       welderHours += cutWeldWelderHours;
     }
     const gateRepairHours = totals.walkRealign * 1 + totals.walkHardware * 1 + totals.walkRebuild * 3;
@@ -11150,14 +11151,20 @@ document.addEventListener('DOMContentLoaded', function(){
     if(concreteRealignCount > 0){
       postTaskParts.push(`realign ${concreteRealignCount} metal posts (dig, straighten, and add concrete)`);
     }
+    if(totals.postsRealignCutWeld > 0){
+      postTaskParts.push(`assist welder with ${totals.postsRealignCutWeld} cut/weld metal post ${plural(totals.postsRealignCutWeld, 'realignment')}`);
+    }
     if((totals.woodPostReplace6 + totals.woodPostReplace8) > 0){
       postTaskParts.push(`replace ${totals.woodPostReplace6 + totals.woodPostReplace8} wood posts`);
     }
     if(totals.woodPostInstall > 0){
       postTaskParts.push(`install ${totals.woodPostInstall} wood posts`);
     }
-    if((totals.woodPostRealignDig + totals.woodPostRealignCutWeld) > 0){
-      postTaskParts.push(`realign ${totals.woodPostRealignDig + totals.woodPostRealignCutWeld} wood posts`);
+    if(totals.woodPostRealignDig > 0){
+      postTaskParts.push(`realign ${totals.woodPostRealignDig} wood posts (dig/straighten)`);
+    }
+    if(totals.woodPostRealignCutWeld > 0){
+      postTaskParts.push(`assist welder with ${totals.woodPostRealignCutWeld} cut/weld wood post ${plural(totals.woodPostRealignCutWeld, 'realignment')}`);
     }
 
     const patchWelderHours = totals.wiPatches * (20/60);
