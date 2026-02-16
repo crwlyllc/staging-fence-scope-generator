@@ -1344,7 +1344,7 @@ document.addEventListener('DOMContentLoaded', function(){
   ];
 
   const POST_REALIGN_METHODS = [
-    { value: 'concrete', label: 'Concrete' },
+    { value: 'concrete', label: 'Dig, straighten, add concrete' },
     { value: 'cut-weld', label: 'Cut & Weld' }
   ];
 
@@ -4096,9 +4096,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const qty = parseInt((row.querySelector('[data-post-realign-qty] input')?.value)||'0',10) || 0;
         const rawMethod = (row.querySelector('[data-post-realign-method]')?.value) || 'concrete';
         const method = rawMethod === 'cut-weld' ? 'cut-weld' : 'concrete';
-        const size = method === 'cut-weld'
-          ? ''
-          : ((row.querySelector('[data-post-realign-size]')?.value) || SEED.postRealignSize[0]);
+        const size = (row.querySelector('[data-post-realign-size]')?.value) || SEED.postRealignSize[0];
         if(qty>0){
           const entry = { qty, method, size };
           postRealignments.push(entry);
@@ -4573,9 +4571,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const qty = parseInt((row.querySelector('[data-post-realign-qty] input')?.value)||'0',10) || 0;
       const rawMethod = (row.querySelector('[data-post-realign-method]')?.value) || 'concrete';
       const method = rawMethod === 'cut-weld' ? 'cut-weld' : 'concrete';
-      const size = method === 'cut-weld'
-        ? ''
-        : ((row.querySelector('[data-post-realign-size]')?.value) || SEED.postRealignSize[0] || '');
+      const size = (row.querySelector('[data-post-realign-size]')?.value) || SEED.postRealignSize[0] || '';
       return { qty, method, size };
     });
   }
@@ -4842,18 +4838,24 @@ document.addEventListener('DOMContentLoaded', function(){
     return null;
   }
 
-  function countPostGroups(arr){
+  function countPostGroupsByMethod(arr, method='concrete'){
     const counts = { posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 };
+    const targetMethod = String(method || 'concrete').toLowerCase() === 'cut-weld' ? 'cut-weld' : 'concrete';
     (Array.isArray(arr) ? arr : []).forEach(item=>{
       const qty = parseInt(item?.qty,10) || 0;
       if(qty <= 0) return;
-      if((item?.method || 'concrete') === 'cut-weld') return;
-      const key = postSizeKey(item?.size || item?.postSize);
+      const itemMethod = String(item?.method || 'concrete').toLowerCase() === 'cut-weld' ? 'cut-weld' : 'concrete';
+      if(itemMethod !== targetMethod) return;
+      const key = postSizeKey(item?.size || item?.postSize || SEED.postRealignSize[0] || '');
       if(key && Object.prototype.hasOwnProperty.call(counts, key)){
         counts[key] += qty;
       }
     });
     return counts;
+  }
+
+  function countPostGroups(arr){
+    return countPostGroupsByMethod(arr, 'concrete');
   }
 
   function postKeyToLabel(key){
@@ -7648,7 +7650,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodPostReplace6:0, woodPostReplace8:0, woodPostRealignCutWeld:0, woodPostRealignDig:0,
       woodPostInstall:0, woodPanels:0, woodGateRepair:0, woodGateStrengthen:0, woodGateReplace:0,
       woodTopCapLf:0, woodTrimLf:0, woodKickLf:0, woodStainSqft:0,
-      posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0, postsRealignCutWeld:0,
+      posts2x2:0, posts3x3:0, posts1p5:0, posts4x4:0, postsRealign2x2:0, postsRealign3x3:0, postsRealignCutWeld:0, postsRealignCutWeldBySize: zeroPostCounts(),
       retainingWallPosts: zeroPostCounts(),
       walkGates:0, walkRealign:0, walkHardware:0, walkRebuild:0,
       walkGateAdds:0,
@@ -8116,6 +8118,7 @@ document.addEventListener('DOMContentLoaded', function(){
       let replaceCounts = zeroPostCounts();
       let realignCounts = zeroPostCounts();
       let realignCutWeld = 0;
+      let realignCutWeldCounts = zeroPostCounts();
       if(isRepair){
         const repairLines = [];
         if(isWood){
@@ -8155,6 +8158,7 @@ document.addEventListener('DOMContentLoaded', function(){
           replaceCounts = countPostGroups(s.postReplacements);
           realignCounts = countPostGroups(s.postRealignments);
           realignCutWeld = countRealignCutWeld(s.postRealignments);
+          realignCutWeldCounts = countPostGroupsByMethod(s.postRealignments, 'cut-weld');
           if(picketReplaceCount > 0) repairLines.push(`  - Pickets to replace: ${picketReplaceCount}`);
           if(puppyPicketReplaceCount > 0){
             const detailSuffix = puppyPicketDetail ? ` (${puppyPicketDetail})` : '';
@@ -8176,7 +8180,13 @@ document.addEventListener('DOMContentLoaded', function(){
           if(realignCounts.posts2x2 > 0) repairLines.push(`  - 2x2 posts to realign: ${realignCounts.posts2x2}`);
           if(realignCounts.posts3x3 > 0) repairLines.push(`  - 3x3 posts to realign: ${realignCounts.posts3x3}`);
           if(realignCutWeld > 0){
-            repairLines.push(`  - Posts to realign (cut & weld): ${realignCutWeld}`);
+            const cutWeldSizeParts = [];
+            if(realignCutWeldCounts.posts2x2 > 0) cutWeldSizeParts.push(`${realignCutWeldCounts.posts2x2} × 2x2`);
+            if(realignCutWeldCounts.posts3x3 > 0) cutWeldSizeParts.push(`${realignCutWeldCounts.posts3x3} × 3x3`);
+            if(realignCutWeldCounts.posts1p5 > 0) cutWeldSizeParts.push(`${realignCutWeldCounts.posts1p5} × 1 1/2" x 1 1/2"`);
+            if(realignCutWeldCounts.posts4x4 > 0) cutWeldSizeParts.push(`${realignCutWeldCounts.posts4x4} × 4x4`);
+            const cutWeldSizeDetail = cutWeldSizeParts.length ? ` (${cutWeldSizeParts.join('; ')})` : '';
+            repairLines.push(`  - Posts to realign (cut & weld): ${realignCutWeld}${cutWeldSizeDetail}`);
           }
           if(braceTotalQty > 0){
             const braceSummary = braceLineParts.length ? ` (${braceLineParts.join('; ')})` : '';
@@ -8556,6 +8566,7 @@ document.addEventListener('DOMContentLoaded', function(){
           totals.postsRealign2x2 += realignCounts.posts2x2;
           totals.postsRealign3x3 += realignCounts.posts3x3;
           totals.postsRealignCutWeld += realignCutWeld;
+          addPostCounts(totals.postsRealignCutWeldBySize, realignCutWeldCounts);
         }
         totals.walkGates   += wg;
         totals.walkRealign += wgr;
@@ -9335,9 +9346,18 @@ document.addEventListener('DOMContentLoaded', function(){
       if(partText) addServiceLine('Realign Leaning Posts', `Plumb and secure ${partText} without replacement.`);
     }
     if (totals.postsRealignCutWeld > 0){
+      const cutWeldCounts = totals.postsRealignCutWeldBySize || zeroPostCounts();
+      const cutWeldParts = [];
+      if(cutWeldCounts.posts2x2 > 0) cutWeldParts.push(describeCount(cutWeldCounts.posts2x2, '2x2 post', '2x2 posts'));
+      if(cutWeldCounts.posts3x3 > 0) cutWeldParts.push(describeCount(cutWeldCounts.posts3x3, '3x3 post', '3x3 posts'));
+      if(cutWeldCounts.posts1p5 > 0) cutWeldParts.push(describeCount(cutWeldCounts.posts1p5, '1 1/2" x 1 1/2" post', '1 1/2" x 1 1/2" posts'));
+      if(cutWeldCounts.posts4x4 > 0) cutWeldParts.push(describeCount(cutWeldCounts.posts4x4, '4x4 post', '4x4 posts'));
+      const cutWeldText = cutWeldParts.length
+        ? joinParts(cutWeldParts)
+        : describeCount(totals.postsRealignCutWeld, 'post', 'posts');
       addServiceLine(
         'Realign Leaning Posts (Cut & Weld)',
-        `Cut, brace, and weld ${describeCount(totals.postsRealignCutWeld, 'leaning post', 'leaning posts')} back plumb without resetting in concrete.`
+        `Realign ${cutWeldText} via cut and weld.`
       );
     }
     if (totals.finials > 0){
@@ -9699,6 +9719,7 @@ document.addEventListener('DOMContentLoaded', function(){
       (replacePostCounts.posts3x3 || 0) +
       (replacePostCounts.posts4x4 || 0)
     );
+    const concreteRealignCount = totals.postsRealign2x2 + totals.postsRealign3x3;
     const weldRepairHours = (
       totals.wiPickets*12 +
       totals.puppyPickets*12 +
@@ -9706,11 +9727,15 @@ document.addEventListener('DOMContentLoaded', function(){
       totals.wiPatches*20 +
       totals.wiRails*45 +
       totals.wiRailGaps*20 +
-      totals.weldRedos*5 +
-      (totals.postsRealign2x2 + totals.postsRealign3x3)*30
+      totals.weldRedos*5
     )/60;
     manHours += weldRepairHours;
     welderHours += weldRepairHours;
+    const concreteRealignHelperManHours = concreteRealignCount * (30/60);
+    if(concreteRealignHelperManHours > 0){
+      manHours += concreteRealignHelperManHours;
+      helperHours += concreteRealignHelperManHours;
+    }
     let postReplacementCrewManHours = 0;
     let postReplacementWelderHours = 0;
     if(wroughtPostReplacements > 0){
@@ -9750,7 +9775,7 @@ document.addEventListener('DOMContentLoaded', function(){
       manHours += cureManHours;
       helperHours += cureManHours;
     }
-    const cutWeldWelderHours = totals.postsRealignCutWeld * 0.5;
+    const cutWeldWelderHours = totals.postsRealignCutWeld * (20/60);
     const cutWeldHelperHours = 0;
     if(totals.postsRealignCutWeld > 0){
       manHours += cutWeldWelderHours;
@@ -11104,6 +11129,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postReplacementCrewManHours +
       postInstallManHours +
       cureManHours +
+      concreteRealignHelperManHours +
       cutWeldHelperHours +
       woodPostReplaceManHours +
       woodPostRealignDigManHours +
@@ -11121,8 +11147,8 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
     if(installPostSummary) postTaskParts.push(`set ${installPostSummary} new posts`);
-    if((totals.postsRealign2x2 + totals.postsRealign3x3) > 0){
-      postTaskParts.push(`realign ${totals.postsRealign2x2 + totals.postsRealign3x3} metal posts (dig/straighten/concrete)`);
+    if(concreteRealignCount > 0){
+      postTaskParts.push(`realign ${concreteRealignCount} metal posts (dig, straighten, and add concrete)`);
     }
     if((totals.woodPostReplace6 + totals.woodPostReplace8) > 0){
       postTaskParts.push(`replace ${totals.woodPostReplace6 + totals.woodPostReplace8} wood posts`);
@@ -11141,7 +11167,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const picketWelderHours = totals.wiPickets * (12/60);
     const puppyPicketWelderHours = totals.puppyPickets * (12/60);
     const weldRedoWelderHours = totals.weldRedos * (5/60);
-    const concreteRealignCount = totals.postsRealign2x2 + totals.postsRealign3x3;
     const welderTaskGroups = [];
     if(totals.wiPatches > 0){
       welderTaskGroups.push({ hours: patchWelderHours, label: `${totals.wiPatches}x rail ${plural(totals.wiPatches, 'patch', 'patches')}` });
@@ -11170,20 +11195,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if(totals.weldRedos > 0){
       welderTaskGroups.push({ hours: weldRedoWelderHours, label: `${totals.weldRedos}x weld ${plural(totals.weldRedos, 'redo')}` });
-    }
-    if(concreteRealignCount > 0){
-      const splitLanes = Math.max(1, Math.min(maxWeldersConfigured, concreteRealignCount));
-      const baseCountPerLane = Math.floor(concreteRealignCount / splitLanes);
-      let remainder = concreteRealignCount % splitLanes;
-      for(let lane=0; lane<splitLanes; lane++){
-        const laneCount = baseCountPerLane + (remainder > 0 ? 1 : 0);
-        if(remainder > 0) remainder -= 1;
-        if(laneCount <= 0) continue;
-        welderTaskGroups.push({
-          hours: laneCount * (30/60),
-          label: `metal post realign weld cleanup (${laneCount} ${plural(laneCount, 'post')})`
-        });
-      }
     }
     if(totals.finials > 0){
       welderTaskGroups.push({ hours: finialHours, label: `${totals.finials}x finial ${plural(totals.finials, 'replacement')}` });
