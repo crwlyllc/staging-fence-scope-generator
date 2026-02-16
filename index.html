@@ -10848,7 +10848,6 @@ document.addEventListener('DOMContentLoaded', function(){
     };
     const estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
     const totalLaborHoursLabel = formatHours(manHours);
-    const onsiteCrewLabel = `${ONSITE_CREW_SIZE}-man crew`;
 
     const materialSortGroup = (label)=>{
       const normalized = String(label || '').toLowerCase();
@@ -10882,11 +10881,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const sub = [];
     sub.push("CREW");
-    if (totalLaborHoursLabel) {
-      sub.push(`- Total labor time: ${totalLaborHoursLabel}`);
-    }
     if (estimatedOnsiteLabel) {
-      sub.push(`- Estimated onsite time (${onsiteCrewLabel}): ${estimatedOnsiteLabel}`);
+      sub.push(`${estimatedOnsiteLabel} onsite`);
     }
     sub.push('');
     sub.push('PROCESS');
