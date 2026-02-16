@@ -957,6 +957,7 @@
           <div class="sp-subtitle">Internal Scope Generator</div>
         </div>
         <div class="sp-actions">
+          <a class="sp-btn ghost" href="crew-policies.html" target="_blank" rel="noopener noreferrer">Crew Policies</a>
           <button class="sp-btn ghost" id="sp-open-manual" type="button">Manual Quote</button>
           <button class="sp-btn ghost" id="sp-open-import" type="button">Reload from Notes</button>
           <button class="sp-btn is-hidden" id="sp-refresh-materials" type="button" data-gated>Update Material Costs</button>
@@ -11604,6 +11605,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const paintCrew = (sprayBaseHours + sprayFinishHours) > 0 ? helperLaneParallel : helperLaneFullCrew;
         const defaultPaintCandidates = pickCrewNames(paintCrew, sprayNames);
         let paintCandidates = defaultPaintCandidates.slice();
+        let shortTailWrapUpNames = [];
         if(hasSimpleByHandPaintTail && defaultPaintCandidates.length){
           const shortTailThresholdHours = 20 / 60;
           const estimatedFullCrewDuration = remainingPaintManHours / defaultPaintCandidates.length;
@@ -11614,6 +11616,8 @@ document.addEventListener('DOMContentLoaded', function(){
           ).filter(name=> !sprayNames.includes(name));
           if(estimatedFullCrewDuration <= shortTailThresholdHours && preferredByHandTailCrew.length){
             paintCandidates = preferredByHandTailCrew;
+            const preferredSet = new Set(preferredByHandTailCrew);
+            shortTailWrapUpNames = defaultPaintCandidates.filter(name=> !preferredSet.has(name));
           }
         }
         paintSchedule = scheduleWorkByAvailability({
@@ -11642,6 +11646,10 @@ document.addEventListener('DOMContentLoaded', function(){
             const primeNote = primePaintScheduled ? ' (prime + return finish coat)' : '';
             const durationNote = paintDuration > 0 ? ` (${formatTaskHours(paintDuration)}${paintSplit})` : '';
             coatingLines.push(`${formatNameList(paintNames)}: paint ${paintLenTotal} ft of fence${primeNote}${durationNote}.`);
+            if(shortTailWrapUpNames.length && paintDuration > 0){
+              reservePeopleUntil(shortTailWrapUpNames, paintSchedule.endTime);
+              coatingLines.push(`${formatNameList(shortTailWrapUpNames)}: clean up tools and load everything up (${formatTaskHours(paintDuration)}).`);
+            }
           }
         }
       }
