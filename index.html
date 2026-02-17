@@ -9647,7 +9647,6 @@ document.addEventListener('DOMContentLoaded', function(){
         const scopeType = (s.scopeType || 'repair');
         return scopeType === 'install' || scopeType === 'replace';
       });
-      let isFirstSection = true;
 
       installSections.forEach(s=>{
         if((s.fenceType || '').toLowerCase() !== 'wood') return;
@@ -9657,8 +9656,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const lengthFt = Math.max(0, parseFloat(s.length || 0) || 0);
         if(lengthFt <= 0) return;
         const spanCount = Math.max(1, Math.ceil(lengthFt / postSpacingFt));
-        const postsTotal = spanCount + (isFirstSection ? 1 : 0);
-        isFirstSection = false;
+        const postsTotal = spanCount + 1;
         const gateAddsForInstall = walkGateAddCount(s);
         const postsToSet = postsTotal + gateAddsForInstall;
         const totalRails = (postsTotal * RAILS_PER_POST) + (gateAddsForInstall * RAILS_PER_POST);
