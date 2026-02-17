@@ -6922,6 +6922,7 @@ document.addEventListener('DOMContentLoaded', function(){
     grossProfitTargetPerHour: 125,
     grossProfitMinimumResidential: 350,
     grossProfitMinimumCommercial: 350,
+    grossProfitMinimumRevenuePercent: 0.30,
     revenueMinimumCommercial: 2500,
     revenueMinimumFullDayHours: 7,
     revenueMinimumFullDay: 2967
@@ -6975,10 +6976,14 @@ document.addEventListener('DOMContentLoaded', function(){
   function getMinimumSummaryText(){
     const minGross = getGrossProfitMinimum();
     const revenueMin = getRevenueMinimum();
+    const marginFloorPct = (Number(PRICING.grossProfitMinimumRevenuePercent) || 0) * 100;
+    const marginFloorLabel = Number.isInteger(marginFloorPct)
+      ? `${marginFloorPct}`
+      : marginFloorPct.toFixed(1).replace(/\.0$/, '');
     if(isFinite(revenueMin) && revenueMin > 0){
-      return `$${money(minGross)} minimum gross, $${money(revenueMin)} minimum charge`;
+      return `$${money(minGross)} minimum gross, ${marginFloorLabel}% minimum gross margin, $${money(revenueMin)} minimum charge`;
     }
-    return `$${money(minGross)} minimum gross`;
+    return `$${money(minGross)} minimum gross, ${marginFloorLabel}% minimum gross margin`;
   }
 
   function updatePricingMinimumUI(){
@@ -7041,6 +7046,43 @@ document.addEventListener('DOMContentLoaded', function(){
     return required / highDenom;
   }
 
+  function solveRevenueForGrossProfitMargin(directCosts, marginFloor){
+    const costs = Number(directCosts);
+    const ratio = Number(marginFloor);
+    if(!isFinite(costs) || costs < 0) return NaN;
+    if(!isFinite(ratio) || ratio <= 0 || ratio >= 1) return NaN;
+    if(costs === 0) return 0;
+
+    const meetsMargin = (revenue)=>{
+      const rev = Number(revenue);
+      if(!isFinite(rev) || rev <= 0) return false;
+      const gross = grossProfitForRevenue(rev, costs);
+      return isFinite(gross) && gross >= (rev * ratio);
+    };
+
+    let low = 0;
+    let high = Math.max(costs + 1, 100);
+    let attempts = 0;
+    while(!meetsMargin(high) && attempts < 60){
+      high *= 2;
+      attempts += 1;
+      if(!isFinite(high) || high > 1e12){
+        return NaN;
+      }
+    }
+    if(!meetsMargin(high)) return NaN;
+
+    for(let i=0;i<60;i++){
+      const mid = (low + high) / 2;
+      if(meetsMargin(mid)){
+        high = mid;
+      }else{
+        low = mid;
+      }
+    }
+    return high;
+  }
+
   function computeTargetGross(hours, targetPerHour = PRICING.grossProfitTargetPerHour, minimum = getGrossProfitMinimum()){
     const h = Number(hours);
     const rate = Number(targetPerHour);
@@ -7064,8 +7106,17 @@ document.addEventListener('DOMContentLoaded', function(){
       return { revenue: NaN, mode: 'invalid' };
     }
     const revenueMinimum = getRevenueMinimum(totalHours);
-    if(isFinite(revenueMinimum) && revenueMinimum > 0 && revenue < revenueMinimum){
-      revenue = revenueMinimum;
+    const marginFloor = Number(PRICING.grossProfitMinimumRevenuePercent);
+    const revenueMarginFloor = (isFinite(marginFloor) && marginFloor > 0)
+      ? solveRevenueForGrossProfitMargin(cost, marginFloor)
+      : NaN;
+    const requiredRevenue = Math.max(
+      revenue,
+      (isFinite(revenueMarginFloor) && revenueMarginFloor > 0) ? revenueMarginFloor : 0,
+      (isFinite(revenueMinimum) && revenueMinimum > 0) ? revenueMinimum : 0
+    );
+    if(isFinite(requiredRevenue) && requiredRevenue > revenue){
+      revenue = requiredRevenue;
       const minTargetGross = grossProfitForRevenue(revenue, cost);
       if(isFinite(minTargetGross)){
         targetGross = Math.max(targetGross, minTargetGross);
@@ -7077,6 +7128,7 @@ document.addEventListener('DOMContentLoaded', function(){
       targetGross,
       hours,
       revenueMinimum,
+      revenueMarginFloor,
       overheadAmount: overheadAmountForRevenue(revenue)
     };
   }
@@ -12455,7 +12507,11 @@ document.addEventListener('DOMContentLoaded', function(){
       cost.push('- Total direct costs: $'+money(directCosts));
       if(isFinite(revenueRes?.targetGross)){
         const hoursLabel = totalHoursLabel || (isFinite(totalHours) && totalHours > 0 ? `${totalHours.toFixed(1)} hours` : 'time TBD');
-        cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}, $${money(getGrossProfitMinimum())} min): $${money(revenueRes.targetGross)}`);
+        const minGrossPct = (Number(PRICING.grossProfitMinimumRevenuePercent) || 0) * 100;
+        const minGrossPctLabel = Number.isInteger(minGrossPct)
+          ? `${minGrossPct}`
+          : minGrossPct.toFixed(1).replace(/\.0$/, '');
+        cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}, $${money(getGrossProfitMinimum())} min, ${minGrossPctLabel}% of revenue min): $${money(revenueRes.targetGross)}`);
       }
       cost.push('- Overhead amount: $'+money(overheadAmount));
       cost.push('- Gross profit: $'+money(grossProfit));
