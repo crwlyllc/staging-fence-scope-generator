@@ -12896,10 +12896,15 @@ document.addEventListener('DOMContentLoaded', function(){
     pushHcpBtn.textContent = 'Pushing...';
 
     try{
+      const encodedReloadKey = extractEmbeddedNotesData(notes);
+      const reloadKey = encodedReloadKey
+        ? `${NOTES_DATA_START}${encodedReloadKey}${NOTES_DATA_END}`
+        : '';
       const payload = {
         estimateNumber,
         notes,
         notesSub,
+        reloadKey,
       };
 
       if(serviceLinesPayload.length){
