@@ -3427,6 +3427,29 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
 
+        <div class="sp-scope-group col-12" data-section-detail data-install-only data-retaining-wall-group style="display:none">
+          <div class="sp-scope-head">
+            <div class="sp-scope-pill">Retaining Wall</div>
+            <div>
+              <div class="sp-scope-title">Wall length & height for fence install</div>
+              <div class="sp-scope-sub"></div>
+            </div>
+          </div>
+          <div class="sp-grid sp-scope-grid">
+            <div class="sp-grid col-12" data-retaining-wall style="display:none">
+              <div class="sp-field col-3">
+                <label class="sp-label">Retaining Wall Length (ft)</label>
+                ${numberControl('retainingWallLength','0')}
+              </div>
+              <div class="sp-field col-3">
+                <label class="sp-label">Retaining Wall Height (ft)</label>
+                <input class="sp-input" data-field="retainingWallHeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 2.5" />
+                <div class="sp-hint">In-House 4 pours the wall only at $35/sq ft ($1,500 min) including wall materials & labor; Jesus' crew installs the fence. Posts in the wall are set during the pour (no extra concrete bags).</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="sp-scope-group col-12 is-style" data-section-detail data-style-group>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Style, Finish & Patches</div>
@@ -3436,18 +3459,6 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
           </div>
           <div class="sp-grid sp-scope-grid">
-        <div class="sp-grid col-12" data-retaining-wall data-install-only style="display:none">
-          <div class="sp-field col-3">
-            <label class="sp-label">Retaining Wall Length (ft)</label>
-            ${numberControl('retainingWallLength','0')}
-          </div>
-          <div class="sp-field col-3">
-            <label class="sp-label">Retaining Wall Height (ft)</label>
-            <input class="sp-input" data-field="retainingWallHeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 2.5" />
-            <div class="sp-hint">In-House 4 pours the wall only at $35/sq ft ($1,500 min) including wall materials & labor; Jesus' crew installs the fence. Posts in the wall are set during the pour (no extra concrete bags).</div>
-          </div>
-        </div>
-
         <div class="sp-grid col-12" data-wrought-only>
           <div class="sp-field col-2">
             <label class="sp-label">Style</label>
@@ -3558,7 +3569,7 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
         </div>
-        <div class="sp-scope-group col-12 is-repair" data-section-detail>
+        <div class="sp-scope-group col-12 is-repair" data-section-detail data-repair-only>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Repairs</div>
             <div>
@@ -5861,14 +5872,11 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function updateStyleGroupVisibility(card){
-    const scopeSel = card.querySelector('[data-field="scopeType"]');
-    const scope = scopeSel ? scopeSel.value : 'repair';
-    const isRepair = scope !== 'install' && scope !== 'replace';
     const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
     const isWood = fenceType === 'wood';
     const styleGroup = card.querySelector('[data-style-group]');
     if(styleGroup){
-      styleGroup.style.display = (isWood && isRepair) ? 'none' : '';
+      styleGroup.style.display = isWood ? 'none' : '';
     }
   }
 
