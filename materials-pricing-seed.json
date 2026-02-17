@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "currency": "USD",
+  "defaultVendorId": "vendor_tbd",
+  "source": {
+    "file": "index.html",
+    "pricingObjects": [
+      "PRICE_MISC",
+      "PRICE_FT",
+      "PRICE.post2x2",
+      "WOOD_BOARD_PIECE_PRICING",
+      "PANEL_PRICE",
+      "post cap pricing matrix (CAP_LABEL_RE-driven)"
+    ]
+  },
+  "directMaterials": [
+    {"id": "mat_gate_latch_gravity", "label": "Gravity Latch", "unitPrice": 5.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Gravity Latch"},
+    {"id": "mat_gate_latch_pool_short", "label": "Short Pool Latch", "unitPrice": 80.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Short Pool Latch"},
+    {"id": "mat_gate_latch_pool_tall", "label": "Tall Pool Latch", "unitPrice": 90.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Tall Pool Latch"},
+    {"id": "mat_gate_lock_box_single", "label": "Single Lock Box", "unitPrice": 5.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Single Lock Box"},
+    {"id": "mat_gate_lock_box_double", "label": "Double Lock Box", "unitPrice": 10.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Double Lock Box"},
+    {"id": "mat_gate_hinge_pair_door", "label": "Pair of Door Hinges", "unitPrice": 5.00, "unitType": "pair", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Pair of Door Hinges"},
+    {"id": "mat_gate_hinge_pair_bat_wing", "label": "Pair of Bat Wing Hinges", "unitPrice": 5.00, "unitType": "pair", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Pair of Bat Wing Hinges"},
+    {"id": "mat_gate_hinge_pair_auto_close", "label": "Pair of Auto Close Hinges", "unitPrice": 50.00, "unitType": "pair", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Pair of Auto Close Hinges"},
+
+    {"id": "mat_post_wood_4x4", "label": "Wood 4x4 posts", "unitPrice": 20.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Wood 4x4 posts"},
+    {"id": "mat_post_round_steel_generic", "label": "Round Steel posts", "unitPrice": 23.61, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Round Steel posts"},
+    {"id": "mat_post_round_steel_9ft", "label": "9ft round steel posts", "unitPrice": 23.61, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "9ft round steel posts"},
+    {"id": "mat_post_round_steel_12ft", "label": "12ft round steel posts", "unitPrice": 31.82, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "12ft round steel posts"},
+    {"id": "mat_post_postmaster", "label": "Postmaster posts", "unitPrice": 50.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Postmaster posts"},
+    {"id": "mat_post_cap_dome_standard", "label": "Dome cap post cap", "unitPrice": 1.13, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Dome cap post cap"},
+    {"id": "mat_post_cap_flat_standard", "label": "Flat cap post cap", "unitPrice": 1.13, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Flat cap post cap"},
+
+    {"id": "mat_simpson_tie_1_piece", "label": "Simpson 1 piece ties", "unitPrice": 1.81, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Simpson 1 piece ties"},
+    {"id": "mat_simpson_tie_2_piece", "label": "Simpson 2 piece ties", "unitPrice": 1.81, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Simpson 2 piece ties"},
+    {"id": "mat_fastener_lag_screw_each", "label": "lag screws", "unitPrice": 0.075, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "lag screws"},
+    {"id": "mat_fastener_lag_screw_bag_100", "label": "lag screw bags (100)", "unitPrice": 7.50, "unitType": "bag", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "lag screw bags (100)"},
+    {"id": "mat_fastener_ring_shank_nail_each", "label": "ring shank nails", "unitPrice": 0.04, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "ring shank nails"},
+    {"id": "mat_fastener_postmaster_screw_box_170", "label": "postmaster screw boxes (170)", "unitPrice": 16.65, "unitType": "box", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "postmaster screw boxes (170)"},
+    {"id": "mat_equipment_skid_steer_rental", "label": "Skid steer rental", "unitPrice": 500.00, "unitType": "day", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Skid steer rental"},
+    {"id": "mat_gate_hinge_wood_walk", "label": "wood walk gate hinge", "unitPrice": 35.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood walk gate hinge"},
+    {"id": "mat_gate_latch_wood_walk", "label": "wood walk gate latch", "unitPrice": 20.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood walk gate latch"},
+
+    {"id": "mat_finial_replacement_each", "label": "replacement finial", "unitPrice": 1.25, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "replacement finial"},
+    {"id": "mat_puppy_insert_1_2", "label": "puppy picket insert (1/2\")", "unitPrice": 62.59, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "puppy picket insert (1/2\")"},
+    {"id": "mat_puppy_insert_5_8", "label": "puppy picket insert (5/8\")", "unitPrice": 62.59, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "puppy picket insert (5/8\")"},
+    {"id": "mat_puppy_plug_1_2", "label": "picket plugs (1/2\")", "unitPrice": 0.10, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "picket plugs (1/2\")"},
+    {"id": "mat_puppy_plug_5_8", "label": "picket plugs (5/8\")", "unitPrice": 0.11, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "picket plugs (5/8\")"},
+    {"id": "mat_prefab_gate_panel", "label": "prefab gate panel", "unitPrice": 0.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "prefab gate panel"},
+
+    {"id": "mat_drive_operator_liftmaster_generic", "label": "LiftMaster drive gate operator", "unitPrice": 2000.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "LiftMaster drive gate operator"},
+    {"id": "mat_drive_operator_single_swing", "label": "LiftMaster LA400PKGUL Swing Gate Operator", "unitPrice": 1866.23, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "DRIVE_GATE_OPERATOR_DETAILS", "priceKey": "Single Swing"},
+    {"id": "mat_drive_operator_double_swing", "label": "LiftMaster LA400PKGUL Dual Swing Gate Operator", "unitPrice": 2601.25, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "DRIVE_GATE_OPERATOR_DETAILS", "priceKey": "Double Swing"},
+    {"id": "mat_drive_operator_sliding", "label": "LiftMaster CSL24UL 24VDC High Traffic Commercial Slide Gate Operator", "unitPrice": 2596.92, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "DRIVE_GATE_OPERATOR_DETAILS", "priceKey": "Sliding"},
+    {"id": "mat_drive_power_run_new_wiring", "label": "Drive gate power run (new wiring)", "unitPrice": 2000.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Drive gate power run (new wiring)"},
+    {"id": "mat_drive_power_solar_kit", "label": "Solar gate power kit", "unitPrice": 500.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Solar gate power kit"},
+    {"id": "mat_drive_chain_sliding", "label": "Sliding drive gate chain", "unitPrice": 150.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Sliding drive gate chain"},
+    {"id": "mat_panel_mount_bracket_each", "label": "panel mount bracket", "unitPrice": 1.27, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "panel mount bracket"},
+
+    {"id": "mat_stain_bucket_5gal_default", "label": "5 gal wood stain bucket", "unitPrice": 124.49, "unitType": "bucket", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "5 gal wood stain bucket"},
+    {"id": "mat_stain_bucket_5gal_huemiller", "label": "5 gal wood stain bucket (HueMiller)", "unitPrice": 124.49, "unitType": "bucket", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "5 gal wood stain bucket (HueMiller)"},
+    {"id": "mat_stain_bucket_5gal_ready_seal", "label": "5 gal wood stain bucket (Ready Seal)", "unitPrice": 160.00, "unitType": "bucket", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "5 gal wood stain bucket (Ready Seal)"},
+    {"id": "mat_stain_bucket_5gal_wood_defender", "label": "5 gal wood stain bucket (Wood Defender)", "unitPrice": 185.00, "unitType": "bucket", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "5 gal wood stain bucket (Wood Defender)"},
+
+    {"id": "mat_wood_picket_default", "label": "wood picket", "unitPrice": 3.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood picket"},
+    {"id": "mat_wood_picket_3_5", "label": "wood picket (3.5\")", "unitPrice": 2.50, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood picket (3.5\")"},
+    {"id": "mat_wood_picket_4_0", "label": "wood picket (4\")", "unitPrice": 2.75, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood picket (4\")"},
+    {"id": "mat_wood_picket_5_5", "label": "wood picket (5.5\")", "unitPrice": 3.25, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood picket (5.5\")"},
+    {"id": "mat_wood_picket_6_0", "label": "wood picket (6\")", "unitPrice": 3.50, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood picket (6\")"},
+
+    {"id": "mat_wood_rail_2x3_pressure_treated", "label": "wood rail (2x3, Pressure Treated)", "unitPrice": 3.23, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood rail (2x3, Pressure Treated)"},
+    {"id": "mat_wood_rail_2x4_cedar", "label": "wood rail (2x4, Cedar)", "unitPrice": 9.33, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood rail (2x4, Cedar)"},
+    {"id": "mat_wood_rail_2x4_stained_cedar", "label": "wood rail (2x4, Stained Cedar)", "unitPrice": 10.81, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood rail (2x4, Stained Cedar)"},
+    {"id": "mat_wood_rail_2x3", "label": "wood rail (2x3)", "unitPrice": 10.81, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood rail (2x3)"},
+    {"id": "mat_wood_rail_2x4", "label": "wood rail (2x4)", "unitPrice": 10.81, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood rail (2x4)"},
+    {"id": "mat_wood_rail_default", "label": "wood rail", "unitPrice": 10.81, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "wood rail"},
+
+    {"id": "mat_paint_gloss_black_gallon", "label": "gallons of gloss black paint", "unitPrice": 50.00, "unitType": "gallon", "vendorId": "vendor_tbd", "pricingSource": "PRICE", "priceKey": "paintGallon"},
+    {"id": "mat_paint_gloss_black_can", "label": "spray cans (gloss black)", "unitPrice": 8.00, "unitType": "can", "vendorId": "vendor_tbd", "pricingSource": "PRICE", "priceKey": "paintCan"},
+    {"id": "mat_primer_red_oxide_gallon", "label": "gallons of red oxide primer", "unitPrice": 50.00, "unitType": "gallon", "vendorId": "vendor_tbd", "pricingSource": "PRICE", "priceKey": "primerGallon"},
+    {"id": "mat_primer_red_oxide_can", "label": "spray cans (red oxide primer)", "unitPrice": 8.00, "unitType": "can", "vendorId": "vendor_tbd", "pricingSource": "PRICE", "priceKey": "primerCan"},
+    {"id": "mat_concrete_maximizer_bag", "label": "Maximizer bags of concrete", "unitPrice": 12.00, "unitType": "bag", "vendorId": "vendor_tbd", "pricingSource": "PRICE", "priceKey": "concrete"}
+  ],
+
+  "steelProfilesPerFoot": [
+    {"id": "mat_steel_profile_1_2_per_ft", "profile": "1/2\"", "unitPricePerFt": 0.57, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "1/2\""},
+    {"id": "mat_steel_profile_5_8_per_ft", "profile": "5/8\"", "unitPricePerFt": 0.68, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "5/8\""},
+    {"id": "mat_steel_profile_3_4_per_ft", "profile": "3/4\"", "unitPricePerFt": 0.74, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "3/4\""},
+    {"id": "mat_steel_profile_1_0_per_ft", "profile": "1\"", "unitPricePerFt": 1.07, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "1\""},
+    {"id": "mat_steel_profile_1x2_per_ft", "profile": "1x2\"", "unitPricePerFt": 1.65, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "1x2\""},
+    {"id": "mat_steel_profile_1_1_2_per_ft", "profile": "1 1/2\"", "unitPricePerFt": 1.46, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "1 1/2\""},
+    {"id": "mat_steel_profile_1_1_4_per_ft", "profile": "1 1/4\"", "unitPricePerFt": 1.46, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "1 1/4\""},
+    {"id": "mat_steel_profile_1_3_4_per_ft", "profile": "1 3/4\"", "unitPricePerFt": 2.57, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "1 3/4\""},
+    {"id": "mat_steel_profile_2x2_per_ft", "profile": "2x2\"", "unitPricePerFt": 2.57, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "2x2\""},
+    {"id": "mat_steel_profile_3x3_per_ft", "profile": "3x3\"", "unitPricePerFt": 6.00, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "3x3\""},
+    {"id": "mat_steel_profile_4x4_per_ft", "profile": "4x4", "unitPricePerFt": 11.6441666667, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "4x4"},
+    {"id": "mat_steel_profile_2_0_per_ft", "profile": "2\"", "unitPricePerFt": 2.57, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "2\""},
+    {"id": "mat_steel_profile_3_0_per_ft", "profile": "3\"", "unitPricePerFt": 6.00, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "3\""},
+    {"id": "mat_steel_profile_flat_bar_1_4x1_per_ft", "profile": "Flat Bar 1/4\" x 1\"", "unitPricePerFt": 0.58, "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "Flat Bar 1/4\" x 1\""}
+  ],
+
+  "rules": {
+    "generatedLabelPatterns": [
+      {"id": "rule_finials_dynamic_label", "labelPattern": "finials - {material} - {style} ({picketSize})", "pricingBy": "mat_finial_replacement_each", "notes": "All finial labels are costed at replacement finial unit price."},
+      {"id": "rule_caps_dynamic_label", "labelPattern": "caps - {material} - {style} ({postSize})", "pricingBy": "postCapMatrix", "notes": "Ball vs non-ball pricing by post size."},
+      {"id": "rule_prefab_panel_dynamic_label", "labelPattern": "prefab fence panel {panelDesc}", "pricingBy": "prefabPanelMatrix", "notes": "Cost chosen by panel height, picket size, and style key."},
+      {"id": "rule_wood_picket_dynamic_label", "labelPattern": "wood picket ({width}, {height}, {woodType}, {style})", "pricingBy": "PRICE_MISC width fallback", "notes": "Checks width-specific key, then wood picket default."},
+      {"id": "rule_wood_rail_dynamic_label", "labelPattern": "wood rail ({size}, {woodType})", "pricingBy": "PRICE_MISC size fallback", "notes": "Checks size-specific key, then wood rail default."},
+      {"id": "rule_wood_board_dynamic_label", "labelPattern": "wood {top cap|trim|kick board} ({size}, {length} ft)", "pricingBy": "woodBoardPieces", "notes": "Uses configured board piece length and piece cost."},
+      {"id": "rule_steel_stick_label", "labelPattern": "12ft {picket|rail} sticks ({profile})", "pricingBy": "steelProfilesPerFoot", "notes": "Cost = quantity * 12ft * profile per-foot price."},
+      {"id": "rule_post_2x2_dynamic_length", "labelPattern": "2x2x{lengthFt} posts", "pricingBy": "post2x2ByLengthFt", "notes": "Uses explicit length price if mapped, else 2x2 profile per-foot fallback."}
+    ],
+
+    "post2x2ByLengthFt": [
+      {"id": "mat_post_2x2_8ft", "lengthFt": 8, "unitPrice": 18.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE.post2x2", "priceKey": "8"},
+      {"id": "mat_post_2x2_9ft", "lengthFt": 9, "unitPrice": 23.61, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE.post2x2", "priceKey": "9"},
+      {"id": "mat_post_2x2_fallback_per_ft", "lengthFt": null, "unitPricePerFt": 2.57, "unitType": "foot", "vendorId": "vendor_tbd", "pricingSource": "PRICE_FT", "priceKey": "2x2\""}
+    ],
+
+    "woodBoardPieces": [
+      {"id": "mat_wood_top_cap_2x6_16ft", "boardType": "top cap", "size": "2x6", "pieceLengthFt": 16, "unitPrice": 26.74, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+      {"id": "mat_wood_top_cap_2x8_16ft", "boardType": "top cap", "size": "2x8", "pieceLengthFt": 16, "unitPrice": 32.09, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+      {"id": "mat_wood_top_cap_2x10_16ft", "boardType": "top cap", "size": "2x10", "pieceLengthFt": 16, "unitPrice": 34.76, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+      {"id": "mat_wood_top_cap_2x12_16ft", "boardType": "top cap", "size": "2x12", "pieceLengthFt": 16, "unitPrice": 37.44, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+
+      {"id": "mat_wood_kick_board_2x6_16ft", "boardType": "kick board", "size": "2x6", "pieceLengthFt": 16, "unitPrice": 17.54, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+      {"id": "mat_wood_kick_board_2x8_16ft", "boardType": "kick board", "size": "2x8", "pieceLengthFt": 16, "unitPrice": 21.05, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+      {"id": "mat_wood_kick_board_2x10_16ft", "boardType": "kick board", "size": "2x10", "pieceLengthFt": 16, "unitPrice": 22.80, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+      {"id": "mat_wood_kick_board_2x12_16ft", "boardType": "kick board", "size": "2x12", "pieceLengthFt": 16, "unitPrice": 24.56, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+
+      {"id": "mat_wood_trim_1x4_8ft", "boardType": "trim", "size": "1x4", "pieceLengthFt": 8, "unitPrice": 5.76, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"},
+      {"id": "mat_wood_trim_1x2_8ft", "boardType": "trim", "size": "1x2", "pieceLengthFt": 8, "unitPrice": 5.76, "unitType": "piece", "vendorId": "vendor_tbd", "pricingSource": "WOOD_BOARD_PIECE_PRICING"}
+    ],
+
+    "prefabPanelMatrix": [
+      {"id": "mat_prefab_panel_puppy", "matrixKey": "puppy", "panelHeightFt": null, "picketSize": null, "styleKey": "puppy", "unitPrice": 111.37, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_3ft_1_2_base", "matrixKey": "3|p1/2\"|base", "panelHeightFt": 3, "picketSize": "1/2\"", "styleKey": "base", "unitPrice": 59.91, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_3ft_5_8_base", "matrixKey": "3|p5/8\"|base", "panelHeightFt": 3, "picketSize": "5/8\"", "styleKey": "base", "unitPrice": 59.91, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_4ft_1_2_base", "matrixKey": "4|p1/2\"|base", "panelHeightFt": 4, "picketSize": "1/2\"", "styleKey": "base", "unitPrice": 64.48, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_4ft_5_8_base", "matrixKey": "4|p5/8\"|base", "panelHeightFt": 4, "picketSize": "5/8\"", "styleKey": "base", "unitPrice": 72.11, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_5ft_1_2_base", "matrixKey": "5|p1/2\"|base", "panelHeightFt": 5, "picketSize": "1/2\"", "styleKey": "base", "unitPrice": 66.39, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_5ft_5_8_base", "matrixKey": "5|p5/8\"|base", "panelHeightFt": 5, "picketSize": "5/8\"", "styleKey": "base", "unitPrice": 66.39, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_5ft_1_2_finials", "matrixKey": "5|p1/2\"|finials", "panelHeightFt": 5, "picketSize": "1/2\"", "styleKey": "finials", "unitPrice": 72.63, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_5ft_5_8_finials", "matrixKey": "5|p5/8\"|finials", "panelHeightFt": 5, "picketSize": "5/8\"", "styleKey": "finials", "unitPrice": 91.75, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_6ft_1_2_base", "matrixKey": "6|p1/2\"|base", "panelHeightFt": 6, "picketSize": "1/2\"", "styleKey": "base", "unitPrice": 76.35, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"},
+      {"id": "mat_prefab_panel_6ft_5_8_base", "matrixKey": "6|p5/8\"|base", "panelHeightFt": 6, "picketSize": "5/8\"", "styleKey": "base", "unitPrice": 94.57, "unitType": "panel", "vendorId": "vendor_tbd", "pricingSource": "PANEL_PRICE"}
+    ],
+
+    "postCapMatrix": [
+      {"id": "mat_cap_1p5_ball", "postSize": "1 1/2\" x 1 1/2\"", "styleClass": "ball", "unitPrice": 4.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "post cap matrix"},
+      {"id": "mat_cap_1p5_other", "postSize": "1 1/2\" x 1 1/2\"", "styleClass": "other", "unitPrice": 1.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "post cap matrix"},
+      {"id": "mat_cap_2x2_ball", "postSize": "2x2", "styleClass": "ball", "unitPrice": 4.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "post cap matrix"},
+      {"id": "mat_cap_2x2_other", "postSize": "2x2", "styleClass": "other", "unitPrice": 1.61, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "post cap matrix"},
+      {"id": "mat_cap_3x3_ball", "postSize": "3x3", "styleClass": "ball", "unitPrice": 7.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "post cap matrix"},
+      {"id": "mat_cap_3x3_other", "postSize": "3x3", "styleClass": "other", "unitPrice": 2.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "post cap matrix"},
+      {"id": "mat_cap_4x4_ball", "postSize": "4x4", "styleClass": "ball", "unitPrice": 15.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "post cap matrix"},
+      {"id": "mat_cap_4x4_other", "postSize": "4x4", "styleClass": "other", "unitPrice": 8.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "post cap matrix"}
+    ]
+  }
+}
