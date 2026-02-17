@@ -11808,8 +11808,24 @@ document.addEventListener('DOMContentLoaded', function(){
     if(woodInstallReturnNextDay && woodInstallBuildManHours > 0 && woodInstallScopeSections.length > 0){
       const woodBuildCrewCount = Math.max(1, helperLaneFullCrew);
       const woodBuildNames = pickCrewNames(woodBuildCrewCount, []);
-      const woodBuildDuration = woodInstallBuildManHours / woodBuildCrewCount;
-      const woodBuildLine = `${formatNameList(woodBuildNames)}: ${woodInstallBuildTaskPhrase} (${formatTaskHours(woodBuildDuration)}).`;
+      const woodBuildStartGate = woodBuildNames.reduce((max, name)=>{
+        return Math.max(max, getPersonAvailableAt(name));
+      }, 0);
+      const woodBuildSchedule = scheduleWorkByAvailability({
+        names: woodBuildNames,
+        totalHours: woodInstallBuildManHours,
+        earliestStart: woodBuildStartGate
+      });
+      const woodBuildLineNames = woodBuildSchedule.participants.length
+        ? woodBuildSchedule.participants
+        : woodBuildNames;
+      if(woodBuildSchedule.workDone > 0){
+        reserveScheduledPeople(woodBuildSchedule);
+      }
+      const woodBuildDuration = woodBuildSchedule.workDone > 0
+        ? woodBuildSchedule.elapsed
+        : (woodInstallBuildManHours / woodBuildCrewCount);
+      const woodBuildLine = `${formatNameList(woodBuildLineNames)}: ${woodInstallBuildTaskPhrase} (${formatTaskHours(woodBuildDuration)}).`;
       pushStage('Wood build-out', [woodBuildLine]);
     }
 
