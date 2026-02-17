@@ -1448,6 +1448,8 @@ document.addEventListener('DOMContentLoaded', function(){
     digCrewHoursPerPostHand: 0.25,
     digCrewHoursPerPostSkid: (5 / 60),
     setCrewHoursPerPost: 0.125,
+    tallDigExtraCrewHoursPerPost: (10 / 60),
+    tallSetExtraCrewHoursPerPost: (5 / 60),
     buildLfPerCrewDay: 200,
     removalCrewHoursPer200Lf: 1,
     removalHaulCostPerLf: 3.9,
@@ -7725,6 +7727,9 @@ document.addEventListener('DOMContentLoaded', function(){
       removalSubLf: 0,
       removalSubCost: 0,
       totalPosts: 0,
+      totalTallPosts: 0,
+      totalBuildLfAdjusted: 0,
+      totalTopCapPieces: 0,
       totalRails: 0,
       totalPickets: 0,
       removalCrewHours: 0,
@@ -9669,6 +9674,9 @@ document.addEventListener('DOMContentLoaded', function(){
         const heightFt = Math.max(0, feetFromStr(s.woodHeight || s.height));
         const isRoundSteel = isRoundSteelPost(s.woodPost || '');
         const isPostmaster = isPostmasterPost(s.woodPost || '');
+        const isTallFence = heightFt >= 8;
+        const boardOnBoardBuildMultiplier = /board on board/i.test(String(s.woodStyle || '')) ? 1.2 : 1;
+        let topCapPiecesForSection = 0;
 
         addMat(materials, woodRailMaterialLabel(s), totalRails);
         addMat(materials, woodPicketMaterialLabel(s), totalPickets);
@@ -9679,6 +9687,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const topCapPieces = cfg.pieceLen > 0 ? Math.ceil(lengthFt / cfg.pieceLen) : 0;
           if(topCapPieces > 0){
             addMat(materials, cfg.label, topCapPieces);
+            topCapPiecesForSection += topCapPieces;
           }
         }
 
@@ -9740,6 +9749,11 @@ document.addEventListener('DOMContentLoaded', function(){
         woodInstallPlan.sections += 1;
         woodInstallPlan.totalLf += lengthFt;
         woodInstallPlan.totalPosts += postsToSet;
+        if(isTallFence){
+          woodInstallPlan.totalTallPosts += postsToSet;
+        }
+        woodInstallPlan.totalBuildLfAdjusted += (lengthFt * boardOnBoardBuildMultiplier);
+        woodInstallPlan.totalTopCapPieces += topCapPiecesForSection;
         woodInstallPlan.totalRails += totalRails;
         woodInstallPlan.totalPickets += totalPickets;
       });
@@ -9750,10 +9764,13 @@ document.addEventListener('DOMContentLoaded', function(){
       const digCrewHoursPerPostHand = Math.max(0, Number(WOOD_INSTALL_PRODUCTION.digCrewHoursPerPostHand || 0.25) || 0);
       const digCrewHoursPerPostSkid = Math.max(0, Number(WOOD_INSTALL_PRODUCTION.digCrewHoursPerPostSkid || (5 / 60)) || 0);
       const setCrewHoursPerPost = Math.max(0, Number(WOOD_INSTALL_PRODUCTION.setCrewHoursPerPost || 0.125) || 0);
+      const tallDigExtraCrewHoursPerPost = Math.max(0, Number(WOOD_INSTALL_PRODUCTION.tallDigExtraCrewHoursPerPost || (10 / 60)) || 0);
+      const tallSetExtraCrewHoursPerPost = Math.max(0, Number(WOOD_INSTALL_PRODUCTION.tallSetExtraCrewHoursPerPost || (5 / 60)) || 0);
       const buildLfPerCrewDay = Math.max(0.01, Number(WOOD_INSTALL_PRODUCTION.buildLfPerCrewDay || 200) || 200);
       const removalCrewHoursPer200Lf = Math.max(0.01, Number(WOOD_INSTALL_PRODUCTION.removalCrewHoursPer200Lf || 1) || 1);
       const removalHaulCostPerLf = Math.max(0, Number(WOOD_INSTALL_PRODUCTION.removalHaulCostPerLf || 3.9) || 0);
       const removalHaulMinimum = Math.max(0, Number(WOOD_INSTALL_PRODUCTION.removalHaulMinimum || 100) || 0);
+      const tallPostsToSet = Math.max(0, Number(woodInstallPlan.totalTallPosts || 0) || 0);
 
       if(woodInstallPlan.removalLf > 0){
         woodInstallPlan.removalCrewHours = Math.ceil(woodInstallPlan.removalLf / 200) * removalCrewHoursPer200Lf;
@@ -9767,11 +9784,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
       if(woodInstallPlan.totalPosts > 0){
         const layoutCrewHours = layoutCrewHoursPerJob;
-        const digCrewHoursHand = woodInstallPlan.totalPosts * digCrewHoursPerPostHand;
-        const setCrewHours = woodInstallPlan.totalPosts * setCrewHoursPerPost;
+        const digCrewHoursHand = (woodInstallPlan.totalPosts * digCrewHoursPerPostHand) + (tallPostsToSet * tallDigExtraCrewHoursPerPost);
+        const setCrewHours = (woodInstallPlan.totalPosts * setCrewHoursPerPost) + (tallPostsToSet * tallSetExtraCrewHoursPerPost);
         let postCrewHoursCore = layoutCrewHours + digCrewHoursHand + setCrewHours;
         if(postCrewHoursCore > maxCrewDayHours){
-          const digCrewHoursSkid = woodInstallPlan.totalPosts * digCrewHoursPerPostSkid;
+          const digCrewHoursSkid = (woodInstallPlan.totalPosts * digCrewHoursPerPostSkid) + (tallPostsToSet * tallDigExtraCrewHoursPerPost);
           postCrewHoursCore = layoutCrewHours + digCrewHoursSkid + setCrewHours;
           woodInstallPlan.skidDays = Math.max(1, Math.ceil(postCrewHoursCore / maxCrewDayHours));
         }
@@ -9779,9 +9796,12 @@ document.addEventListener('DOMContentLoaded', function(){
         woodInstallPlan.postManHours = postCrewHoursCore * maxCrewCount;
       }
 
-      if(woodInstallPlan.totalLf > 0){
+      if(woodInstallPlan.totalLf > 0 || woodInstallPlan.totalTopCapPieces > 0){
         const buildCrewHoursPerLf = maxCrewDayHours / buildLfPerCrewDay;
-        woodInstallPlan.buildCrewHours = woodInstallPlan.totalLf * buildCrewHoursPerLf;
+        const adjustedBuildLf = Math.max(0, Number(woodInstallPlan.totalBuildLfAdjusted || 0) || 0);
+        const topCapManHours = Math.max(0, Number(woodInstallPlan.totalTopCapPieces || 0) || 0) * (10 / 60);
+        const topCapCrewHours = topCapManHours / maxCrewCount;
+        woodInstallPlan.buildCrewHours = (adjustedBuildLf * buildCrewHoursPerLf) + topCapCrewHours;
         woodInstallPlan.buildManHours = woodInstallPlan.buildCrewHours * maxCrewCount;
       }
 
@@ -10696,6 +10716,12 @@ document.addEventListener('DOMContentLoaded', function(){
     // Wrought-iron repair work is capped at 2 concurrent welders.
     const MAX_BASE_WELDERS = hasWroughtRepair ? Math.min(MAX_WELDERS, 2) : MAX_WELDERS;
     const woodInstallDays = [];
+    const woodInstallCanRunSameDay = (
+      woodInstallPlan.sections > 0 &&
+      woodInstallPlan.buildCrewHours > 0 &&
+      woodInstallPlan.totalPosts > 0 &&
+      woodInstallPlan.totalPosts <= 4
+    );
     const appendWoodPhaseDays = (crewHours, kind)=>{
       let remainingCrewHours = Math.max(0, Number(crewHours || 0) || 0);
       while(remainingCrewHours > 0.01){
@@ -10711,11 +10737,18 @@ document.addEventListener('DOMContentLoaded', function(){
         remainingCrewHours = Math.max(0, remainingCrewHours - usedCrewHours);
       }
     };
-    appendWoodPhaseDays(woodInstallPlan.postCrewHours + woodInstallPlan.removalCrewHours, 'wood-posts');
-    appendWoodPhaseDays(woodInstallPlan.buildCrewHours, 'wood-build');
+    if(woodInstallCanRunSameDay){
+      appendWoodPhaseDays(woodInstallPlan.postCrewHours + woodInstallPlan.removalCrewHours + woodInstallPlan.buildCrewHours, 'wood-posts');
+    } else {
+      appendWoodPhaseDays(woodInstallPlan.postCrewHours + woodInstallPlan.removalCrewHours, 'wood-posts');
+      appendWoodPhaseDays(woodInstallPlan.buildCrewHours, 'wood-build');
+    }
     woodInstallPlan.removalDays = woodInstallDays.filter(day => day.kind === 'wood-posts').length;
     woodInstallPlan.postDays = woodInstallPlan.removalDays;
-    woodInstallPlan.buildDays = woodInstallDays.filter(day => day.kind === 'wood-build').length;
+    const explicitBuildDays = woodInstallDays.filter(day => day.kind === 'wood-build').length;
+    woodInstallPlan.buildDays = explicitBuildDays > 0
+      ? explicitBuildDays
+      : (woodInstallCanRunSameDay && woodInstallPlan.buildCrewHours > 0 ? 1 : 0);
     if(woodInstallDays.length){
       const woodInstallManHours = woodInstallDays.reduce((acc, day)=> acc + (Number(day.hours || 0) || 0), 0);
       manHours += woodInstallManHours;
@@ -10917,14 +10950,29 @@ document.addEventListener('DOMContentLoaded', function(){
       const crewLabel = crewLabelWithMix(day.crew);
       let suffix = '';
       if(day.kind === 'wood-posts'){
-        suffix = ' (remove existing wood fence & set wood posts)';
+        const sameDayWoodBuild = woodInstallPlan.totalPosts > 0
+          && woodInstallPlan.totalPosts <= 4
+          && woodInstallPlan.buildCrewHours > 0
+          && woodInstallPlan.sections > 0;
+        const returnWoodDayNote = woodInstallPlan.totalPosts > 4 && woodInstallPlan.buildCrewHours > 0
+          ? '; return next day to install wood'
+          : '';
+        suffix = sameDayWoodBuild
+          ? ' (set wood posts + install wood rails & pickets)'
+          : ` (remove existing wood fence & set wood posts${returnWoodDayNote})`;
+        if(sameDayWoodBuild && woodInstallPlan.removalLf > 0){
+          suffix = ' (remove existing wood fence, set wood posts + install wood rails & pickets)';
+        }
         if(woodInstallPlan.removalLf <= 0){
-          suffix = ' (set wood posts)';
+          suffix = sameDayWoodBuild
+            ? ' (set wood posts + install wood rails & pickets)'
+            : ` (set wood posts${returnWoodDayNote})`;
         }
       } else if(day.kind === 'wood-build'){
+        const buildPrefix = woodInstallPlan.totalPosts > 4 ? ' (return day: install wood rails & pickets' : ' (install wood rails & pickets';
         suffix = day.hasBase
-          ? ' (install wood rails & pickets + remaining labor tasks)'
-          : ' (install wood rails & pickets)';
+          ? `${buildPrefix} + remaining labor tasks)`
+          : `${buildPrefix})`;
       } else if(day.kind === 'wash'){
         suffix = ' (pressure wash)';
       } else if(day.kind === 'finish'){
@@ -11248,6 +11296,51 @@ document.addEventListener('DOMContentLoaded', function(){
     });
     const paintPrepEligibleManHours = Math.max(0, paintingHours);
     const paintLaborTotalManHours = Math.max(0, paintingHours + primePaintReturnHours);
+    const woodInstallScopeSections = state.sections.filter(section=>{
+      if((section.fenceType || '').toLowerCase() !== 'wood') return false;
+      const scopeType = section.scopeType || 'repair';
+      if(scopeType !== 'install' && scopeType !== 'replace') return false;
+      const lengthFt = Math.max(0, parseFloat(section.length || 0) || 0);
+      return lengthFt > 0;
+    });
+    const woodInstallTotalLf = woodInstallScopeSections.reduce((sum, section)=>{
+      return sum + Math.max(0, parseFloat(section.length || 0) || 0);
+    }, 0);
+    const woodInstallHeights = new Set();
+    const woodInstallStyles = new Set();
+    const woodInstallAdds = { kick: false, topCap: false, trim: false };
+    woodInstallScopeSections.forEach(section=>{
+      const heightLabel = normalizeLabelText(section.woodHeight || section.height || '');
+      if(heightLabel) woodInstallHeights.add(heightLabel);
+      const styleLabel = String(section.woodStyle || '').trim().toLowerCase();
+      if(styleLabel) woodInstallStyles.add(styleLabel);
+      if(section.woodAddKickBoard) woodInstallAdds.kick = true;
+      if(section.woodAddTopCap) woodInstallAdds.topCap = true;
+      if(section.woodAddTrim) woodInstallAdds.trim = true;
+    });
+    const woodInstallHeightPhrase = woodInstallHeights.size
+      ? `${joinParts(Array.from(woodInstallHeights))} tall`
+      : '';
+    const woodInstallStylePhrase = woodInstallStyles.size
+      ? joinParts(Array.from(woodInstallStyles))
+      : '';
+    const woodInstallDescriptor = [woodInstallHeightPhrase, woodInstallStylePhrase, 'wood fence']
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim() || 'wood fence';
+    const woodInstallLengthLabel = formatFtValue(woodInstallTotalLf);
+    const woodInstallScopePhrase = woodInstallLengthLabel
+      ? `install about ${woodInstallLengthLabel}ft of ${woodInstallDescriptor}`
+      : `install ${woodInstallDescriptor}`;
+    const woodInstallBuildItems = ['wood rails', 'pickets'];
+    if(woodInstallAdds.kick) woodInstallBuildItems.push('kick boards');
+    if(woodInstallAdds.topCap) woodInstallBuildItems.push('top cap');
+    if(woodInstallAdds.trim) woodInstallBuildItems.push('trim');
+    const woodInstallBuildTaskPhrase = woodInstallLengthLabel
+      ? `install ${joinParts(woodInstallBuildItems)} on about ${woodInstallLengthLabel}ft of ${woodInstallDescriptor}`
+      : `install ${joinParts(woodInstallBuildItems)} on the wood fence`;
+    const woodInstallReturnNextDay = woodInstallBuildManHours > 0 && woodInstallPlan.totalPosts > 4;
 
     const postHelperManHours =
       postReplacementCrewManHours +
@@ -11264,6 +11357,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const replacePostSummary = compactPostSummary(totals.postsReplace || zeroPostCounts());
     const installPostSummary = compactPostSummary(totals.postsInstall || zeroPostCounts());
     const postTaskParts = [];
+    const sentenceCase = (text)=>{
+      const raw = String(text || '').trim();
+      if(!raw) return '';
+      return raw.charAt(0).toUpperCase() + raw.slice(1);
+    };
     if(replacePostSummary){
       if(wroughtPostReplacements > 0){
         postTaskParts.push(`identify ${replacePostSummary} posts to replace, cut off existing panels, replace posts, and load old posts/concrete into the truck bed`);
@@ -11271,11 +11369,23 @@ document.addEventListener('DOMContentLoaded', function(){
         postTaskParts.push(`identify and replace ${replacePostSummary} posts`);
       }
     }
-    if(woodInstallPlan.totalPosts > 0){
+    if(woodInstallScopeSections.length > 0 && woodInstallPlan.totalPosts > 0){
+      const woodDayOneSentences = [];
+      woodDayOneSentences.push(`${sentenceCase(woodInstallScopePhrase)}.`);
+      if(woodInstallPlan.removalLf > 0){
+        woodDayOneSentences.push(`Remove and stack ${formatFtValue(woodInstallPlan.removalLf)} lf of existing wood fence for haul away.`);
+      }
+      woodDayOneSentences.push(`Run strings and mark ${woodInstallPlan.totalPosts} wood post ${plural(woodInstallPlan.totalPosts, 'location', 'locations')}.`);
+      woodDayOneSentences.push('Dig post holes, clear out the holes, set your end posts, run a string and set your line posts.');
+      if(woodInstallReturnNextDay){
+        woodDayOneSentences.push('Return another day to install wood.');
+      }
+      postTaskParts.push(woodDayOneSentences.join(' '));
+    } else if(woodInstallPlan.totalPosts > 0){
       postTaskParts.push(`run strings and mark ${woodInstallPlan.totalPosts} wood post ${plural(woodInstallPlan.totalPosts, 'location', 'locations')}`);
     }
     if(installPostSummary) postTaskParts.push(`set ${installPostSummary} new posts`);
-    if(woodInstallPlan.removalLf > 0){
+    if(woodInstallPlan.removalLf > 0 && woodInstallScopeSections.length <= 0){
       postTaskParts.push(`remove and stack ${formatFtValue(woodInstallPlan.removalLf)} lf of existing wood fence for haul away`);
     }
     if(concreteRealignCount > 0){
@@ -11354,12 +11464,13 @@ document.addEventListener('DOMContentLoaded', function(){
     let stageOneEndAt = 0;
     let stageOnePaintConsumedManHours = 0;
     const hasPostLane = postHelperManHours > 0 && postTaskParts.length > 0;
+    const woodInstallBuildManHoursInStageOne = woodInstallReturnNextDay ? 0 : woodInstallBuildManHours;
     const productionHelperManHours =
       bracketPanelHours +
       digHours +
       capHours +
       puppyInsertHelperHours +
-      woodInstallBuildManHours +
+      woodInstallBuildManHoursInStageOne +
       woodCoreRepairManHours;
     const productionParts = [];
     if(bracketPanelHours > 0){
@@ -11377,8 +11488,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if(puppyInsertHelperHours > 0 && totals.puppyInserts > 0){
       productionParts.push(`fit/secure ${totals.puppyInserts} puppy insert backers`);
     }
-    if(woodInstallBuildManHours > 0){
-      productionParts.push(`wood install build-out (${woodInstallPlan.buildDays} day${woodInstallPlan.buildDays === 1 ? '' : 's'} planned)`);
+    if(woodInstallBuildManHoursInStageOne > 0){
+      productionParts.push(`${woodInstallBuildTaskPhrase} (${woodInstallPlan.buildDays} day${woodInstallPlan.buildDays === 1 ? '' : 's'} planned)`);
     }
     if(woodCoreRepairManHours > 0){
       productionParts.push('wood repair production (rails/pickets/panels/trim)');
@@ -11489,6 +11600,13 @@ document.addEventListener('DOMContentLoaded', function(){
         stageTitleBase = 'Weld repairs';
       }
       pushStage(stageTitleBase, postAndWeldLines);
+    }
+    if(woodInstallReturnNextDay && woodInstallBuildManHours > 0 && woodInstallScopeSections.length > 0){
+      const woodBuildCrewCount = Math.max(1, helperLaneFullCrew);
+      const woodBuildNames = pickCrewNames(woodBuildCrewCount, []);
+      const woodBuildDuration = woodInstallBuildManHours / woodBuildCrewCount;
+      const woodBuildLine = `${formatNameList(woodBuildNames)}: ${woodInstallBuildTaskPhrase} (${formatTaskHours(woodBuildDuration)}).`;
+      pushStage('Wood build-out', [woodBuildLine]);
     }
 
     const tieInLines = [];
