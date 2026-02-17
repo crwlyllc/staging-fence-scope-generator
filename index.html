@@ -1502,6 +1502,10 @@ document.addEventListener('DOMContentLoaded', function(){
     wood: '#d97706',
     wroughtIron: '#dc2626',
   };
+  const MAP_BASE_POLYLINE_COLOR = '#111827';
+  const MAP_BASE_POLYLINE_OPACITY = 0.01;
+  const MAP_BASE_POLYLINE_WEIGHT = 10;
+  const MAP_SEGMENT_STROKE_WEIGHT = 4;
   let pendingMapRestore = null;
   let mapUpdateScheduled = false;
 
@@ -2534,6 +2538,7 @@ document.addEventListener('DOMContentLoaded', function(){
   function clearMapDrawing(options={}){
     mapState.polylines.forEach(poly=>{
       clearPolylineLabels(poly);
+      clearPolylineSegmentStrokes(poly);
       poly.setMap(null);
     });
     mapState.polylines = [];
@@ -2578,11 +2583,23 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  function mapPolylineBaseOptions(strokeColor){
+  function mapPolylineBaseOptions(strokeColor = MAP_BASE_POLYLINE_COLOR){
     return {
       editable: true,
       draggable: true,
       strokeColor,
+      strokeOpacity: MAP_BASE_POLYLINE_OPACITY,
+      strokeWeight: MAP_BASE_POLYLINE_WEIGHT,
+      zIndex: 100
+    };
+  }
+
+  function mapPolylineDrawOptions(strokeColor){
+    return {
+      editable: true,
+      draggable: true,
+      strokeColor,
+      strokeOpacity: 1,
       strokeWeight: 3,
       zIndex: 100
     };
@@ -2594,45 +2611,53 @@ document.addEventListener('DOMContentLoaded', function(){
       : MAP_POLYLINE_COLORS.wroughtIron;
   }
 
-  function mapSegmentIndex(segmentId){
-    const parts = String(segmentId || '').split(':');
-    const idx = parseInt(parts[parts.length - 1], 10);
-    return isFinite(idx) ? idx : 0;
-  }
-
-  function mapLinkedSectionsForPolyline(polyline){
-    if(!polyline || !polyline.__spPolylineId){
-      return [];
-    }
-    const prefix = `${polyline.__spPolylineId}:`;
-    return state.sections
-      .filter(sec=>{
-        return sec
-          && sec.mapGenerated
-          && typeof sec.mapSegmentId === 'string'
-          && sec.mapSegmentId.startsWith(prefix);
-      })
-      .slice()
-      .sort((a,b)=>mapSegmentIndex(a.mapSegmentId) - mapSegmentIndex(b.mapSegmentId));
-  }
-
-  function mapStrokeColorForPolyline(polyline){
-    const linkedSections = mapLinkedSectionsForPolyline(polyline);
-    if(!linkedSections.length){
-      return MAP_POLYLINE_COLORS.wroughtIron;
-    }
-    const hasWood = linkedSections.some(sec=>String(sec.fenceType || '').toLowerCase() === 'wood');
-    const hasWrought = linkedSections.some(sec=>{
-      const type = String(sec.fenceType || '').toLowerCase();
-      return !type || type === 'wrought iron';
+  function clearPolylineSegmentStrokes(polyline){
+    if(!polyline || !Array.isArray(polyline.__spSegmentStrokes)) return;
+    polyline.__spSegmentStrokes.forEach(segmentStroke=>{
+      if(segmentStroke && typeof segmentStroke.setMap === 'function'){
+        segmentStroke.setMap(null);
+      }
     });
-    if(hasWood && !hasWrought){
-      return MAP_POLYLINE_COLORS.wood;
+    polyline.__spSegmentStrokes = [];
+  }
+
+  function mapStrokeColorForSegmentId(segmentId){
+    const linkedSection = state.sections.find(sec=>{
+      return sec && sec.mapGenerated && sec.mapSegmentId === segmentId;
+    });
+    return mapStrokeColorForFenceType(linkedSection && linkedSection.fenceType);
+  }
+
+  function refreshPolylineSegmentStrokes(polyline){
+    if(!polyline || typeof polyline.getPath !== 'function'){
+      return;
     }
-    if(hasWrought && !hasWood){
-      return MAP_POLYLINE_COLORS.wroughtIron;
+    if(!mapState.map || typeof google === 'undefined' || !google.maps || typeof google.maps.Polyline !== 'function'){
+      return;
     }
-    return mapStrokeColorForFenceType(linkedSections[0].fenceType);
+    clearPolylineSegmentStrokes(polyline);
+    const path = polyline.getPath();
+    if(!path || typeof path.getLength !== 'function') return;
+    const len = path.getLength();
+    if(len < 2) return;
+    const strokes = [];
+    for(let i=0; i<len-1; i++){
+      const start = path.getAt(i);
+      const end = path.getAt(i+1);
+      if(!start || !end) continue;
+      const segmentId = `${polyline.__spPolylineId}:${i}`;
+      const segmentStroke = new google.maps.Polyline({
+        map: mapState.map,
+        path: [start, end],
+        clickable: false,
+        strokeColor: mapStrokeColorForSegmentId(segmentId),
+        strokeOpacity: 1,
+        strokeWeight: MAP_SEGMENT_STROKE_WEIGHT,
+        zIndex: 120
+      });
+      strokes.push(segmentStroke);
+    }
+    polyline.__spSegmentStrokes = strokes;
   }
 
   function refreshMapPolylineColors(){
@@ -2640,10 +2665,13 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
     mapState.polylines.forEach(polyline=>{
-      if(!polyline || typeof polyline.setOptions !== 'function'){
+      if(!polyline){
         return;
       }
-      polyline.setOptions(mapPolylineBaseOptions(mapStrokeColorForPolyline(polyline)));
+      if(typeof polyline.setOptions === 'function'){
+        polyline.setOptions(mapPolylineBaseOptions());
+      }
+      refreshPolylineSegmentStrokes(polyline);
     });
   }
 
@@ -2858,7 +2886,7 @@ document.addEventListener('DOMContentLoaded', function(){
   function attachMapPolyline(polyline){
     polyline.__spPolylineId = polyline.__spPolylineId || `poly-${mapState.nextPolylineId++}`;
     if(polyline && typeof polyline.setOptions === 'function'){
-      polyline.setOptions(mapPolylineBaseOptions(mapStrokeColorForPolyline(polyline)));
+      polyline.setOptions(mapPolylineBaseOptions());
     }
     mapState.polylines.push(polyline);
     updateMapControlsUI();
@@ -2873,6 +2901,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       if(confirm('Remove this fence run?')){
         clearPolylineLabels(polyline);
+        clearPolylineSegmentStrokes(polyline);
         polyline.setMap(null);
         mapState.polylines = mapState.polylines.filter(p=>p!==polyline);
         scheduleMapSectionsUpdate();
@@ -2925,7 +2954,7 @@ document.addEventListener('DOMContentLoaded', function(){
     pendingMapRestore = null;
     clearMapDrawing({ skipSections: true });
 
-    const baseOpts = mapPolylineBaseOptions(MAP_POLYLINE_COLORS.wroughtIron);
+    const baseOpts = mapPolylineBaseOptions();
     let maxId = restore.nextPolylineId || mapState.nextPolylineId || 1;
     (restore.polylines || []).forEach(data=>{
       if(!data || !Array.isArray(data.path) || data.path.length < 2) return;
@@ -3002,7 +3031,7 @@ document.addEventListener('DOMContentLoaded', function(){
         drawingModes: [google.maps.drawing.OverlayType.POLYLINE]
       },
       polylineOptions: {
-        ...mapPolylineBaseOptions(MAP_POLYLINE_COLORS.wroughtIron)
+        ...mapPolylineDrawOptions(MAP_POLYLINE_COLORS.wroughtIron)
       }
     });
     mapState.drawingManager.setMap(mapState.map);
