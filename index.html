@@ -11083,8 +11083,9 @@ document.addEventListener('DOMContentLoaded', function(){
     finishDays.forEach(day => crewSchedule.push({ ...day, kind: 'finish' }));
 
     const crewLabelWithMix = (count) => {
-      if(count <= 0) return '';
-      return `${ONSITE_CREW_SIZE}-man crew`;
+      const crewCount = parseInt(count, 10) || 0;
+      if(crewCount <= 0) return '';
+      return `${crewCount}-man crew`;
     };
 
     const returnSuffix = primePaintScheduled && hasWoodWash
@@ -11135,14 +11136,14 @@ document.addEventListener('DOMContentLoaded', function(){
       };
     });
 
-    const estimatedOnsiteHours = ONSITE_CREW_SIZE > 0 ? manHours / ONSITE_CREW_SIZE : 0;
+    let estimatedOnsiteHours = ONSITE_CREW_SIZE > 0 ? manHours / ONSITE_CREW_SIZE : 0;
     const formatHours = (hours) => {
       if (!isFinite(hours) || hours <= 0) return '';
       const rounded = Math.round(hours * 10) / 10;
       const isWhole = Math.abs(rounded - Math.round(rounded)) < 0.05;
       return isWhole ? `${Math.round(rounded)} hours` : `${rounded.toFixed(1)} hours`;
     };
-    const estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
+    let estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
     const totalLaborHoursLabel = formatHours(manHours);
 
     const materialSortGroup = (label)=>{
@@ -11177,9 +11178,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const sub = [];
     sub.push("CREW");
-    if (estimatedOnsiteLabel) {
-      sub.push(`${estimatedOnsiteLabel} onsite`);
-    }
+    const crewOnsiteLineIndex = sub.length;
+    sub.push(estimatedOnsiteLabel ? `${estimatedOnsiteLabel} onsite` : '');
     sub.push('');
     sub.push('PROCESS');
     const formatTaskHours = (hours)=>{
@@ -12063,6 +12063,17 @@ document.addEventListener('DOMContentLoaded', function(){
         ? 'Paint the fence'
         : 'Coatings and finish work';
       pushStage(coatingTitleBase, coatingLines);
+    }
+
+    const scheduledOnsiteHours = crewNames.reduce((max, name)=>{
+      return Math.max(max, getPersonAvailableAt(name));
+    }, 0);
+    if(isFinite(scheduledOnsiteHours) && scheduledOnsiteHours > 0){
+      estimatedOnsiteHours = scheduledOnsiteHours;
+      estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
+    }
+    if(crewOnsiteLineIndex >= 0){
+      sub[crewOnsiteLineIndex] = estimatedOnsiteLabel ? `${estimatedOnsiteLabel} onsite` : '';
     }
 
     if(stageNumber === 1){
