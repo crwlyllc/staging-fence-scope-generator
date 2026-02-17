@@ -1498,6 +1498,10 @@ document.addEventListener('DOMContentLoaded', function(){
     nextPolylineId: 1,
     pendingAddress: '',
   };
+  const MAP_POLYLINE_COLORS = {
+    wood: '#d97706',
+    wroughtIron: '#dc2626',
+  };
   let pendingMapRestore = null;
   let mapUpdateScheduled = false;
 
@@ -2574,6 +2578,75 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function mapPolylineBaseOptions(strokeColor){
+    return {
+      editable: true,
+      draggable: true,
+      strokeColor,
+      strokeWeight: 3,
+      zIndex: 100
+    };
+  }
+
+  function mapStrokeColorForFenceType(fenceType){
+    return String(fenceType || '').toLowerCase() === 'wood'
+      ? MAP_POLYLINE_COLORS.wood
+      : MAP_POLYLINE_COLORS.wroughtIron;
+  }
+
+  function mapSegmentIndex(segmentId){
+    const parts = String(segmentId || '').split(':');
+    const idx = parseInt(parts[parts.length - 1], 10);
+    return isFinite(idx) ? idx : 0;
+  }
+
+  function mapLinkedSectionsForPolyline(polyline){
+    if(!polyline || !polyline.__spPolylineId){
+      return [];
+    }
+    const prefix = `${polyline.__spPolylineId}:`;
+    return state.sections
+      .filter(sec=>{
+        return sec
+          && sec.mapGenerated
+          && typeof sec.mapSegmentId === 'string'
+          && sec.mapSegmentId.startsWith(prefix);
+      })
+      .slice()
+      .sort((a,b)=>mapSegmentIndex(a.mapSegmentId) - mapSegmentIndex(b.mapSegmentId));
+  }
+
+  function mapStrokeColorForPolyline(polyline){
+    const linkedSections = mapLinkedSectionsForPolyline(polyline);
+    if(!linkedSections.length){
+      return MAP_POLYLINE_COLORS.wroughtIron;
+    }
+    const hasWood = linkedSections.some(sec=>String(sec.fenceType || '').toLowerCase() === 'wood');
+    const hasWrought = linkedSections.some(sec=>{
+      const type = String(sec.fenceType || '').toLowerCase();
+      return !type || type === 'wrought iron';
+    });
+    if(hasWood && !hasWrought){
+      return MAP_POLYLINE_COLORS.wood;
+    }
+    if(hasWrought && !hasWood){
+      return MAP_POLYLINE_COLORS.wroughtIron;
+    }
+    return mapStrokeColorForFenceType(linkedSections[0].fenceType);
+  }
+
+  function refreshMapPolylineColors(){
+    if(!Array.isArray(mapState.polylines) || !mapState.polylines.length){
+      return;
+    }
+    mapState.polylines.forEach(polyline=>{
+      if(!polyline || typeof polyline.setOptions !== 'function'){
+        return;
+      }
+      polyline.setOptions(mapPolylineBaseOptions(mapStrokeColorForPolyline(polyline)));
+    });
+  }
+
   function clearPolylineLabels(polyline){
     if(!polyline || !Array.isArray(polyline.__spSegmentLabels)) return;
     polyline.__spSegmentLabels.forEach(marker=>{
@@ -2706,6 +2779,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
     applySegmentsToSections(segments);
+    refreshMapPolylineColors();
   }
 
   function applySegmentsToSections(segments){
@@ -2784,7 +2858,7 @@ document.addEventListener('DOMContentLoaded', function(){
   function attachMapPolyline(polyline){
     polyline.__spPolylineId = polyline.__spPolylineId || `poly-${mapState.nextPolylineId++}`;
     if(polyline && typeof polyline.setOptions === 'function'){
-      polyline.setOptions({ zIndex: 100 });
+      polyline.setOptions(mapPolylineBaseOptions(mapStrokeColorForPolyline(polyline)));
     }
     mapState.polylines.push(polyline);
     updateMapControlsUI();
@@ -2851,7 +2925,7 @@ document.addEventListener('DOMContentLoaded', function(){
     pendingMapRestore = null;
     clearMapDrawing({ skipSections: true });
 
-    const baseOpts = { editable: true, draggable: true, strokeColor: '#d97706', strokeWeight: 3, zIndex: 100 };
+    const baseOpts = mapPolylineBaseOptions(MAP_POLYLINE_COLORS.wroughtIron);
     let maxId = restore.nextPolylineId || mapState.nextPolylineId || 1;
     (restore.polylines || []).forEach(data=>{
       if(!data || !Array.isArray(data.path) || data.path.length < 2) return;
@@ -2928,11 +3002,7 @@ document.addEventListener('DOMContentLoaded', function(){
         drawingModes: [google.maps.drawing.OverlayType.POLYLINE]
       },
       polylineOptions: {
-        editable: true,
-        draggable: true,
-        strokeColor: '#d97706',
-        strokeWeight: 3,
-        zIndex: 100
+        ...mapPolylineBaseOptions(MAP_POLYLINE_COLORS.wroughtIron)
       }
     });
     mapState.drawingManager.setMap(mapState.map);
@@ -5936,6 +6006,7 @@ document.addEventListener('DOMContentLoaded', function(){
     updateInstallConditional(card);
     updateWalkGateConditional(card);
     updateDriveGateOperatorConditional(card);
+    refreshMapPolylineColors();
     persist();
   }
 
@@ -6274,6 +6345,7 @@ document.addEventListener('DOMContentLoaded', function(){
         });
       });
     });
+    refreshMapPolylineColors();
     updateQuickActions();
   }
 
