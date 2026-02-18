@@ -11847,6 +11847,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const method = String(section.paintingApplication || 'By Hand').trim().toLowerCase();
       return method !== 'spray';
     });
+    const consolidateByHandPaintProcessNotes =
+      hasByHandPaintScope &&
+      paintLenTotal > 0 &&
+      (sprayBaseHours + sprayFinishHours) <= 0 &&
+      washHours <= 0 &&
+      stainHours <= 0;
     const paintPrepEligibleManHours = Math.max(0, paintingHours);
     const paintLaborTotalManHours = Math.max(0, paintingHours + primePaintReturnHours);
     const woodInstallScopeSections = state.sections.filter(section=>{
@@ -12125,7 +12131,8 @@ document.addEventListener('DOMContentLoaded', function(){
       hasByHandPaintScope &&
       paintLenTotal > 0 &&
       paintPrepEligibleManHours > 0 &&
-      stageOneEndAt > 0
+      stageOneEndAt > 0 &&
+      !consolidateByHandPaintProcessNotes
     ){
       const stageOneHelperPaintCandidates = crewNames.filter(name=>
         !postStageWelderNames.includes(name) &&
@@ -12265,7 +12272,12 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
     const remainingPrepEligibleManHours = Math.max(0, paintPrepEligibleManHours - paintPrepConsumedManHours);
-    if(hasPanelTieIns && paintLenTotal > 0 && remainingPrepEligibleManHours > 0){
+    if(
+      hasPanelTieIns &&
+      paintLenTotal > 0 &&
+      remainingPrepEligibleManHours > 0 &&
+      !consolidateByHandPaintProcessNotes
+    ){
       const prepCrew = postPanelTieInWelderHours > 0 ? helperLaneParallel : helperLaneFullCrew;
       const prepNames = pickCrewNames(prepCrew, tieInWelderNames);
       const prepStartGate = tieInSchedule ? tieInSchedule.startTime : (hasPostLane ? postLaneReadyAt : 0);
@@ -12395,7 +12407,13 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     let gatePaintConsumedManHours = 0;
     let gatePaintNames = [];
-    if(!hasPanelTieIns && hasByHandPaintScope && paintLenTotal > 0 && gateEndAt > gateStartGate){
+    if(
+      !hasPanelTieIns &&
+      hasByHandPaintScope &&
+      paintLenTotal > 0 &&
+      gateEndAt > gateStartGate &&
+      !consolidateByHandPaintProcessNotes
+    ){
       const gatePaintEligibleManHours = Math.max(0, paintPrepEligibleManHours - paintPrepConsumedManHours);
       if(gatePaintEligibleManHours > 0){
         const gatePaintCrew = gateWelderHours > 0 ? gateHelperParallel : helperLaneFullCrew;
@@ -12424,11 +12442,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const coatingTotalManHours = remainingPaintManHours + washHours + stainManHours;
     if(coatingTotalManHours > 0){
       const coatingLines = [];
-      const hasSimpleByHandPaintTail =
-        hasByHandPaintScope &&
-        (sprayBaseHours + sprayFinishHours) <= 0 &&
-        washHours <= 0 &&
-        stainHours <= 0;
+      const hasSimpleByHandPaintTail = consolidateByHandPaintProcessNotes;
       let sprayNames = [];
       let paintSchedule = null;
       let paintNames = [];
@@ -12492,7 +12506,10 @@ document.addEventListener('DOMContentLoaded', function(){
             const paintSplit = contributorSplitNote(paintSchedule, paintNames);
             const primeNote = primePaintScheduled ? ' (prime + return finish coat)' : '';
             const durationNote = paintDuration > 0 ? ` (${formatTaskHours(paintDuration)}${paintSplit})` : '';
-            coatingLines.push(`${formatNameList(paintNames)}: paint ${paintLenTotal} ft of fence${primeNote}${durationNote}.`);
+            const paintActionLabel = consolidateByHandPaintProcessNotes
+              ? `scrape loose rust and debris and hand paint ${paintLenTotal} ft of fence`
+              : `paint ${paintLenTotal} ft of fence`;
+            coatingLines.push(`${formatNameList(paintNames)}: ${paintActionLabel}${primeNote}${durationNote}.`);
             if(shortTailWrapUpNames.length && paintDuration > 0){
               reservePeopleUntil(shortTailWrapUpNames, paintSchedule.endTime);
               coatingLines.push(`${formatNameList(shortTailWrapUpNames)}: clean up tools and load everything up (${formatTaskHours(paintDuration)}).`);
