@@ -6805,6 +6805,65 @@ document.addEventListener('DOMContentLoaded', function(){
       .replace(/×/g,'x')
       .trim();
   }
+  function parseMixedFractionInches(value){
+    const raw = String(value || '').trim();
+    if(!raw) return NaN;
+    const mixed = raw.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+    if(mixed){
+      const whole = parseInt(mixed[1],10) || 0;
+      const num = parseInt(mixed[2],10) || 0;
+      const den = parseInt(mixed[3],10) || 0;
+      if(den > 0) return whole + (num / den);
+      return NaN;
+    }
+    const frac = raw.match(/^(\d+)\/(\d+)$/);
+    if(frac){
+      const num = parseInt(frac[1],10) || 0;
+      const den = parseInt(frac[2],10) || 0;
+      if(den > 0) return num / den;
+      return NaN;
+    }
+    const num = parseFloat(raw);
+    return isFinite(num) ? num : NaN;
+  }
+  function steelTubeDimsFromSize(size){
+    const normalized = normalizeSize(size).replace(/"/g,'').toLowerCase().trim();
+    if(!normalized || normalized.includes('flat bar')) return null;
+    if(normalized.includes('x')){
+      const parts = normalized.split('x').map(part=>part.trim()).filter(Boolean);
+      if(parts.length !== 2) return null;
+      const w = parseMixedFractionInches(parts[0]);
+      const h = parseMixedFractionInches(parts[1]);
+      if(!(w > 0) || !(h > 0)) return null;
+      return { w, h };
+    }
+    const side = parseMixedFractionInches(normalized);
+    if(!(side > 0)) return null;
+    return { w: side, h: side };
+  }
+  function steelWeightPerFtBySize(size){
+    const dims = steelTubeDimsFromSize(size);
+    if(!dims) return 0;
+    const wall = STEEL_16GA_WALL_IN;
+    if(dims.w <= (2 * wall) || dims.h <= (2 * wall)) return 0;
+    const outerArea = dims.w * dims.h;
+    const innerArea = (dims.w - (2 * wall)) * (dims.h - (2 * wall));
+    const areaIn2 = Math.max(0, outerArea - innerArea);
+    return areaIn2 * 12 * STEEL_DENSITY_LB_PER_IN3;
+  }
+  function steelDiscountRateForWeight(weightLbs){
+    const lbs = Math.max(0, Number(weightLbs) || 0);
+    const tier = STEEL_DISCOUNT_TIERS.find(entry=> lbs >= (entry.minLbs * STEEL_DISCOUNT_SAFETY_FACTOR));
+    return tier ? tier.rate : 0;
+  }
+  function steelThresholdSticksForSize(size, stickLengthFt, targetLbs){
+    const lbPerFt = steelWeightPerFtBySize(size);
+    const lengthFt = Math.max(1, wroughtCustomStickLengthFt(stickLengthFt));
+    if(!(lbPerFt > 0) || !(targetLbs > 0)) return Infinity;
+    const adjustedTargetLbs = targetLbs * STEEL_DISCOUNT_SAFETY_FACTOR;
+    const feetNeeded = Math.ceil(adjustedTargetLbs / lbPerFt);
+    return Math.ceil(feetNeeded / lengthFt);
+  }
   function isPanelPuppyInsertStyle(style){
     return /Puppy Picket Insert/i.test(style || '');
   }
@@ -6908,6 +6967,14 @@ document.addEventListener('DOMContentLoaded', function(){
     '3\"': 6.00,
     'Flat Bar 1/4\" x 1\"': 0.58
   };
+  const STEEL_16GA_WALL_IN = 0.065;
+  const STEEL_DENSITY_LB_PER_IN3 = 0.283;
+  const STEEL_DISCOUNT_SAFETY_FACTOR = 1.2;
+  const STEEL_DISCOUNT_TIERS = [
+    { minLbs: 1000, rate: 0.3333 },
+    { minLbs: 500, rate: 0.294 },
+    { minLbs: 101, rate: 0.25 }
+  ];
 
   const PRICE_MISC = {
     'Gravity Latch': 5,
@@ -10911,7 +10978,74 @@ document.addEventListener('DOMContentLoaded', function(){
       matBreak.push('  - 2x2x'+len+' posts: '+qty+' x $'+money(unit)+' = $'+money(c));
     });
 
-    // Steel remains yield-based (sticks required), without supplier quantity discount tiers.
+    const rawSteelSizeByKind = {
+      raw1p5: '1 1/2"',
+      raw2x2: '2x2"',
+      raw3x3: '3x3"',
+      raw4x4: '4x4'
+    };
+    const steelFeetBySize = {};
+    const addSteelFeetBySize = (size, feet)=>{
+      const normalized = normalizeSize(size);
+      const totalFeet = Math.max(0, Number(feet) || 0);
+      if(!normalized || totalFeet <= 0) return;
+      steelFeetBySize[normalized] = (steelFeetBySize[normalized] || 0) + totalFeet;
+    };
+    Object.keys(picketStickTotals).forEach(key=>{
+      const [lenRaw, sizeRaw] = String(key).split('|');
+      const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
+      const qty = parseInt(picketStickTotals[key],10) || 0;
+      addSteelFeetBySize(sizeRaw, qty * stickLengthFt);
+    });
+    Object.keys(railStickTotals).forEach(key=>{
+      const [lenRaw, sizeRaw] = String(key).split('|');
+      const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
+      const qty = parseInt(railStickTotals[key],10) || 0;
+      addSteelFeetBySize(sizeRaw, qty * stickLengthFt);
+    });
+    Object.entries(rawSteelSizeByKind).forEach(([kind, sizeLabel])=>{
+      const byLength = steelStickTotals[kind] || {};
+      Object.keys(byLength).forEach(lenRaw=>{
+        const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
+        const qty = parseInt(byLength[lenRaw],10) || 0;
+        addSteelFeetBySize(sizeLabel, qty * stickLengthFt);
+      });
+    });
+    const steelDiscountMetaBySize = {};
+    Object.entries(steelFeetBySize).forEach(([size, totalFeet])=>{
+      const lbPerFt = steelWeightPerFtBySize(size);
+      if(!(lbPerFt > 0)) return;
+      const totalLbs = totalFeet * lbPerFt;
+      const discountRate = steelDiscountRateForWeight(totalLbs);
+      steelDiscountMetaBySize[size] = { totalFeet, totalLbs, lbPerFt, discountRate };
+    });
+    const steelDiscountRateForSize = (size)=>{
+      const normalized = normalizeSize(size);
+      const meta = steelDiscountMetaBySize[normalized];
+      return meta ? (meta.discountRate || 0) : 0;
+    };
+    const steelDiscountSuffixForSize = (size)=>{
+      const normalized = normalizeSize(size);
+      const meta = steelDiscountMetaBySize[normalized];
+      const rate = meta ? (meta.discountRate || 0) : 0;
+      if(!(rate > 0)) return '';
+      const pct = (rate * 100).toFixed(2).replace(/\.00$/, '');
+      const lbs = meta ? (meta.totalLbs || 0) : 0;
+      return ` (${pct}% steel discount @ ${lbs.toFixed(1)} lbs)`;
+    };
+    Object.entries(steelDiscountMetaBySize).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([size, meta])=>{
+      const thresholds = [101, 500, 1000].map(target=>{
+        const sticks12 = steelThresholdSticksForSize(size, 12, target);
+        const sticks24 = steelThresholdSticksForSize(size, 24, target);
+        return `${target} lbs: ${sticks12}/${sticks24} sticks (12ft/24ft)`;
+      }).join('; ');
+      const appliedRate = meta.discountRate || 0;
+      const appliedPct = appliedRate > 0
+        ? `${(appliedRate * 100).toFixed(2).replace(/\.00$/, '')}%`
+        : 'none';
+      matBreak.push(`  - Steel discount thresholds (${size}, includes 20% safety buffer): ${thresholds}. Applied: ${appliedPct}.`);
+    });
+
     const addRawSteelCostBreakdown = (kind, perFtKey, displayLabel)=>{
       const byLength = steelStickTotals[kind] || {};
       Object.keys(byLength).sort((a,b)=>parseInt(a,10)-parseInt(b,10)).forEach(lenRaw=>{
@@ -10920,9 +11054,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
         const perFt = PRICE_FT[perFtKey] || 0;
         if(perFt === 0) unpriced = true;
-        const c = qty * stickLengthFt * perFt;
+        const normalizedSize = normalizeSize(perFtKey);
+        const discountRate = steelDiscountRateForSize(normalizedSize);
+        const baseCost = qty * stickLengthFt * perFt;
+        const c = baseCost * (1 - discountRate);
         costMaterials += c;
-        matBreak.push(`  - ${displayLabel} raw steel sticks: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
+        matBreak.push(`  - ${displayLabel} raw steel sticks: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}${steelDiscountSuffixForSize(normalizedSize)}`);
       });
     };
     addRawSteelCostBreakdown('raw1p5', '1 1/2\"', '1.5x1.5');
@@ -10936,10 +11073,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
       const qty = picketStickTotals[key];
       const perFt = PRICE_FT[normalizedSize]||0;
-      const c = qty * stickLengthFt * perFt;
+      const discountRate = steelDiscountRateForSize(normalizedSize);
+      const baseCost = qty * stickLengthFt * perFt;
+      const c = baseCost * (1 - discountRate);
       if(perFt===0) unpriced = true;
       costMaterials += c;
-      matBreak.push(`  - ${stickLengthFt}ft picket sticks ${normalizedSize}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
+      matBreak.push(`  - ${stickLengthFt}ft picket sticks ${normalizedSize}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}${steelDiscountSuffixForSize(normalizedSize)}`);
     });
 
     Object.keys(railStickTotals).sort().forEach(key=>{
@@ -10948,10 +11087,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
       const qty = railStickTotals[key];
       const perFt = PRICE_FT[normalizedSize]||0;
-      const c = qty * stickLengthFt * perFt;
+      const discountRate = steelDiscountRateForSize(normalizedSize);
+      const baseCost = qty * stickLengthFt * perFt;
+      const c = baseCost * (1 - discountRate);
       if(perFt===0) unpriced = true;
       costMaterials += c;
-      matBreak.push(`  - ${stickLengthFt}ft rail sticks ${normalizedSize}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
+      matBreak.push(`  - ${stickLengthFt}ft rail sticks ${normalizedSize}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}${steelDiscountSuffixForSize(normalizedSize)}`);
     });
 
     // NEW: Finials cost (flat $1.25 each via total of descriptive labels)
@@ -12662,7 +12803,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const laborHoursShop = Math.max(0, Number(shopFabricationLaborHours || 0) || 0);
     const laborHoursBillable = laborHoursOnsite + laborHoursShop;
     const laborCost = laborHoursBillable * LABOR_RATE;
-    const consumablesCost = scheduleEntries.length * 50;
+    const baseConsumablesCost = scheduleEntries.length * 50;
+    const shopFabricationConsumablesCost = Math.max(0, parseInt(totals.panelsInstallCustomShop || 0, 10) || 0) * 10;
+    const consumablesCost = baseConsumablesCost + shopFabricationConsumablesCost;
     const removalCost = totals.removalCost || 0;
     const travelCostResult = await computeTravelCost({ crewSchedule, jobAddress, travelDayInfo });
     const travelCost = travelCostResult.cost || 0;
@@ -12720,6 +12863,9 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     travelCostResult.breakdown.forEach(line => cost.push(line));
     cost.push('- Consumables: $'+money(consumablesCost));
+    if(shopFabricationConsumablesCost > 0){
+      cost.push(`  - Includes shop panel fabrication consumables: ${totals.panelsInstallCustomShop} panel${totals.panelsInstallCustomShop === 1 ? '' : 's'} × $10.00 = $${money(shopFabricationConsumablesCost)}`);
+    }
     cost.push('- Materials: $'+money(costMaterials));
     if(removalCost>0){ cost.push('- Removal & disposal (paid to sub): $'+money(removalCost)); }
     matBreak.forEach(line=> cost.push(line));
