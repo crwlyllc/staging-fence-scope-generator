@@ -7683,13 +7683,41 @@ document.addEventListener('DOMContentLoaded', function(){
         comboCounts.set(key, (comboCounts.get(key)||0) + count);
       });
       const details = [];
+      const combos = [];
       comboCounts.forEach((count, key)=>{
         const [latch, hinges] = key.split('|||');
         const labels = [latch, hinges].filter(Boolean).join(' + ') || 'hardware';
         const gateLabel = describeCount(count, 'gate', 'gates');
         details.push(`${labels}: ${gateLabel}`);
+        combos.push({ count, latch, hinges });
       });
-      return { total, details };
+      return { total, details, combos };
+    }
+    function walkHardwareActionLines(summary){
+      const lines = [];
+      if(!summary || !(summary.total > 0)) return lines;
+      const combos = Array.isArray(summary.combos) ? summary.combos : [];
+      if(!combos.length){
+        lines.push(`Replace hardware on ${describeCount(summary.total, 'walk gate', 'walk gates')}`);
+        return lines;
+      }
+      combos.forEach(item=>{
+        const count = parseInt(item?.count, 10) || 0;
+        if(count <= 0) return;
+        const gatesLabel = describeCount(count, 'walk gate', 'walk gates');
+        const latch = String(item?.latch || '').trim().toLowerCase();
+        const hinges = String(item?.hinges || '').trim().toLowerCase();
+        let hardwareLabel = '';
+        if(hinges && latch){
+          hardwareLabel = `${hinges} and ${latch}`;
+        } else if(hinges){
+          hardwareLabel = hinges;
+        } else if(latch){
+          hardwareLabel = latch;
+        }
+        lines.push(`Replace hardware on ${gatesLabel}${hardwareLabel ? ` with ${hardwareLabel}` : ''}`);
+      });
+      return lines;
     }
     function fenceTypeLabel(type){
       const normalized = String(type||'').toLowerCase();
@@ -12579,12 +12607,10 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
     if (totals.wiRailGaps > 0)      sub.push('- Full rail gap fillers: '+totals.wiRailGaps);
-    if (totals.walkGates > 0)       sub.push('- Walk gates: '+totals.walkGates);
-    if (totals.walkRealign > 0)     sub.push('- Walk gates to realign: '+totals.walkRealign);
-    if (walkHardwareSummary.total > 0) {
-      const detail = walkHardwareSummary.details.length ? ` (${walkHardwareSummary.details.join('; ')})` : '';
-      sub.push(`- Walk gate hardware replacements: ${walkHardwareSummary.total}${detail}`);
+    if (totals.walkRealign > 0) {
+      sub.push(`- Realign ${describeCount(totals.walkRealign, 'walk gate', 'walk gates')}`);
     }
+    walkHardwareActionLines(walkHardwareSummary).forEach(line=> sub.push(`- ${line}`));
     if (totals.walkRebuild > 0)     sub.push('- Walk gates to rebuild: '+totals.walkRebuild);
     if (totals.walkGateAddsSingle > 0) sub.push('- Single swing walk gates to add: '+totals.walkGateAddsSingle);
     if (totals.walkGateAddsDouble > 0) sub.push('- Double swing gates to add: '+totals.walkGateAddsDouble);
