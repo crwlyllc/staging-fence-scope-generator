@@ -1479,6 +1479,7 @@ document.addEventListener('DOMContentLoaded', function(){
     digCrewHoursPerPostHand: 0.25,
     digCrewHoursPerPostSkid: (5 / 60),
     setCrewHoursPerPost: 0.125,
+    panelInstallLfPerCrewDay: 250,
     skidSteerRentalPerDay: 500
   };
 
@@ -8715,10 +8716,15 @@ document.addEventListener('DOMContentLoaded', function(){
           const usesBrackets = attachment === 'Brackets';
           let onsitePanelHours = 0;
           let shopPanelHours = 0;
+          const panelLinearFt = (qty * widthIn) / 12;
+          const panelInstallLfPerCrewDay = Math.max(1, Number(WROUGHT_INSTALL_PRODUCTION.panelInstallLfPerCrewDay || 250) || 250);
+          const crewDayHours = Math.max(0.25, Number(CREW_SETTINGS.maxDayHours || 13) || 13);
           if(eligible){
-            onsitePanelHours = qty * 0.5;
+            onsitePanelHours = source === 'install'
+              ? (panelLinearFt * (crewDayHours / panelInstallLfPerCrewDay))
+              : (qty * 0.5);
           } else if(source === 'install' && installFabricationMode === 'Shop'){
-            onsitePanelHours = qty * 0.5;
+            onsitePanelHours = panelLinearFt * (crewDayHours / panelInstallLfPerCrewDay);
             shopPanelHours = qty * 1.5;
           } else {
             onsitePanelHours = qty * 1.5;
