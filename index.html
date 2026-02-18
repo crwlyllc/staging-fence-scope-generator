@@ -7135,6 +7135,7 @@ document.addEventListener('DOMContentLoaded', function(){
     grossProfitMinimumResidential: 350,
     grossProfitMinimumCommercial: 350,
     grossProfitMinimumRevenuePercent: 0.30,
+    grossProfitMinimumRevenuePercentPreferred: 0.16,
     revenueMinimumCommercial: 2500,
     revenueMinimumFullDayHours: 7,
     revenueMinimumFullDay: 2967
@@ -7166,13 +7167,18 @@ document.addEventListener('DOMContentLoaded', function(){
     return PRICING.grossProfitMinimumResidential;
   }
 
-  function shouldApplyGrossMarginFloor(){
-    const selectType = customerTypeSelect ? normalizeCustomerType(customerTypeSelect.value) : '';
-    const stateType = normalizeCustomerType(state.customerType);
-    if(selectType === 'Preferred' || stateType === 'Preferred'){
-      return false;
+  function getGrossMarginFloorRate(){
+    const type = getCustomerType();
+    if(type === 'Preferred'){
+      const preferredRate = Number(PRICING.grossProfitMinimumRevenuePercentPreferred);
+      return isFinite(preferredRate) && preferredRate > 0 ? preferredRate : 0;
     }
-    return getCustomerType() !== 'Preferred';
+    const defaultRate = Number(PRICING.grossProfitMinimumRevenuePercent);
+    return isFinite(defaultRate) && defaultRate > 0 ? defaultRate : 0;
+  }
+
+  function shouldApplyGrossMarginFloor(){
+    return getGrossMarginFloorRate() > 0;
   }
 
   function getRevenueMinimum(totalHours){
@@ -7200,7 +7206,7 @@ document.addEventListener('DOMContentLoaded', function(){
   function getMinimumSummaryText(){
     const minGross = getGrossProfitMinimum();
     const revenueMin = getRevenueMinimum();
-    const marginFloorPct = (Number(PRICING.grossProfitMinimumRevenuePercent) || 0) * 100;
+    const marginFloorPct = getGrossMarginFloorRate() * 100;
     const marginFloorLabel = Number.isInteger(marginFloorPct)
       ? `${marginFloorPct}`
       : marginFloorPct.toFixed(1).replace(/\.0$/, '');
@@ -7337,9 +7343,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return { revenue: NaN, mode: 'invalid' };
     }
     const revenueMinimum = getRevenueMinimum(totalHours);
-    const marginFloor = shouldApplyGrossMarginFloor()
-      ? Number(PRICING.grossProfitMinimumRevenuePercent)
-      : 0;
+    const marginFloor = getGrossMarginFloorRate();
     const revenueMarginFloor = (isFinite(marginFloor) && marginFloor > 0)
       ? solveRevenueForGrossProfitMargin(cost, marginFloor)
       : NaN;
@@ -13046,8 +13050,9 @@ document.addEventListener('DOMContentLoaded', function(){
       cost.push('- Total direct costs: $'+money(directCosts));
       if(isFinite(revenueRes?.targetGross)){
         const hoursLabel = totalHoursLabel || (isFinite(totalHours) && totalHours > 0 ? `${totalHours.toFixed(1)} hours` : 'time TBD');
-        if(shouldApplyGrossMarginFloor()){
-          const minGrossPct = (Number(PRICING.grossProfitMinimumRevenuePercent) || 0) * 100;
+        const marginFloorRate = getGrossMarginFloorRate();
+        if(marginFloorRate > 0){
+          const minGrossPct = marginFloorRate * 100;
           const minGrossPctLabel = Number.isInteger(minGrossPct)
             ? `${minGrossPct}`
             : minGrossPct.toFixed(1).replace(/\.0$/, '');
