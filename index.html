@@ -7045,6 +7045,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood rail': 10.81
   };
   const PRICE_MISC_UNPRICED_LABELS = new Set();
+  const SKID_STEER_WEEKLY_RATE = 1200;
 
   const WOOD_BOARD_PIECE_PRICING = {
     // Per-piece pricing and piece length (feet) for wood detail boards.
@@ -10919,6 +10920,28 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // PRICE_MISC line-items
     Object.entries(materials).forEach(([label, qty])=>{
+      if(label === 'Skid steer rental'){
+        const rentalDays = Math.max(0, Math.ceil(Number(qty) || 0));
+        if(rentalDays <= 0) return;
+        const dailyRate = Math.max(0, Number(PRICE_MISC['Skid steer rental'] || 500) || 500);
+        const fullWeeks = Math.floor(rentalDays / 7);
+        const remainingDays = rentalDays % 7;
+        const remainingAsWeek = remainingDays >= 3;
+        const totalWeeks = fullWeeks + (remainingAsWeek ? 1 : 0);
+        const totalDailyDays = remainingAsWeek ? 0 : remainingDays;
+        const c = (totalWeeks * SKID_STEER_WEEKLY_RATE) + (totalDailyDays * dailyRate);
+        costMaterials += c;
+        const breakdownParts = [];
+        if(totalWeeks > 0){
+          breakdownParts.push(`${totalWeeks} week${totalWeeks === 1 ? '' : 's'} @ $${money(SKID_STEER_WEEKLY_RATE)}`);
+        }
+        if(totalDailyDays > 0){
+          breakdownParts.push(`${totalDailyDays} day${totalDailyDays === 1 ? '' : 's'} @ $${money(dailyRate)}`);
+        }
+        const breakdown = breakdownParts.length ? ` (${breakdownParts.join(' + ')})` : '';
+        matBreak.push(`  - Skid steer rental: ${rentalDays} day${rentalDays === 1 ? '' : 's'} = $${money(c)}${breakdown}`);
+        return;
+      }
       if(Object.prototype.hasOwnProperty.call(PRICE_MISC, label)){
         const unit = PRICE_MISC[label] || 0;
         if(unit <= 0 && PRICE_MISC_UNPRICED_LABELS.has(label)){
