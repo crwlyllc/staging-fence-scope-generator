@@ -1074,7 +1074,6 @@
               <option value="Residential">Residential</option>
               <option value="Commercial">Commercial</option>
               <option value="City">City</option>
-              <option value="Preferred">Preferred</option>
             </select>
             <div class="sp-hint" id="sp-customer-min-hint">Minimum charge: $350</div>
           </div>
@@ -1374,7 +1373,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const PUPPY_INSERT_SIZES = ['1/2"','5/8"'];
   const PANEL_REPLACEMENT_STYLES = [...SEED.style, 'Flat Top w/ Puppy Picket Insert'];
-  const CUSTOMER_TYPES = ['Residential','Commercial','City','Preferred'];
+  const CUSTOMER_TYPES = ['Residential','Commercial','City'];
   const WROUGHT_CURRENT_COLOR_OPTIONS = [
     'Black',
     'Gray',
@@ -7135,7 +7134,6 @@ document.addEventListener('DOMContentLoaded', function(){
     grossProfitMinimumResidential: 350,
     grossProfitMinimumCommercial: 350,
     grossProfitMinimumRevenuePercent: 0.30,
-    grossProfitMinimumRevenuePercentPreferred: 0.16,
     revenueMinimumCommercial: 2500,
     revenueMinimumFullDayHours: 7,
     revenueMinimumFullDay: 2967
@@ -7168,11 +7166,6 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function getGrossMarginFloorRate(){
-    const type = getCustomerType();
-    if(type === 'Preferred'){
-      const preferredRate = Number(PRICING.grossProfitMinimumRevenuePercentPreferred);
-      return isFinite(preferredRate) && preferredRate > 0 ? preferredRate : 0;
-    }
     const defaultRate = Number(PRICING.grossProfitMinimumRevenuePercent);
     return isFinite(defaultRate) && defaultRate > 0 ? defaultRate : 0;
   }
@@ -11108,55 +11101,7 @@ document.addEventListener('DOMContentLoaded', function(){
       raw3x3: '3x3"',
       raw4x4: '4x4'
     };
-    const steelFeetBySize = {};
-    const addSteelFeetBySize = (size, feet)=>{
-      const normalized = normalizeSize(size);
-      const totalFeet = Math.max(0, Number(feet) || 0);
-      if(!normalized || totalFeet <= 0) return;
-      steelFeetBySize[normalized] = (steelFeetBySize[normalized] || 0) + totalFeet;
-    };
-    Object.keys(picketStickTotals).forEach(key=>{
-      const [lenRaw, sizeRaw] = String(key).split('|');
-      const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
-      const qty = parseInt(picketStickTotals[key],10) || 0;
-      addSteelFeetBySize(sizeRaw, qty * stickLengthFt);
-    });
-    Object.keys(railStickTotals).forEach(key=>{
-      const [lenRaw, sizeRaw] = String(key).split('|');
-      const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
-      const qty = parseInt(railStickTotals[key],10) || 0;
-      addSteelFeetBySize(sizeRaw, qty * stickLengthFt);
-    });
-    Object.entries(rawSteelSizeByKind).forEach(([kind, sizeLabel])=>{
-      const byLength = steelStickTotals[kind] || {};
-      Object.keys(byLength).forEach(lenRaw=>{
-        const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
-        const qty = parseInt(byLength[lenRaw],10) || 0;
-        addSteelFeetBySize(sizeLabel, qty * stickLengthFt);
-      });
-    });
-    const steelDiscountMetaBySize = {};
-    Object.entries(steelFeetBySize).forEach(([size, totalFeet])=>{
-      const lbPerFt = steelWeightPerFtBySize(size);
-      if(!(lbPerFt > 0)) return;
-      const totalLbs = totalFeet * lbPerFt;
-      const discountRate = steelDiscountRateForWeight(totalLbs);
-      steelDiscountMetaBySize[size] = { totalFeet, totalLbs, lbPerFt, discountRate };
-    });
-    const steelDiscountRateForSize = (size)=>{
-      const normalized = normalizeSize(size);
-      const meta = steelDiscountMetaBySize[normalized];
-      return meta ? (meta.discountRate || 0) : 0;
-    };
-    const steelDiscountSuffixForSize = (size)=>{
-      const normalized = normalizeSize(size);
-      const meta = steelDiscountMetaBySize[normalized];
-      const rate = meta ? (meta.discountRate || 0) : 0;
-      if(!(rate > 0)) return '';
-      const pct = (rate * 100).toFixed(2).replace(/\.00$/, '');
-      const lbs = meta ? (meta.totalLbs || 0) : 0;
-      return ` (${pct}% steel discount @ ${lbs.toFixed(1)} lbs)`;
-    };
+    let steelSupplierSubtotal = 0;
     const addRawSteelCostBreakdown = (kind, perFtKey, displayLabel)=>{
       const byLength = steelStickTotals[kind] || {};
       Object.keys(byLength).sort((a,b)=>parseInt(a,10)-parseInt(b,10)).forEach(lenRaw=>{
@@ -11165,12 +11110,10 @@ document.addEventListener('DOMContentLoaded', function(){
         const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
         const perFt = PRICE_FT[perFtKey] || 0;
         if(perFt === 0) unpriced = true;
-        const normalizedSize = normalizeSize(perFtKey);
-        const discountRate = steelDiscountRateForSize(normalizedSize);
-        const baseCost = qty * stickLengthFt * perFt;
-        const c = baseCost * (1 - discountRate);
+        const c = qty * stickLengthFt * perFt;
         costMaterials += c;
-        matBreak.push(`  - ${displayLabel} raw steel sticks: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}${steelDiscountSuffixForSize(normalizedSize)}`);
+        steelSupplierSubtotal += c;
+        matBreak.push(`  - ${displayLabel} raw steel sticks: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
       });
     };
     addRawSteelCostBreakdown('raw1p5', '1 1/2\"', '1.5x1.5');
@@ -11184,12 +11127,11 @@ document.addEventListener('DOMContentLoaded', function(){
       const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
       const qty = picketStickTotals[key];
       const perFt = PRICE_FT[normalizedSize]||0;
-      const discountRate = steelDiscountRateForSize(normalizedSize);
-      const baseCost = qty * stickLengthFt * perFt;
-      const c = baseCost * (1 - discountRate);
+      const c = qty * stickLengthFt * perFt;
       if(perFt===0) unpriced = true;
       costMaterials += c;
-      matBreak.push(`  - ${stickLengthFt}ft picket sticks ${normalizedSize}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}${steelDiscountSuffixForSize(normalizedSize)}`);
+      steelSupplierSubtotal += c;
+      matBreak.push(`  - ${stickLengthFt}ft picket sticks ${normalizedSize}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
     });
 
     Object.keys(railStickTotals).sort().forEach(key=>{
@@ -11198,13 +11140,22 @@ document.addEventListener('DOMContentLoaded', function(){
       const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
       const qty = railStickTotals[key];
       const perFt = PRICE_FT[normalizedSize]||0;
-      const discountRate = steelDiscountRateForSize(normalizedSize);
-      const baseCost = qty * stickLengthFt * perFt;
-      const c = baseCost * (1 - discountRate);
+      const c = qty * stickLengthFt * perFt;
       if(perFt===0) unpriced = true;
       costMaterials += c;
-      matBreak.push(`  - ${stickLengthFt}ft rail sticks ${normalizedSize}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}${steelDiscountSuffixForSize(normalizedSize)}`);
+      steelSupplierSubtotal += c;
+      matBreak.push(`  - ${stickLengthFt}ft rail sticks ${normalizedSize}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
     });
+    const steelSupplierDiscountRate = steelSupplierSubtotal > 25000
+      ? 0.20
+      : (steelSupplierSubtotal > 15000 ? 0.10 : 0);
+    if(steelSupplierDiscountRate > 0){
+      const steelSupplierDiscountAmount = steelSupplierSubtotal * steelSupplierDiscountRate;
+      const steelSupplierDiscountPct = (steelSupplierDiscountRate * 100).toFixed(0);
+      const steelSupplierThresholdLabel = steelSupplierDiscountRate >= 0.20 ? 'over $25,000' : 'over $15,000';
+      costMaterials -= steelSupplierDiscountAmount;
+      matBreak.push(`  - Steel supplier discount (${steelSupplierDiscountPct}% tier at ${steelSupplierThresholdLabel} steel spend): -$${money(steelSupplierDiscountAmount)} (from $${money(steelSupplierSubtotal)} steel subtotal)`);
+    }
 
     // NEW: Finials cost (flat $1.25 each via total of descriptive labels)
     const finialsPricedUnit = PRICE_MISC['replacement finial'] || 0;
