@@ -4331,7 +4331,23 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const currentFenceType = val('fenceType') || 'Wrought Iron';
     const normalizedFence = currentFenceType.toLowerCase();
-    const paintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
+    const scopeTypeValue = val('scopeType') || 'repair';
+    const panelAttachmentValue = val('panelAttachment');
+    const rawPaintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
+    const wroughtPanelFabrication = normalizeWroughtPanelFabrication(val('wroughtPanelFabrication'));
+    const isShopFabrication = wroughtPanelFabrication === 'Shop';
+    const powderCoatPanelsValue = isShopFabrication ? val('wroughtPowderCoatPanels') : false;
+    const powderCoatPostsValue = isShopFabrication ? val('wroughtPowderCoatPosts') : false;
+    const paintingSelection = normalizedFence === 'wood'
+      ? 'None'
+      : effectiveWroughtPaintingSelection({
+        fenceType: currentFenceType,
+        scopeType: scopeTypeValue,
+        panelAttachment: panelAttachmentValue,
+        wroughtPanelFabrication,
+        wroughtPowderCoatPanels: powderCoatPanelsValue,
+        painting: rawPaintingSelection
+      });
     const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
     const paintingPrepExtra = paintingSelection === 'Paint Section' ? val('paintingPrepExtra') : false;
     const paintingCurrentColor = normalizedFence === 'wood'
@@ -4343,23 +4359,21 @@ document.addEventListener('DOMContentLoaded', function(){
     updateMapLengthOverrideFromCard(card);
     const mapLengthOverride = parsePositiveInt(card.dataset.mapLengthOverride);
     const mapMeasuredLength = parsePositiveInt(card.dataset.mapMeasuredLength);
-    const wroughtPanelFabrication = normalizeWroughtPanelFabrication(val('wroughtPanelFabrication'));
-    const isShopFabrication = wroughtPanelFabrication === 'Shop';
 
     return {
       id,
       label: val('label').trim(),
       fenceType: currentFenceType,
-      scopeType: val('scopeType') || 'repair',
+      scopeType: scopeTypeValue,
       style: val('style'),
       height: val('height'),
       postSize: val('postSize'),
       postSpacing: val('postSpacing'),
-      panelAttachment: val('panelAttachment'),
+      panelAttachment: panelAttachmentValue,
       wroughtCustomStickLength: val('wroughtCustomStickLength') || '12',
       wroughtPanelFabrication,
-      wroughtPowderCoatPanels: isShopFabrication ? val('wroughtPowderCoatPanels') : false,
-      wroughtPowderCoatPosts: isShopFabrication ? val('wroughtPowderCoatPosts') : false,
+      wroughtPowderCoatPanels: powderCoatPanelsValue,
+      wroughtPowderCoatPosts: powderCoatPostsValue,
       installFinialStyle: val('installFinialStyle'),
       postReplacements,
       postRealignments,
@@ -6011,11 +6025,20 @@ document.addEventListener('DOMContentLoaded', function(){
       } else if(isInstall && isWrought){
         const attachmentSel = card.querySelector('[data-field="panelAttachment"]');
         const usesBrackets = attachmentSel ? attachmentSel.value === 'Brackets' : false;
-        const desired = usesBrackets ? 'None' : 'Spot Paint Welds';
-        const autoValues = new Set(['', 'Paint Section', 'Spot Paint Welds', 'None']);
-        if(autoValues.has(currentVal) && currentVal !== desired){
-          paintingSel.value = desired;
-          paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
+        const powderPanelsChecked = !!card.querySelector('[data-field="wroughtPowderCoatPanels"]')?.checked;
+        const powderCoatForcesSpot = panelFabrication === 'Shop' && powderPanelsChecked && !usesBrackets;
+        if(powderCoatForcesSpot){
+          if(currentVal !== 'Spot Paint Welds'){
+            paintingSel.value = 'Spot Paint Welds';
+            paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        } else {
+          const desired = usesBrackets ? 'None' : 'Spot Paint Welds';
+          const autoValues = new Set(['', 'Paint Section', 'Spot Paint Welds', 'None']);
+          if(autoValues.has(currentVal) && currentVal !== desired){
+            paintingSel.value = desired;
+            paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
         }
       }
     }
@@ -6535,6 +6558,30 @@ document.addEventListener('DOMContentLoaded', function(){
     const target = normalizePaintColorKey(section?.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]);
     if(!current || !target) return 1;
     return current === target ? 1 : 2;
+  }
+  function effectiveWroughtPaintingSelection(section){
+    const fenceType = String(section?.fenceType || '').toLowerCase();
+    if(fenceType && fenceType !== 'wrought iron') return 'None';
+    const scopeType = String(section?.scopeType || 'repair').toLowerCase();
+    const isInstallScope = scopeType === 'install' || scopeType === 'replace';
+    const attachment = String(section?.panelAttachment || '').trim();
+    if(isInstallScope && attachment === 'Brackets'){
+      return 'None';
+    }
+    const panelFabrication = normalizeWroughtPanelFabrication(section?.wroughtPanelFabrication);
+    const powderCoatPanels = !!section?.wroughtPowderCoatPanels;
+    if(isInstallScope && panelFabrication === 'Shop' && powderCoatPanels){
+      return 'Spot Paint Welds';
+    }
+    const raw = String(section?.painting || '').trim();
+    if(raw) return raw;
+    return isInstallScope ? 'Spot Paint Welds' : 'Paint Section';
+  }
+  function isFullWroughtSectionPaintMode(mode){
+    return mode === 'Paint Section' || mode === 'Prime and Paint';
+  }
+  function isAnyWroughtPaintMode(mode){
+    return isFullWroughtSectionPaintMode(mode) || mode === 'Spot Paint Welds';
   }
   function normalizeWoodStainBrand(value){
     const raw = String(value || '').trim().toLowerCase();
@@ -8167,6 +8214,8 @@ document.addEventListener('DOMContentLoaded', function(){
     let shopFabricationLaborHours = 0;
     let weldedPanelHours = 0;
     let bracketPanelHours = 0;
+    let wroughtInstallPanelCrewHours = 0;
+    let wroughtInstallPanelLf = 0;
     let woodHelperHours = 0;
     let woodWelderHours = 0;
     let woodManHours = 0;
@@ -8502,11 +8551,7 @@ document.addEventListener('DOMContentLoaded', function(){
           ].filter(Boolean);
           woodSectionSummaries.push(`- ${title}: ${woodSummaryParts.join('; ')}`);
         } else {
-          const attachmentMethod = s.panelAttachment || (installInfo && installInfo.attachment) || 'Welding';
-          const paintingDefault = s.painting || 'Paint Section';
-          const paintingLabel = (scopeType === 'install' && attachmentMethod === 'Brackets')
-            ? 'None'
-            : paintingDefault;
+          const paintingLabel = effectiveWroughtPaintingSelection(s);
           lines.push(`- Painting: ${paintingLabel}`);
           if(paintingLabel !== 'None'){
             const currentColor = s.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0];
@@ -8729,6 +8774,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const panelLinearFt = (qty * widthIn) / 12;
           const panelInstallLfPerCrewDay = Math.max(1, Number(WROUGHT_INSTALL_PRODUCTION.panelInstallLfPerCrewDay || 250) || 250);
           const crewDayHours = Math.max(0.25, Number(CREW_SETTINGS.maxDayHours || 13) || 13);
+          const isCrewPacedInstallPanel = source === 'install' && (eligible || installFabricationMode === 'Shop');
           if(eligible){
             onsitePanelHours = source === 'install'
               ? (panelLinearFt * (crewDayHours / panelInstallLfPerCrewDay))
@@ -8740,13 +8786,21 @@ document.addEventListener('DOMContentLoaded', function(){
           } else {
             onsitePanelHours = qty * 1.5;
           }
-          manHours += onsitePanelHours;
-          if(!usesBrackets){
-            welderHours += onsitePanelHours;
-            weldedPanelHours += onsitePanelHours;
-          }else{
-            helperHours += onsitePanelHours;
-            bracketPanelHours += onsitePanelHours;
+          if(isCrewPacedInstallPanel){
+            const panelCrewManHours = onsitePanelHours * ONSITE_CREW_SIZE;
+            wroughtInstallPanelCrewHours += onsitePanelHours;
+            wroughtInstallPanelLf += panelLinearFt;
+            manHours += panelCrewManHours;
+            helperHours += panelCrewManHours;
+          } else {
+            manHours += onsitePanelHours;
+            if(!usesBrackets){
+              welderHours += onsitePanelHours;
+              weldedPanelHours += onsitePanelHours;
+            }else{
+              helperHours += onsitePanelHours;
+              bracketPanelHours += onsitePanelHours;
+            }
           }
           if(shopPanelHours > 0){
             shopFabricationLaborHours += shopPanelHours;
@@ -9283,46 +9337,45 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSummary = state.sections.reduce((acc, s)=>{
       const fenceType = (s.fenceType || '').toLowerCase();
       if(fenceType && fenceType !== 'wrought iron') return acc;
+      const paintingMode = effectiveWroughtPaintingSelection(s);
       const len = parseInt(s.length||0,10) || 0;
       if(len > 0){
         const hardscape = parseInt(s.hardscape||0,10) || 0;
         const trim = parseInt(s.trim||0,10) || 0;
         const coatCount = paintCoatCountForSection(s);
-        if(s.painting === 'Paint Section'){
+        if(paintingMode === 'Paint Section'){
           acc.full.len += len;
           acc.full.hardscape += hardscape;
           acc.full.trim += trim;
           if(coatCount > 1){
             acc.full.colorChangeLen += len;
           }
-        } else if (s.painting === 'Prime and Paint'){
+        } else if (paintingMode === 'Prime and Paint'){
           acc.primePaint.len += len;
           acc.primePaint.hardscape += hardscape;
           acc.primePaint.trim += trim;
           if(coatCount > 1){
             acc.primePaint.colorChangeLen += len;
           }
-        } else if (s.painting === 'Spot Paint Welds'){
+        } else if (paintingMode === 'Spot Paint Welds'){
           acc.spot += len;
-          if(coatCount > 1){
-            acc.spotColorChangeLen += len;
-          }
         }
       }
       return acc;
     }, {
       full: { len: 0, hardscape: 0, trim: 0, colorChangeLen: 0 },
       primePaint: { len: 0, hardscape: 0, trim: 0, colorChangeLen: 0 },
-      spot: 0,
-      spotColorChangeLen: 0
+      spot: 0
     });
 
     if (paintingSummary.full.len || paintingSummary.primePaint.len || paintingSummary.spot){
+      const hasSectionPaintScope = paintingSummary.full.len > 0 || paintingSummary.primePaint.len > 0;
       const paintingMethodSet = new Set();
       state.sections.forEach(s=>{
         const fenceType = (s.fenceType || '').toLowerCase();
         if(fenceType && fenceType !== 'wrought iron') return;
-        if(s.painting === 'Paint Section' || s.painting === 'Prime and Paint' || s.painting === 'Spot Paint Welds'){
+        const paintingMode = effectiveWroughtPaintingSelection(s);
+        if(isAnyWroughtPaintMode(paintingMode)){
           const method = String(s.paintingApplication || 'By Hand').trim();
           if(method) paintingMethodSet.add(method);
         }
@@ -9345,7 +9398,8 @@ document.addEventListener('DOMContentLoaded', function(){
       state.sections.forEach(s=>{
         const fenceType = (s.fenceType || '').toLowerCase();
         if(fenceType && fenceType !== 'wrought iron') return;
-        if(s.painting === 'Paint Section' || s.painting === 'Prime and Paint' || s.painting === 'Spot Paint Welds'){
+        const paintingMode = effectiveWroughtPaintingSelection(s);
+        if(isAnyWroughtPaintMode(paintingMode)){
           const currentColor = normalizeLabelText(s.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0]) || WROUGHT_CURRENT_COLOR_OPTIONS[0];
           const targetColor = normalizeLabelText(s.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]) || WROUGHT_PAINT_COLOR_OPTIONS[0];
           currentColorCounts.set(currentColor, (currentColorCounts.get(currentColor) || 0) + 1);
@@ -9380,8 +9434,7 @@ document.addEventListener('DOMContentLoaded', function(){
         : 'the selected oil-based paint color';
       const colorChangeTotalLen =
         (paintingSummary.full.colorChangeLen || 0) +
-        (paintingSummary.primePaint.colorChangeLen || 0) +
-        (paintingSummary.spotColorChangeLen || 0);
+        (paintingSummary.primePaint.colorChangeLen || 0);
       let coatRuleNote = '';
       if(colorChangeTotalLen > 0){
         const coatParts = [];
@@ -9390,9 +9443,6 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         if(paintingSummary.primePaint.colorChangeLen > 0){
           coatParts.push(`prime and paint ${paintingSummary.primePaint.colorChangeLen} lf`);
-        }
-        if(paintingSummary.spotColorChangeLen > 0){
-          coatParts.push(`spot paint welds ${paintingSummary.spotColorChangeLen} lf`);
         }
         const coatDetail = coatParts.length ? ` (${coatParts.join('; ')})` : '';
         coatRuleNote = `Two paint coats are included where the selected paint color differs from the current fence color${coatDetail}.`;
@@ -9417,19 +9467,24 @@ document.addEventListener('DOMContentLoaded', function(){
         segments.push(detail);
       }
       if(paintingSummary.spot){
-        segments.push(`Spot prep and apply ${paintColorPhrase} to weld areas along ${paintingSummary.spot} linear feet`);
+        if(hasSectionPaintScope){
+          segments.push(`Spot prep and apply ${paintColorPhrase} to weld areas along ${paintingSummary.spot} linear feet`);
+        } else {
+          segments.push(`Spot paint weld touch-up after installation along ${paintingSummary.spot} linear feet`);
+        }
       }
       let desc = segments.join('; ') + '.';
-      if(colorNote){
+      if(hasSectionPaintScope && colorNote){
         desc += ` ${colorNote}`;
       }
-      if(coatRuleNote){
+      if(hasSectionPaintScope && coatRuleNote){
         desc += ` ${coatRuleNote}`;
       }
-      if(methodNote){
+      if(hasSectionPaintScope && methodNote){
         desc += ` ${methodNote}`;
       }
-      addServiceLine('Surface Preparation & Painting', desc);
+      const paintingLineTitle = hasSectionPaintScope ? 'Surface Preparation & Painting' : 'Weld Touch-Up Paint';
+      addServiceLine(paintingLineTitle, desc);
     }
 
     const woodRepairSections = state.sections.filter(s=> ((s.fenceType||'').toLowerCase() === 'wood') && ((s.scopeType||'repair') === 'repair'));
@@ -10788,27 +10843,28 @@ document.addEventListener('DOMContentLoaded', function(){
     let totalLenSpotByCoat = 0;
     let finialSprayCanUnits = 0;
     state.sections.forEach(s=>{
+      const paintingMode = effectiveWroughtPaintingSelection(s);
       const len = (parseInt(s.length||0,10) || 0);
       const coatCount = paintCoatCountForSection(s);
-      if (s.painting === 'Paint Section') {
+      if (paintingMode === 'Paint Section') {
         if(len > 0){
           totalLenPaint += len;
           totalLenPaintByCoat += (len * coatCount);
         }
-      } else if (s.painting === 'Prime and Paint') {
+      } else if (paintingMode === 'Prime and Paint') {
         if(len > 0){
           totalLenPaint += len;
           totalLenPaintByCoat += (len * coatCount);
           totalLenPrimePaint += len;
         }
-      } else if (s.painting === 'Spot Paint Welds') {
+      } else if (paintingMode === 'Spot Paint Welds') {
         if(len > 0){
           totalLenSpot += len;
           totalLenSpotByCoat += (len * coatCount);
         }
       }
 
-      const isFullSectionPaint = s.painting === 'Paint Section' || s.painting === 'Prime and Paint';
+      const isFullSectionPaint = isFullWroughtSectionPaintMode(paintingMode);
       if(!isFullSectionPaint) return;
 
       const styleHasFinials = /finials?/i.test(String(s.style || ''));
@@ -11200,7 +11256,8 @@ document.addEventListener('DOMContentLoaded', function(){
     let sprayBaseHours = 0;
     let sprayFinishHours = 0;
     const paintingHours = state.sections.reduce((acc, s)=>{
-      if (s.painting !== 'Paint Section' && s.painting !== 'Prime and Paint') return acc;
+      const paintingMode = effectiveWroughtPaintingSelection(s);
+      if(!isFullWroughtSectionPaintMode(paintingMode)) return acc;
       const len = parseInt(s.length||0,10) || 0;
       const method = s.paintingApplication || 'By Hand';
       const paintCoats = paintCoatCountForSection(s);
@@ -11229,17 +11286,17 @@ document.addEventListener('DOMContentLoaded', function(){
         totalSectionHours = baseHours + hardscapeHours + trimHours;
       }
       if(totalSectionHours <= 0) return acc;
-      if(s.painting === 'Paint Section' && s.paintingPrepExtra){
+      if(paintingMode === 'Paint Section' && s.paintingPrepExtra){
         totalSectionHours *= 1.25;
       }
       if(method === 'Spray'){
-        if(s.painting === 'Prime and Paint'){
+        if(paintingMode === 'Prime and Paint'){
           sprayBaseHours += totalSectionHours;
         }else{
           sprayBaseHours += totalSectionHours * paintCoats;
         }
       }
-      if (s.painting === 'Prime and Paint'){
+      if (paintingMode === 'Prime and Paint'){
         primePaintReturnHours += totalSectionHours * paintCoats;
         if(method === 'Spray'){
           sprayFinishHours += totalSectionHours * paintCoats;
@@ -11882,7 +11939,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const hasByHandPaintScope = state.sections.some(section=>{
       const fenceType = (section.fenceType || '').toLowerCase();
       if(fenceType && fenceType !== 'wrought iron') return false;
-      const isFullSectionPaint = section.painting === 'Paint Section' || section.painting === 'Prime and Paint';
+      const isFullSectionPaint = isFullWroughtSectionPaintMode(effectiveWroughtPaintingSelection(section));
       if(!isFullSectionPaint) return false;
       const method = String(section.paintingApplication || 'By Hand').trim().toLowerCase();
       return method !== 'spray';
@@ -11938,6 +11995,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const woodInstallCureWaitLabel = woodInstallPlan.cureWaitCrewHours > 0
       ? formatTaskHours(woodInstallPlan.cureWaitCrewHours)
       : '';
+    const wroughtPanelInstallReturnNextDay = wroughtInstallPanelCrewHours > 0 && installPostsNeedingCrew > 0;
 
     const postHelperManHours =
       postReplacementCrewManHours +
@@ -11984,6 +12042,9 @@ document.addEventListener('DOMContentLoaded', function(){
       postTaskParts.push(`run strings and mark ${woodInstallPlan.totalPosts} wood post ${plural(woodInstallPlan.totalPosts, 'location', 'locations')}`);
     }
     if(installPostSummary) postTaskParts.push(`set ${installPostSummary} new posts`);
+    if(wroughtPanelInstallReturnNextDay){
+      postTaskParts.push('return another day to install panels');
+    }
     if(woodInstallPlan.removalLf > 0 && woodInstallScopeSections.length <= 0){
       postTaskParts.push(`remove and stack ${formatFtValue(woodInstallPlan.removalLf)} lf of existing wood fence for haul away`);
     }
@@ -12199,6 +12260,48 @@ document.addEventListener('DOMContentLoaded', function(){
         stageTitleBase = 'Weld repairs';
       }
       pushStage(stageTitleBase, postAndWeldLines);
+    }
+    if(wroughtInstallPanelCrewHours > 0){
+      const panelCrewCount = Math.max(1, helperLaneFullCrew);
+      const panelCrewNames = pickCrewNames(panelCrewCount, []);
+      const panelBaseStartGate = panelCrewNames.reduce((max, name)=>{
+        return Math.max(max, getPersonAvailableAt(name));
+      }, Math.max(stageOneEndAt, postLaneReadyAt));
+      const dayBlock = Math.max(0.25, Number(HOURS_PER_PERSON || CREW_SETTINGS.maxDayHours || 13) || 13);
+      let panelStartGate = panelBaseStartGate;
+      if(wroughtPanelInstallReturnNextDay){
+        panelStartGate = Math.ceil(panelBaseStartGate / dayBlock) * dayBlock;
+        if(panelStartGate <= panelBaseStartGate + 1e-9){
+          panelStartGate += dayBlock;
+        }
+      }
+      const panelSchedule = scheduleWorkByAvailability({
+        names: panelCrewNames,
+        totalHours: wroughtInstallPanelCrewHours * panelCrewCount,
+        earliestStart: panelStartGate
+      });
+      const panelLineNames = panelSchedule.participants.length
+        ? panelSchedule.participants
+        : panelCrewNames;
+      if(panelSchedule.workDone > 0){
+        reserveScheduledPeople(panelSchedule);
+      }
+      const panelDuration = panelSchedule.workDone > 0
+        ? panelSchedule.elapsed
+        : wroughtInstallPanelCrewHours;
+      const panelLengthLabel = formatFtValue(wroughtInstallPanelLf);
+      const panelTypeParts = [];
+      if(totals.panelsInstallCustomShop > 0){
+        panelTypeParts.push(`${totals.panelsInstallCustomShop} shop-fabricated custom ${plural(totals.panelsInstallCustomShop, 'panel')}`);
+      }
+      if(totals.panelsInstallPrefab > 0){
+        panelTypeParts.push(`${totals.panelsInstallPrefab} prefab ${plural(totals.panelsInstallPrefab, 'panel')}`);
+      }
+      const panelTypeLabel = panelTypeParts.length ? joinParts(panelTypeParts) : 'fabricated panels';
+      const panelInstallLine = panelLengthLabel
+        ? `${formatNameList(panelLineNames)}: install ${panelTypeLabel} on about ${panelLengthLabel}ft of wrought iron fence (${formatTaskHours(panelDuration)}).`
+        : `${formatNameList(panelLineNames)}: install ${panelTypeLabel} on the wrought iron fence (${formatTaskHours(panelDuration)}).`;
+      pushStage('Wrought panel install', [panelInstallLine]);
     }
     if(woodInstallReturnNextDay && woodInstallBuildManHours > 0 && woodInstallScopeSections.length > 0){
       const woodBuildCrewCount = Math.max(1, helperLaneFullCrew);
@@ -12707,9 +12810,12 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintedSections = state.sections.filter(section=>{
       const fenceType = (section.fenceType || '').toLowerCase();
       if(fenceType && fenceType !== 'wrought iron') return false;
-      return section.painting === 'Paint Section' || section.painting === 'Prime and Paint' || section.painting === 'Spot Paint Welds';
+      return isAnyWroughtPaintMode(effectiveWroughtPaintingSelection(section));
     });
-    if(paintedSections.length){
+    const sectionPaintColorSections = paintedSections.filter(section=>{
+      return isFullWroughtSectionPaintMode(effectiveWroughtPaintingSelection(section));
+    });
+    if(sectionPaintColorSections.length){
       const summarizeColorCounts = (map)=>{
         const parts = [];
         map.forEach((count, label)=>{
@@ -12721,7 +12827,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const currentColorCounts = new Map();
       const targetColorCounts = new Map();
       let colorChangeLf = 0;
-      paintedSections.forEach(section=>{
+      sectionPaintColorSections.forEach(section=>{
         const currentColor = normalizeLabelText(section.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0]) || WROUGHT_CURRENT_COLOR_OPTIONS[0];
         const targetColor = normalizeLabelText(section.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]) || WROUGHT_PAINT_COLOR_OPTIONS[0];
         currentColorCounts.set(currentColor, (currentColorCounts.get(currentColor) || 0) + 1);
