@@ -2406,6 +2406,7 @@ document.addEventListener('DOMContentLoaded', function(){
       scopeType: 'repair',
       postSpacing: '8',
       panelAttachment: 'Welding',
+      wroughtCustomStickLength: '12',
       installFinialStyle: SEED.finialStyles[0],
       finials: [],
       caps: [],
@@ -2477,6 +2478,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!Object.prototype.hasOwnProperty.call(data, 'woodRepairPostReplaceCap')){
       merged.woodRepairPostReplaceCap = defaultCapForWoodPost(merged.woodPost);
     }
+    merged.wroughtCustomStickLength = normalizeWroughtCustomStickLength(merged.wroughtCustomStickLength);
     merged.woodRepairStainBrand = normalizeWoodStainBrand(merged.woodRepairStainBrand);
     return merged;
   }
@@ -3489,6 +3491,14 @@ document.addEventListener('DOMContentLoaded', function(){
               <option value="Brackets">Brackets</option>
             </select>
           </div>
+          <div class="sp-field col-2" data-install-only>
+            <label class="sp-label">Custom Stick Length</label>
+            <select class="sp-select" data-field="wroughtCustomStickLength">
+              <option value="12">12 ft</option>
+              <option value="24">24 ft</option>
+            </select>
+            <div class="sp-hint">Used only when panels are custom-built (not prefab).</div>
+          </div>
           <div class="sp-field col-2" data-install-finials style="display:none">
             <label class="sp-label">Finial Style</label>
             <select class="sp-select" data-field="installFinialStyle">${createSelect(SEED.finialStyles)}</select>
@@ -3898,7 +3908,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   const STYLE_FIELDS = [
-    'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','installFinialStyle','railsCount','rails',
+    'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','wroughtCustomStickLength','installFinialStyle','railsCount','rails',
     'picketSize','picketHeight','puppy','puppyPicketSize','puppyPicketHeight','puppyPicketReplace','painting','paintingApplication','paintingPrepExtra','paintingCurrentColor','paintingTargetColor','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','woodRepairStainBrand','walkLatch','walkHinges','walkRebuildFrame',
@@ -3911,7 +3921,7 @@ document.addEventListener('DOMContentLoaded', function(){
   ];
 
   const BULK_WROUGHT_FIELDS = [
-    'fenceType','scopeType','style','height','postSize','panelAttachment',
+    'fenceType','scopeType','style','height','postSize','panelAttachment','wroughtCustomStickLength',
     'railsCount','rails','picketSize','picketHeight','puppy'
   ];
 
@@ -3992,6 +4002,7 @@ document.addEventListener('DOMContentLoaded', function(){
       values.height = source.height || '4ft';
       values.postSize = source.postSize || '2x2';
       values.panelAttachment = source.panelAttachment || 'Welding';
+      values.wroughtCustomStickLength = normalizeWroughtCustomStickLength(source.wroughtCustomStickLength);
       values.picketSize = source.picketSize || SEED.picketSize[0];
       values.picketHeight = source.picketHeight || '';
       values.puppy = source.puppy || SEED.puppy[0];
@@ -4299,6 +4310,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postSize: val('postSize'),
       postSpacing: val('postSpacing'),
       panelAttachment: val('panelAttachment'),
+      wroughtCustomStickLength: val('wroughtCustomStickLength') || '12',
       installFinialStyle: val('installFinialStyle'),
       postReplacements,
       postRealignments,
@@ -4481,6 +4493,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('postSize', data.postSize||'2x2');
     set('postSpacing', data.postSpacing||'8');
     set('panelAttachment', data.panelAttachment||'Welding');
+    set('wroughtCustomStickLength', normalizeWroughtCustomStickLength(data.wroughtCustomStickLength));
     set('installFinialStyle', data.installFinialStyle||SEED.finialStyles[0]);
 
     set('railsCount', data.railsCount || 2);
@@ -6417,6 +6430,14 @@ document.addEventListener('DOMContentLoaded', function(){
       .replace(/×/g,'x')
       .trim();
   }
+  function normalizeWroughtCustomStickLength(value){
+    const raw = String(value ?? '').trim();
+    const parsed = parseInt(raw, 10);
+    return parsed === 24 ? '24' : '12';
+  }
+  function wroughtCustomStickLengthFt(value){
+    return parseInt(normalizeWroughtCustomStickLength(value), 10) || 12;
+  }
   function normalizePaintColorKey(value){
     const raw = normalizeLabelText(value || '').toLowerCase();
     if(!raw) return '';
@@ -7937,25 +7958,26 @@ document.addEventListener('DOMContentLoaded', function(){
     const railStickTotals = {};
     const steelStickTotals = { raw1p5:0, raw3x3:0, raw4x4:0 };
     const diagonalBraceFeetBySize = {};
+    const stickTotalKey = (lengthFt, sizeLabel)=> `${lengthFt}|${sizeLabel}`;
 
-    const addPicketSticks = (size, qty) => {
+    const addPicketSticks = (size, qty, stickLengthFt = 12) => {
       if(!qty || qty <= 0) return;
       const normalized = normalizeSize(size);
       const labelSize = normalized || normalizeLabelText(size);
-      addMat(materials, `12ft picket sticks (${labelSize})`, qty);
-      if(normalized){
-        picketStickTotals[normalized] = (picketStickTotals[normalized]||0) + qty;
-      }
+      const lengthFt = wroughtCustomStickLengthFt(stickLengthFt);
+      addMat(materials, `${lengthFt}ft picket sticks (${labelSize})`, qty);
+      const key = stickTotalKey(lengthFt, labelSize);
+      picketStickTotals[key] = (picketStickTotals[key]||0) + qty;
     };
 
-    const addRailSticks = (size, qty) => {
+    const addRailSticks = (size, qty, stickLengthFt = 12) => {
       if(!qty || qty <= 0) return;
       const normalized = normalizeSize(size);
       const labelSize = normalized || normalizeLabelText(size);
-      addMat(materials, `12ft rail sticks (${labelSize})`, qty);
-      if(normalized){
-        railStickTotals[normalized] = (railStickTotals[normalized]||0) + qty;
-      }
+      const lengthFt = wroughtCustomStickLengthFt(stickLengthFt);
+      addMat(materials, `${lengthFt}ft rail sticks (${labelSize})`, qty);
+      const key = stickTotalKey(lengthFt, labelSize);
+      railStickTotals[key] = (railStickTotals[key]||0) + qty;
     };
     let manHours = 0;
     let welderHours = 0;
@@ -8493,6 +8515,9 @@ document.addEventListener('DOMContentLoaded', function(){
           const { qty, widthIn, railSize, picketSize, height, style, finialStyle } = entry;
           const feet = feetFromHeightStr(height);
           const eligible = isPrefabEligible(widthIn, railSize, picketSize);
+          const stickLengthFt = source === 'install'
+            ? wroughtCustomStickLengthFt(s.wroughtCustomStickLength)
+            : 12;
           const hasFinials = /Finials/i.test(style);
           const finStyleLabel = hasFinials ? (finialStyle || SEED.finialStyles[0]) : '';
           const finialNote = hasFinials && finStyleLabel ? ` (finials: ${finStyleLabel})` : '';
@@ -8539,6 +8564,7 @@ document.addEventListener('DOMContentLoaded', function(){
             railSize,
             height,
             widthIn,
+            stickLengthFt,
             finialStyle,
             source,
             attachment
@@ -10605,18 +10631,20 @@ document.addEventListener('DOMContentLoaded', function(){
           // No extra raw steel for prefab
         } else {
           // Build on site: rails (2 per panel) and pickets per width
+          const stickLengthFt = wroughtCustomStickLengthFt(p.stickLengthFt);
+          const stickLengthIn = stickLengthFt * 12;
           const totalRailInches = 2 * p.widthIn * p.qty; // two horizontals
           const railFeet = totalRailInches / 12;
-          const railSticks = Math.ceil(railFeet / 12);
-          addRailSticks(p.railSize, railSticks);
+          const railSticks = Math.ceil(railFeet / stickLengthFt);
+          addRailSticks(p.railSize, railSticks, stickLengthFt);
 
           const picketsPerPanel = picketCountForWidth(p.widthIn, p.picketSize);
           // assume picket height = selected panel height in inches (fallback 54)
           let ph = p.feet>0 ? p.feet*12 : 54;
-          const perStick = Math.max(1, Math.floor(144 / ph));
+          const perStick = Math.max(1, Math.floor(stickLengthIn / ph));
           const totalPickets = picketsPerPanel * p.qty;
           const picketSticks = Math.ceil(totalPickets / perStick);
-          addPicketSticks(p.picketSize, picketSticks);
+          addPicketSticks(p.picketSize, picketSticks, stickLengthFt);
         }
       });
     });
@@ -10756,22 +10784,26 @@ document.addEventListener('DOMContentLoaded', function(){
       matBreak.push('  - 4x4 raw steel sticks: '+raw4x4Count+' x $'+money(unit4x4)+' = $'+money(c));
     }
 
-    Object.keys(picketStickTotals).sort().forEach(size=>{
-      const qty = picketStickTotals[size];
+    Object.keys(picketStickTotals).sort().forEach(key=>{
+      const [lenRaw, size] = String(key).split('|');
+      const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
+      const qty = picketStickTotals[key];
       const perFt = PRICE_FT[size]||0;
-      const c = qty * 12 * perFt;
+      const c = qty * stickLengthFt * perFt;
       if(perFt===0) unpriced = true;
       costMaterials += c;
-      matBreak.push('  - 12ft picket sticks '+size+': '+qty+' x 12ft x $'+money(perFt)+'/ft = $'+money(c));
+      matBreak.push(`  - ${stickLengthFt}ft picket sticks ${size}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
     });
 
-    Object.keys(railStickTotals).sort().forEach(size=>{
-      const qty = railStickTotals[size];
+    Object.keys(railStickTotals).sort().forEach(key=>{
+      const [lenRaw, size] = String(key).split('|');
+      const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
+      const qty = railStickTotals[key];
       const perFt = PRICE_FT[size]||0;
-      const c = qty * 12 * perFt;
+      const c = qty * stickLengthFt * perFt;
       if(perFt===0) unpriced = true;
       costMaterials += c;
-      matBreak.push('  - 12ft rail sticks '+size+': '+qty+' x 12ft x $'+money(perFt)+'/ft = $'+money(c));
+      matBreak.push(`  - ${stickLengthFt}ft rail sticks ${size}: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
     });
 
     // NEW: Finials cost (flat $1.25 each via total of descriptive labels)
