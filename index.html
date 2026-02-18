@@ -7101,7 +7101,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function getCustomerType(){
     if(customerTypeSelect){
-      return normalizeCustomerType(customerTypeSelect.value);
+      const rawSelectValue = String(customerTypeSelect.value || '').trim();
+      if(rawSelectValue){
+        return normalizeCustomerType(rawSelectValue);
+      }
     }
     return normalizeCustomerType(state.customerType);
   }
@@ -7115,6 +7118,11 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function shouldApplyGrossMarginFloor(){
+    const selectType = customerTypeSelect ? normalizeCustomerType(customerTypeSelect.value) : '';
+    const stateType = normalizeCustomerType(state.customerType);
+    if(selectType === 'Preferred' || stateType === 'Preferred'){
+      return false;
+    }
     return getCustomerType() !== 'Preferred';
   }
 
