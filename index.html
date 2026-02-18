@@ -1586,6 +1586,7 @@ document.addEventListener('DOMContentLoaded', function(){
   let lastQuickCosts = null;
   let autoGenerateTimer = null;
   let isGeneratingNotes = false;
+  let pendingNotesRegeneration = false;
   let estimateLookupController = null;
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
@@ -7493,9 +7494,11 @@ document.addEventListener('DOMContentLoaded', function(){
       autoGenerateTimer = null;
     }
     if(isGeneratingNotes){
+      pendingNotesRegeneration = true;
       return;
     }
     isGeneratingNotes = true;
+    pendingNotesRegeneration = false;
 
     const shouldScroll = !options.skipScroll;
 
@@ -13109,6 +13112,10 @@ document.addEventListener('DOMContentLoaded', function(){
     persist();
     } finally {
       isGeneratingNotes = false;
+      if(pendingNotesRegeneration){
+        pendingNotesRegeneration = false;
+        scheduleAutoGenerateNotes();
+      }
     }
   }
 
@@ -13537,6 +13544,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function scheduleAutoGenerateNotes(){
     if(isGeneratingNotes){
+      pendingNotesRegeneration = true;
       return;
     }
     if(autoGenerateTimer){
@@ -13556,9 +13564,6 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function persist(){
-    if(isGeneratingNotes){
-      return;
-    }
     scheduleAutoGenerateNotes();
   }
 
@@ -13647,7 +13652,7 @@ document.addEventListener('DOMContentLoaded', function(){
       state.customerType = customerTypeSelect.value;
       updatePricingMinimumUI();
       setCustomerTypeConfirmed(false);
-      persist();
+      generateNotes({ skipScroll: true });
     });
   }
   if(customerTypeSelect){
