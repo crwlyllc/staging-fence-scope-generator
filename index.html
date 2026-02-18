@@ -1480,6 +1480,7 @@ document.addEventListener('DOMContentLoaded', function(){
     digCrewHoursPerPostSkid: (5 / 60),
     setCrewHoursPerPost: 0.125,
     panelInstallLfPerCrewDay: 250,
+    shopFabricationCrewHoursPerPanel: 1.2,
     skidSteerRentalPerDay: 500
   };
 
@@ -8725,7 +8726,8 @@ document.addEventListener('DOMContentLoaded', function(){
               : (qty * 0.5);
           } else if(source === 'install' && installFabricationMode === 'Shop'){
             onsitePanelHours = panelLinearFt * (crewDayHours / panelInstallLfPerCrewDay);
-            shopPanelHours = qty * 1.5;
+            const shopCrewHoursPerPanel = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.shopFabricationCrewHoursPerPanel || 1.2) || 1.2);
+            shopPanelHours = qty * shopCrewHoursPerPanel;
           } else {
             onsitePanelHours = qty * 1.5;
           }
@@ -9946,7 +9948,7 @@ document.addEventListener('DOMContentLoaded', function(){
       addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(totals.panelsInstallCustomOnSite, 'new custom panel', 'new custom panels')} on site to match the wrought iron design.`);
     }
     if (totals.panelsInstallCustomShop > 0){
-      addServiceLine('Shop Fabrication', `Fabricate ${describeCount(totals.panelsInstallCustomShop, 'new custom panel', 'new custom panels')} in the shop (1.5 hours per panel, with up to 2 welders in parallel) and install on site.`);
+      addServiceLine('Shop Fabrication', `Fabricate ${describeCount(totals.panelsInstallCustomShop, 'new custom panel', 'new custom panels')} in the shop with a 4-person crew (1.2 hours per panel, cutting and welding included) and install on site.`);
     }
     if (totals.powderCoatPanels > 0 || totals.powderCoatPosts > 0){
       const powderParts = [];
@@ -11612,10 +11614,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!welderNames.length && crewNames.length){
       welderNames.push(crewNames[0]);
     }
-    const shopFabricationWelderCount = Math.max(1, Math.min(2, welderNames.length || 1));
-    const shopFabricationCrewHours = shopFabricationLaborHours > 0
-      ? (shopFabricationLaborHours / shopFabricationWelderCount)
-      : 0;
+    const shopFabricationCrewSize = Math.max(1, Math.min(ONSITE_CREW_SIZE, crewNames.length || ONSITE_CREW_SIZE));
     const formatNameList = (names)=>{
       const list = (Array.isArray(names) ? names : []).filter(Boolean);
       if(!list.length) return 'Crew';
@@ -11812,16 +11811,16 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push('');
       stageNumber += 1;
     };
-    if(totals.panelsInstallCustomShop > 0 && shopFabricationCrewHours > 0){
-      const shopWelders = welderNames.slice(0, shopFabricationWelderCount);
-      const shopWelderLabel = shopWelders.length ? formatNameList(shopWelders) : (welderNames[0] || leadName || 'Welder');
+    if(totals.panelsInstallCustomShop > 0 && shopFabricationLaborHours > 0){
+      const shopFabricationTeam = crewNames.slice(0, shopFabricationCrewSize);
+      const shopCrewLabel = shopFabricationTeam.length ? formatNameList(shopFabricationTeam) : formatNameList([leadName]);
       const shopPanelScope = describeCount(
         totals.panelsInstallCustomShop,
         'custom wrought iron panel',
         'custom wrought iron panels'
       );
       pushStage('Shop fabrication', [
-        `${shopWelderLabel}: fabricate ${shopPanelScope} in the shop (${formatTaskHours(shopFabricationCrewHours)}).`
+        `${shopCrewLabel}: fabricate ${shopPanelScope} in the shop (${formatTaskHours(shopFabricationLaborHours)}).`
       ]);
     }
     const woodPostReplaceManHours = ((totals.woodPostReplace6 || 0) * 2) + ((totals.woodPostReplace8 || 0) * 3);
@@ -12833,7 +12832,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (notesSubEl) { notesSubEl.value = orderedSub.join('\n'); }
 
     const laborHoursOnsite = isFinite(estimatedOnsiteHours) ? estimatedOnsiteHours : 0;
-    const laborHoursShop = Math.max(0, Number(shopFabricationCrewHours || 0) || 0);
+    const laborHoursShop = Math.max(0, Number(shopFabricationLaborHours || 0) || 0);
     const laborHoursBillable = laborHoursOnsite + laborHoursShop;
     const laborCost = laborHoursBillable * LABOR_RATE;
     const baseConsumablesCost = scheduleEntries.length * 50;
@@ -12873,7 +12872,10 @@ document.addEventListener('DOMContentLoaded', function(){
     cost.push(`- Labor ($${money(LABOR_RATE)}/hr, crew): $${money(laborCost)} (${laborTimeDetail}${laborScheduleDetail})`);
     const travelHoursLabel = formatHours(travelHours);
     const totalHoursLabel = formatHours(totalHours);
-    const totalLaborHoursOverallLabel = formatHours(Math.max(0, (Number(manHours) || 0) + (Number(shopFabricationLaborHours || 0) || 0)));
+    const totalLaborHoursOverallLabel = formatHours(Math.max(
+      0,
+      (Number(manHours) || 0) + ((Number(shopFabricationLaborHours || 0) || 0) * shopFabricationCrewSize)
+    ));
     if (estimatedOnsiteLabel) {
       const timeDetail = (shopFabricationHoursLabel && totalLaborHoursOverallLabel)
         ? `${estimatedOnsiteLabel} onsite (~${totalLaborHoursOverallLabel} of labor time total, including ${shopFabricationHoursLabel} shop fabrication)`
