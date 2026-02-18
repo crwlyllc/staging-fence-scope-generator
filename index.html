@@ -7719,6 +7719,15 @@ document.addEventListener('DOMContentLoaded', function(){
       });
       return lines;
     }
+    function paintColorPhrase(color, finishFirst){
+      const normalized = normalizeLabelText(color || '').toLowerCase();
+      if(!normalized) return '';
+      if(finishFirst && /\bgloss\b/.test(normalized)){
+        const remainder = normalized.replace(/\bgloss\b/g, '').replace(/\s+/g, ' ').trim();
+        if(remainder) return `gloss ${remainder}`;
+      }
+      return normalized;
+    }
     function fenceTypeLabel(type){
       const normalized = String(type||'').toLowerCase();
       if(normalized === 'wood') return 'Wood';
@@ -9223,7 +9232,10 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       if (t.walkRebuild)   lines.push(`- Walk gates to rebuild: ${t.walkRebuild}`);
       if (t.walkGateAdds)  lines.push(`- Walk gates to add: ${t.walkGateAdds}`);
-      if (t.walkGateAddsSingle) lines.push(`- Single swing walk gates to add: ${t.walkGateAddsSingle}`);
+      if (t.walkGateAddsSingle){
+        const gateLabel = t.walkGateAddsSingle === 1 ? 'walk gate' : 'walk gates';
+        lines.push(`- Add ${t.walkGateAddsSingle} single swing ${gateLabel} into the existing fence`);
+      }
       if (t.walkGateAddsDouble) lines.push(`- Double swing gates to add: ${t.walkGateAddsDouble}`);
       if (t.woodWalkGateAdds) lines.push(`- Wood walk gates to add: ${t.woodWalkGateAdds}`);
       if (t.woodWalkGateAddsSingle) lines.push(`- Wood single swing walk gates to add: ${t.woodWalkGateAddsSingle}`);
@@ -12612,7 +12624,10 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     walkHardwareActionLines(walkHardwareSummary).forEach(line=> sub.push(`- ${line}`));
     if (totals.walkRebuild > 0)     sub.push('- Walk gates to rebuild: '+totals.walkRebuild);
-    if (totals.walkGateAddsSingle > 0) sub.push('- Single swing walk gates to add: '+totals.walkGateAddsSingle);
+    if (totals.walkGateAddsSingle > 0) {
+      const gateLabel = totals.walkGateAddsSingle === 1 ? 'walk gate' : 'walk gates';
+      sub.push(`- Add ${totals.walkGateAddsSingle} single swing ${gateLabel} into the existing fence`);
+    }
     if (totals.walkGateAddsDouble > 0) sub.push('- Double swing gates to add: '+totals.walkGateAddsDouble);
     if (totals.woodWalkGateAddsSingle > 0) sub.push('- Wood single swing walk gates to add: '+totals.woodWalkGateAddsSingle);
     if (totals.woodWalkGateAddsDouble > 0) sub.push('- Wood double swing gates to add: '+totals.woodWalkGateAddsDouble);
@@ -12704,42 +12719,29 @@ document.addEventListener('DOMContentLoaded', function(){
     const sectionPaintColorSections = paintedSections.filter(section=>{
       return isFullWroughtSectionPaintMode(effectiveWroughtPaintingSelection(section));
     });
-    if(sectionPaintColorSections.length){
-      const summarizeColorCounts = (map)=>{
-        const parts = [];
-        map.forEach((count, label)=>{
-          if(!label) return;
-          parts.push(count > 1 ? `${count} × ${label}` : label);
-        });
-        return parts.join('; ');
-      };
-      const currentColorCounts = new Map();
-      const targetColorCounts = new Map();
-      let colorChangeLf = 0;
-      sectionPaintColorSections.forEach(section=>{
-        const currentColor = normalizeLabelText(section.paintingCurrentColor || WROUGHT_CURRENT_COLOR_OPTIONS[0]) || WROUGHT_CURRENT_COLOR_OPTIONS[0];
-        const targetColor = normalizeLabelText(section.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]) || WROUGHT_PAINT_COLOR_OPTIONS[0];
-        currentColorCounts.set(currentColor, (currentColorCounts.get(currentColor) || 0) + 1);
-        targetColorCounts.set(targetColor, (targetColorCounts.get(targetColor) || 0) + 1);
-        if(paintCoatCountForSection(section) > 1){
-          colorChangeLf += parseInt(section.length || 0, 10) || 0;
-        }
-      });
-      const singleCurrentColor = currentColorCounts.size === 1 ? Array.from(currentColorCounts.keys())[0] : '';
-      const singleTargetColor = targetColorCounts.size === 1 ? Array.from(targetColorCounts.keys())[0] : '';
-      if(singleCurrentColor && singleTargetColor){
-        sub.push(`- Painting colors: ${singleCurrentColor} to ${singleTargetColor}`);
-      }else{
-        const currentMix = summarizeColorCounts(currentColorCounts);
-        const targetMix = summarizeColorCounts(targetColorCounts);
-        if(currentMix) sub.push(`- Current fence color mix: ${currentMix}`);
-        if(targetMix) sub.push(`- Paint color mix: ${targetMix}`);
+    let singleTargetPaintColor = '';
+    let paintColorChangeDetected = false;
+    const targetColorCounts = new Map();
+    paintedSections.forEach(section=>{
+      const targetColor = normalizeLabelText(section.paintingTargetColor || WROUGHT_PAINT_COLOR_OPTIONS[0]) || WROUGHT_PAINT_COLOR_OPTIONS[0];
+      targetColorCounts.set(targetColor, (targetColorCounts.get(targetColor) || 0) + 1);
+    });
+    sectionPaintColorSections.forEach(section=>{
+      if(paintCoatCountForSection(section) > 1){
+        paintColorChangeDetected = true;
       }
-      if(colorChangeLf > 0){
-        sub.push(`- Two-coat paint rule: ${colorChangeLf} lf requires 2 coats because paint color differs from existing color`);
-      }
+    });
+    if(targetColorCounts.size === 1){
+      singleTargetPaintColor = Array.from(targetColorCounts.keys())[0] || '';
     }
-    if (paintLenTotal > 0)          sub.push('- Scrape off loose rust and debris, then paint '+paintLenTotal+' ft of fence');
+    if (paintLenTotal > 0){
+      const targetPhrase = singleTargetPaintColor
+        ? paintColorPhrase(singleTargetPaintColor, paintColorChangeDetected)
+        : '';
+      const colorSuffix = targetPhrase ? ` with ${targetPhrase}` : '';
+      const coatSuffix = paintColorChangeDetected ? ' May need 2 coats.' : '';
+      sub.push(`- Scrape off loose rust and debris, then paint ${paintLenTotal} ft of fence${colorSuffix}.${coatSuffix}`);
+    }
     if (totalLenPrimePaint > 0)     sub.push('- Prime with red oxide primer and schedule a return visit after cure to apply the finish coat');
     if (totals.woodPicketReplace > 0) sub.push('- Wood pickets to replace: '+totals.woodPicketReplace);
     if (totals.woodPicketInstall > 0) sub.push('- Wood pickets to install: '+totals.woodPicketInstall);
