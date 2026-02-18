@@ -944,6 +944,28 @@
     background:#ffffff;
     border-color:#d6dfd8;
   }
+
+  /* Tap-target hardening: keep the full visual button box clickable on touch devices. */
+  .sp-btn,
+  .sp-floating-actions .sp-fab{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    pointer-events:auto;
+    z-index:2;
+  }
+  .sp-btn > *,
+  .sp-floating-actions .sp-fab > *{
+    pointer-events:none;
+  }
+  @media(max-width:719px){
+    .sp-btn{
+      display:flex;
+    }
+  }
   </style>
 </head>
 <body>
