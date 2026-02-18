@@ -8022,7 +8022,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const installCapsByLabel = new Map();
     const picketStickTotals = {};
     const railStickTotals = {};
-    const steelStickTotals = { raw1p5:0, raw3x3:0, raw4x4:0 };
+    const steelStickTotals = { raw1p5:{}, raw2x2:{}, raw3x3:{}, raw4x4:{} };
     const diagonalBraceFeetBySize = {};
     const stickTotalKey = (lengthFt, sizeLabel)=> `${lengthFt}|${sizeLabel}`;
 
@@ -8044,6 +8044,22 @@ document.addEventListener('DOMContentLoaded', function(){
       addMat(materials, `${lengthFt}ft rail sticks (${labelSize})`, qty);
       const key = stickTotalKey(lengthFt, labelSize);
       railStickTotals[key] = (railStickTotals[key]||0) + qty;
+    };
+    const steelStickLabelForKind = (kind, lengthFt)=>{
+      const normalizedLength = wroughtCustomStickLengthFt(lengthFt);
+      if(kind === 'raw1p5') return `1.5x1.5x${normalizedLength} raw steel`;
+      if(kind === 'raw2x2') return `2x2x${normalizedLength} raw steel`;
+      if(kind === 'raw3x3') return `3x3x${normalizedLength} raw steel`;
+      return `4x4x${normalizedLength} raw steel`;
+    };
+    const addSteelRawSticks = (kind, qty, stickLengthFt = 12)=>{
+      const normalizedKind = Object.prototype.hasOwnProperty.call(steelStickTotals, kind) ? kind : 'raw1p5';
+      const count = Math.max(0, parseInt(qty, 10) || 0);
+      if(count <= 0) return;
+      const lengthFt = wroughtCustomStickLengthFt(stickLengthFt);
+      const current = steelStickTotals[normalizedKind][lengthFt] || 0;
+      steelStickTotals[normalizedKind][lengthFt] = current + count;
+      addMat(materials, steelStickLabelForKind(normalizedKind, lengthFt), count);
     };
     let manHours = 0;
     let welderHours = 0;
@@ -10353,117 +10369,77 @@ document.addEventListener('DOMContentLoaded', function(){
     manHours += driveGateOperatorInstallHours;
     helperHours += driveGateOperatorInstallHours;
 
-    // posts (1.5" x 1.5" raw sticks)
-    let raw1p5Total = 0;
-    state.sections.forEach(s=>{
-      const hft = feetFromStr(s.height);
-      const postLen = Math.max(8, hft + 3);
-      const repCounts = countPostGroups(s.postReplacements);
-      const count = repCounts.posts1p5 || 0;
-      if(count>0){
-        const perStick = Math.max(1, Math.floor(12 / Math.max(1, postLen)));
-        raw1p5Total += Math.ceil(count / perStick);
-      }
-      const installCount1p5 = parseInt(s._installCalc?.postCounts?.posts1p5 || 0,10) || 0;
-      if(installCount1p5>0){
-        const perStickInstall = Math.max(1, Math.floor(12 / Math.max(1, postLen)));
-        raw1p5Total += Math.ceil(installCount1p5 / perStickInstall);
-      }
-      const isWoodSection = (s.fenceType || '').toLowerCase() === 'wood';
-      const addG = !isWoodSection ? walkGateAddCount(s) : 0;
-      if(addG>0 && (s.walkAddPostSize||'').trim() === '1 1/2" x 1 1/2"'){
-        const perStickAdd = Math.max(1, Math.floor(12 / Math.max(1, postLen)));
-        raw1p5Total += Math.ceil(addG / perStickAdd);
-      }
-    });
-    if(raw1p5Total>0){
-      steelStickTotals.raw1p5 += raw1p5Total;
-      addMat(materials, '1.5x1.5x12 raw steel', raw1p5Total);
-    }
-
-    // posts (2x2 by length)
+    // posts
     const posts2x2ByLenCalc = {};
     state.sections.forEach(s=>{
       const hft = feetFromStr(s.height);
       const postLen = Math.max(8, hft + 3);
+      const customPostLen = Math.max(1, hft + 3);
+      const scopeType = s.scopeType || 'repair';
+      const isInstallScope = scopeType === 'install' || scopeType === 'replace';
+      const isWroughtSection = (s.fenceType || '').toLowerCase() === 'wrought iron';
+      const hasCustomInstallPanels = (parseInt(s._installCalc?.customPanels || 0, 10) || 0) > 0;
+      const isCustomInstallSection = isInstallScope && isWroughtSection && hasCustomInstallPanels;
+      const installStickLengthFt = isCustomInstallSection
+        ? wroughtCustomStickLengthFt(s.wroughtCustomStickLength)
+        : 12;
+      const addRawSticksForPosts = (kind, count, stickLengthFt = 12, useCustomDepth = false)=>{
+        const qty = Math.max(0, parseInt(count, 10) || 0);
+        if(qty <= 0) return;
+        const cutLengthFt = useCustomDepth ? customPostLen : postLen;
+        const piecesPerStick = Math.max(1, Math.floor(wroughtCustomStickLengthFt(stickLengthFt) / Math.max(1, cutLengthFt)));
+        const sticks = Math.ceil(qty / piecesPerStick);
+        addSteelRawSticks(kind, sticks, stickLengthFt);
+      };
+
       const repCounts = countPostGroups(s.postReplacements);
+      addRawSticksForPosts('raw1p5', repCounts.posts1p5 || 0, 12);
       const nReplace = repCounts.posts2x2 || 0;
       if(nReplace>0){ posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + nReplace; }
+      addRawSticksForPosts('raw3x3', repCounts.posts3x3 || 0, 12);
+      addRawSticksForPosts('raw4x4', repCounts.posts4x4 || 0, 12);
+
+      const installPostCounts = s._installCalc?.postCounts || {};
+      const nInstall1p5 = parseInt(installPostCounts.posts1p5 || 0,10) || 0;
+      addRawSticksForPosts('raw1p5', nInstall1p5, installStickLengthFt, isCustomInstallSection);
+
       const nInstall2x2 = parseInt(s._installCalc?.postCounts?.posts2x2 || 0,10) || 0;
-      if(nInstall2x2>0){ posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + nInstall2x2; }
+      if(nInstall2x2>0){
+        if(isCustomInstallSection){
+          addRawSticksForPosts('raw2x2', nInstall2x2, installStickLengthFt, true);
+        } else {
+          posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + nInstall2x2;
+        }
+      }
+      const nInstall3x3 = parseInt(installPostCounts.posts3x3 || 0,10) || 0;
+      addRawSticksForPosts('raw3x3', nInstall3x3, installStickLengthFt, isCustomInstallSection);
+      const nInstall4x4 = parseInt(installPostCounts.posts4x4 || 0,10) || 0;
+      addRawSticksForPosts('raw4x4', nInstall4x4, installStickLengthFt, isCustomInstallSection);
+
       const isWoodSection = (s.fenceType || '').toLowerCase() === 'wood';
       const addG = !isWoodSection ? walkGateAddCount(s) : 0;
-      if(addG>0 && (s.walkAddPostSize||'').trim() === '2x2'){
-        posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + addG;
+      const gatePostSize = (s.walkAddPostSize||'').trim();
+      const gateStickLengthFt = isCustomInstallSection ? installStickLengthFt : 12;
+      if(addG>0 && gatePostSize === '1 1/2" x 1 1/2"'){
+        addRawSticksForPosts('raw1p5', addG, gateStickLengthFt, isCustomInstallSection);
+      }
+      if(addG>0 && gatePostSize === '2x2'){
+        if(isCustomInstallSection){
+          addRawSticksForPosts('raw2x2', addG, gateStickLengthFt, true);
+        } else {
+          posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + addG;
+        }
+      }
+      if(addG>0 && gatePostSize === '3x3'){
+        addRawSticksForPosts('raw3x3', addG, gateStickLengthFt, isCustomInstallSection);
+      }
+      if(addG>0 && gatePostSize === '4x4'){
+        addRawSticksForPosts('raw4x4', addG, gateStickLengthFt, isCustomInstallSection);
       }
     });
     Object.keys(posts2x2ByLenCalc).sort((a,b)=>parseInt(a,10)-parseInt(b,10)).forEach(len=>{
       addMat(materials, `2x2x${len} posts`, posts2x2ByLenCalc[len]);
     });
-
-    // 3x3 raw sticks (12ft) incl. gate adds
-    const posts3x3ByLenCalc = {};
-    state.sections.forEach(s=>{
-      const repCounts = countPostGroups(s.postReplacements);
-      const count = repCounts.posts3x3 || 0;
-      const L = Math.max(8, feetFromStr(s.height) + 3);
-      if(count>0){
-        const perStick = Math.max(1, Math.floor(12 / Math.max(1, L)));
-        const sticks = Math.ceil(count / perStick);
-        posts3x3ByLenCalc[L] = (posts3x3ByLenCalc[L]||0) + sticks;
-      }
-      const installCount3x3 = parseInt(s._installCalc?.postCounts?.posts3x3 || 0,10) || 0;
-      if(installCount3x3>0){
-        const perStickInstall = Math.max(1, Math.floor(12 / Math.max(1, L)));
-        const sticksInstall = Math.ceil(installCount3x3 / perStickInstall);
-        posts3x3ByLenCalc[L] = (posts3x3ByLenCalc[L]||0) + sticksInstall;
-      }
-      const isWoodSection = (s.fenceType || '').toLowerCase() === 'wood';
-      const addG = !isWoodSection ? walkGateAddCount(s) : 0;
-      if(addG>0 && (s.walkAddPostSize||'').trim() === '3x3'){
-        const perStickAdd = Math.max(1, Math.floor(12 / Math.max(1, L)));
-        const sticksAdd = Math.ceil(addG / perStickAdd);
-        posts3x3ByLenCalc[L] = (posts3x3ByLenCalc[L]||0) + sticksAdd;
-      }
-    });
-    let raw3x3Total = 0;
-    Object.values(posts3x3ByLenCalc).forEach(v=>{ raw3x3Total += v; });
-    if(raw3x3Total>0){
-      steelStickTotals.raw3x3 += raw3x3Total;
-      addMat(materials, '3x3x12 raw steel', raw3x3Total);
-    }
-
-    // 4x4 raw sticks (12ft) incl. gate adds
-    const posts4x4ByLenCalc = {};
-    state.sections.forEach(s=>{
-      const repCounts = countPostGroups(s.postReplacements);
-      const count = repCounts.posts4x4 || 0;
-      const L = Math.max(8, feetFromStr(s.height) + 3);
-      if(count>0){
-        const perStick = Math.max(1, Math.floor(12 / Math.max(1, L)));
-        const sticks = Math.ceil(count / perStick);
-        posts4x4ByLenCalc[L] = (posts4x4ByLenCalc[L]||0) + sticks;
-      }
-      const installCount4x4 = parseInt(s._installCalc?.postCounts?.posts4x4 || 0,10) || 0;
-      if(installCount4x4>0){
-        const perStickInstall = Math.max(1, Math.floor(12 / Math.max(1, L)));
-        const sticksInstall = Math.ceil(installCount4x4 / perStickInstall);
-        posts4x4ByLenCalc[L] = (posts4x4ByLenCalc[L]||0) + sticksInstall;
-      }
-      const isWoodSection = (s.fenceType || '').toLowerCase() === 'wood';
-      const addG = !isWoodSection ? walkGateAddCount(s) : 0;
-      if(addG>0 && (s.walkAddPostSize||'').trim() === '4x4'){
-        const perStickAdd = Math.max(1, Math.floor(12 / Math.max(1, L)));
-        const sticksAdd = Math.ceil(addG / perStickAdd);
-        posts4x4ByLenCalc[L] = (posts4x4ByLenCalc[L]||0) + sticksAdd;
-      }
-    });
-    let raw4x4Total = 0;
-    Object.values(posts4x4ByLenCalc).forEach(v=>{ raw4x4Total += v; });
-    if(raw4x4Total>0){
-      steelStickTotals.raw4x4 += raw4x4Total;
-      addMat(materials, '4x4x12 raw steel', raw4x4Total);
-    }
 
     // Concrete (exclude posts set within retaining walls)
     const wallPostCounts = totals.retainingWallPosts || zeroPostCounts();
@@ -10800,9 +10776,9 @@ document.addEventListener('DOMContentLoaded', function(){
           // Build on site: rails (2 per panel) and pickets per width
           const stickLengthFt = wroughtCustomStickLengthFt(p.stickLengthFt);
           const stickLengthIn = stickLengthFt * 12;
-          const totalRailInches = 2 * p.widthIn * p.qty; // two horizontals
-          const railFeet = totalRailInches / 12;
-          const railSticks = Math.ceil(railFeet / stickLengthFt);
+          const railPieces = 2 * p.qty;
+          const railPiecesPerStick = Math.max(1, Math.floor(stickLengthIn / Math.max(1, p.widthIn)));
+          const railSticks = Math.ceil(railPieces / railPiecesPerStick);
           addRailSticks(p.railSize, railSticks, stickLengthFt);
 
           const picketsPerPanel = picketCountForWidth(p.widthIn, p.picketSize);
@@ -10925,31 +10901,23 @@ document.addEventListener('DOMContentLoaded', function(){
       matBreak.push('  - 2x2x'+len+' posts: '+qty+' x $'+money(unit)+' = $'+money(c));
     });
 
-    const raw1p5Count = steelStickTotals.raw1p5 || 0;
-    if(raw1p5Count>0){
-      const perFt1p5 = PRICE_FT['1 1/2\"'] || 0;
-      const unit1p5 = 12 * perFt1p5;
-      if(perFt1p5 === 0) unpriced = true;
-      const c = raw1p5Count * unit1p5;
-      costMaterials += c;
-      matBreak.push('  - 1.5x1.5 raw steel sticks: '+raw1p5Count+' x 12ft x $'+money(perFt1p5)+'/ft = $'+money(c));
-    }
-
-    const raw3x3Count = steelStickTotals.raw3x3 || 0;
-    if(raw3x3Count>0){
-      const unit3x3 = 12 * (PRICE_FT['3x3\"']||0);
-      const c = raw3x3Count * unit3x3;
-      costMaterials += c;
-      matBreak.push('  - 3x3 raw steel sticks: '+raw3x3Count+' x 12ft x $'+money(PRICE_FT['3x3\"']||0)+'/ft = $'+money(c));
-    }
-
-    const raw4x4Count = steelStickTotals.raw4x4 || 0;
-    if(raw4x4Count>0){
-      const unit4x4 = 139.73;
-      const c = raw4x4Count * unit4x4;
-      costMaterials += c;
-      matBreak.push('  - 4x4 raw steel sticks: '+raw4x4Count+' x $'+money(unit4x4)+' = $'+money(c));
-    }
+    const addRawSteelCostBreakdown = (kind, perFtKey, displayLabel)=>{
+      const byLength = steelStickTotals[kind] || {};
+      Object.keys(byLength).sort((a,b)=>parseInt(a,10)-parseInt(b,10)).forEach(lenRaw=>{
+        const qty = parseInt(byLength[lenRaw],10) || 0;
+        if(qty <= 0) return;
+        const stickLengthFt = wroughtCustomStickLengthFt(lenRaw);
+        const perFt = PRICE_FT[perFtKey] || 0;
+        if(perFt === 0) unpriced = true;
+        const c = qty * stickLengthFt * perFt;
+        costMaterials += c;
+        matBreak.push(`  - ${displayLabel} raw steel sticks: ${qty} x ${stickLengthFt}ft x $${money(perFt)}/ft = $${money(c)}`);
+      });
+    };
+    addRawSteelCostBreakdown('raw1p5', '1 1/2\"', '1.5x1.5');
+    addRawSteelCostBreakdown('raw2x2', '2x2\"', '2x2');
+    addRawSteelCostBreakdown('raw3x3', '3x3\"', '3x3');
+    addRawSteelCostBreakdown('raw4x4', '4x4', '4x4');
 
     Object.keys(picketStickTotals).sort().forEach(key=>{
       const [lenRaw, size] = String(key).split('|');
