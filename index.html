@@ -1346,6 +1346,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const WOOD_PICKET_WIDTHS = ['3.5"','4"','5.5"','6"'];
   const WOOD_RAIL_SIZES = ['2x3','2x4'];
   const WOOD_TRIM_TYPES = ['1x2','1x4','1x4 & 1x2'];
+  const WROUGHT_PANEL_FABRICATION_OPTIONS = ['On Site','Shop'];
   const WOOD_STAIN_BRANDS = ['HueMiller','Ready Seal','Wood Defender'];
   const DEFAULT_WOOD_STAIN_BRAND = WOOD_STAIN_BRANDS[0];
   const WOOD_STAIN_BUCKET_COSTS = {
@@ -2407,6 +2408,9 @@ document.addEventListener('DOMContentLoaded', function(){
       postSpacing: '8',
       panelAttachment: 'Welding',
       wroughtCustomStickLength: '12',
+      wroughtPanelFabrication: 'On Site',
+      wroughtPowderCoatPanels: false,
+      wroughtPowderCoatPosts: false,
       installFinialStyle: SEED.finialStyles[0],
       finials: [],
       caps: [],
@@ -2479,6 +2483,14 @@ document.addEventListener('DOMContentLoaded', function(){
       merged.woodRepairPostReplaceCap = defaultCapForWoodPost(merged.woodPost);
     }
     merged.wroughtCustomStickLength = normalizeWroughtCustomStickLength(merged.wroughtCustomStickLength);
+    merged.wroughtPanelFabrication = normalizeWroughtPanelFabrication(merged.wroughtPanelFabrication);
+    if(merged.wroughtPanelFabrication === 'Shop'){
+      merged.wroughtPowderCoatPanels = !!merged.wroughtPowderCoatPanels;
+      merged.wroughtPowderCoatPosts = !!merged.wroughtPowderCoatPosts;
+    } else {
+      merged.wroughtPowderCoatPanels = false;
+      merged.wroughtPowderCoatPosts = false;
+    }
     merged.woodRepairStainBrand = normalizeWoodStainBrand(merged.woodRepairStainBrand);
     return merged;
   }
@@ -3499,6 +3511,24 @@ document.addEventListener('DOMContentLoaded', function(){
             </select>
             <div class="sp-hint">Used only when panels are custom-built (not prefab).</div>
           </div>
+          <div class="sp-field col-2" data-install-only>
+            <label class="sp-label">Panel Fabrication</label>
+            <select class="sp-select" data-field="wroughtPanelFabrication">${createSelect(WROUGHT_PANEL_FABRICATION_OPTIONS)}</select>
+          </div>
+          <div class="sp-field col-2" data-install-only data-shop-fabrication-only style="display:none">
+            <label class="sp-label">Powder Coat Panels</label>
+            <label class="sp-row" style="gap:6px">
+              <input type="checkbox" data-field="wroughtPowderCoatPanels" />
+              Add powder coating
+            </label>
+          </div>
+          <div class="sp-field col-2" data-install-only data-shop-fabrication-only style="display:none">
+            <label class="sp-label">Powder Coat Posts</label>
+            <label class="sp-row" style="gap:6px">
+              <input type="checkbox" data-field="wroughtPowderCoatPosts" />
+              Add powder coating
+            </label>
+          </div>
           <div class="sp-field col-2" data-install-finials style="display:none">
             <label class="sp-label">Finial Style</label>
             <select class="sp-select" data-field="installFinialStyle">${createSelect(SEED.finialStyles)}</select>
@@ -3908,7 +3938,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   const STYLE_FIELDS = [
-    'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','wroughtCustomStickLength','installFinialStyle','railsCount','rails',
+    'fenceType','scopeType','style','height','postSize','postSpacing','panelAttachment','wroughtCustomStickLength','wroughtPanelFabrication','wroughtPowderCoatPanels','wroughtPowderCoatPosts','installFinialStyle','railsCount','rails',
     'picketSize','picketHeight','puppy','puppyPicketSize','puppyPicketHeight','puppyPicketReplace','painting','paintingApplication','paintingPrepExtra','paintingCurrentColor','paintingTargetColor','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','woodRepairStainBrand','walkLatch','walkHinges','walkRebuildFrame',
@@ -3921,7 +3951,7 @@ document.addEventListener('DOMContentLoaded', function(){
   ];
 
   const BULK_WROUGHT_FIELDS = [
-    'fenceType','scopeType','style','height','postSize','panelAttachment','wroughtCustomStickLength',
+    'fenceType','scopeType','style','height','postSize','panelAttachment','wroughtCustomStickLength','wroughtPanelFabrication','wroughtPowderCoatPanels','wroughtPowderCoatPosts',
     'railsCount','rails','picketSize','picketHeight','puppy'
   ];
 
@@ -4003,6 +4033,9 @@ document.addEventListener('DOMContentLoaded', function(){
       values.postSize = source.postSize || '2x2';
       values.panelAttachment = source.panelAttachment || 'Welding';
       values.wroughtCustomStickLength = normalizeWroughtCustomStickLength(source.wroughtCustomStickLength);
+      values.wroughtPanelFabrication = normalizeWroughtPanelFabrication(source.wroughtPanelFabrication);
+      values.wroughtPowderCoatPanels = !!source.wroughtPowderCoatPanels;
+      values.wroughtPowderCoatPosts = !!source.wroughtPowderCoatPosts;
       values.picketSize = source.picketSize || SEED.picketSize[0];
       values.picketHeight = source.picketHeight || '';
       values.puppy = source.puppy || SEED.puppy[0];
@@ -4299,6 +4332,8 @@ document.addEventListener('DOMContentLoaded', function(){
     updateMapLengthOverrideFromCard(card);
     const mapLengthOverride = parsePositiveInt(card.dataset.mapLengthOverride);
     const mapMeasuredLength = parsePositiveInt(card.dataset.mapMeasuredLength);
+    const wroughtPanelFabrication = normalizeWroughtPanelFabrication(val('wroughtPanelFabrication'));
+    const isShopFabrication = wroughtPanelFabrication === 'Shop';
 
     return {
       id,
@@ -4311,6 +4346,9 @@ document.addEventListener('DOMContentLoaded', function(){
       postSpacing: val('postSpacing'),
       panelAttachment: val('panelAttachment'),
       wroughtCustomStickLength: val('wroughtCustomStickLength') || '12',
+      wroughtPanelFabrication,
+      wroughtPowderCoatPanels: isShopFabrication ? val('wroughtPowderCoatPanels') : false,
+      wroughtPowderCoatPosts: isShopFabrication ? val('wroughtPowderCoatPosts') : false,
       installFinialStyle: val('installFinialStyle'),
       postReplacements,
       postRealignments,
@@ -4494,6 +4532,10 @@ document.addEventListener('DOMContentLoaded', function(){
     set('postSpacing', data.postSpacing||'8');
     set('panelAttachment', data.panelAttachment||'Welding');
     set('wroughtCustomStickLength', normalizeWroughtCustomStickLength(data.wroughtCustomStickLength));
+    const panelFabrication = normalizeWroughtPanelFabrication(data.wroughtPanelFabrication);
+    set('wroughtPanelFabrication', panelFabrication);
+    set('wroughtPowderCoatPanels', panelFabrication === 'Shop' && Boolean(data.wroughtPowderCoatPanels));
+    set('wroughtPowderCoatPosts', panelFabrication === 'Shop' && Boolean(data.wroughtPowderCoatPosts));
     set('installFinialStyle', data.installFinialStyle||SEED.finialStyles[0]);
 
     set('railsCount', data.railsCount || 2);
@@ -5928,6 +5970,21 @@ document.addEventListener('DOMContentLoaded', function(){
     const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
     const isWrought = fenceType === 'wrought iron';
     const isWood = fenceType === 'wood';
+    const fabricationSel = card.querySelector('[data-field="wroughtPanelFabrication"]');
+    if(fabricationSel && !fabricationSel.value){
+      fabricationSel.value = WROUGHT_PANEL_FABRICATION_OPTIONS[0];
+    }
+    const panelFabrication = normalizeWroughtPanelFabrication(fabricationSel ? fabricationSel.value : '');
+    const showShopFabricationFields = isInstall && isWrought && panelFabrication === 'Shop';
+    card.querySelectorAll('[data-shop-fabrication-only]').forEach(el=>{
+      el.style.display = showShopFabricationFields ? '' : 'none';
+    });
+    if(!showShopFabricationFields){
+      const powderPanels = card.querySelector('[data-field="wroughtPowderCoatPanels"]');
+      const powderPosts = card.querySelector('[data-field="wroughtPowderCoatPosts"]');
+      if(powderPanels){ powderPanels.checked = false; }
+      if(powderPosts){ powderPosts.checked = false; }
+    }
     const showRetainingWall = isInstall && (isWrought || isWood);
     const retainingWrap = card.querySelector('[data-retaining-wall]');
     if(retainingWrap){
@@ -6435,6 +6492,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const parsed = parseInt(raw, 10);
     return parsed === 24 ? '24' : '12';
   }
+  function normalizeWroughtPanelFabrication(value){
+    const raw = String(value || '').trim().toLowerCase();
+    const match = WROUGHT_PANEL_FABRICATION_OPTIONS.find(option=> option.toLowerCase() === raw);
+    return match || WROUGHT_PANEL_FABRICATION_OPTIONS[0];
+  }
   function wroughtCustomStickLengthFt(value){
     return parseInt(normalizeWroughtCustomStickLength(value), 10) || 12;
   }
@@ -6886,6 +6948,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'Solar gate power kit': 500,
     'Sliding drive gate chain': 150,
     'panel mount bracket': 1.27,
+    'powder coat panel': 40,
+    'powder coat post': 10,
     '5 gal wood stain bucket': WOOD_STAIN_BUCKET_COSTS[DEFAULT_WOOD_STAIN_BRAND],
     '5 gal wood stain bucket (HueMiller)': WOOD_STAIN_BUCKET_COSTS['HueMiller'],
     '5 gal wood stain bucket (Ready Seal)': WOOD_STAIN_BUCKET_COSTS['Ready Seal'],
@@ -7909,6 +7973,8 @@ document.addEventListener('DOMContentLoaded', function(){
       retainingWallCost:0,
       panelsPrefab:0, panelsCustom:0,
       panelsInstallPrefab:0, panelsInstallCustom:0,
+      panelsInstallCustomShop:0, panelsInstallCustomOnSite:0,
+      powderCoatPanels:0, powderCoatPosts:0,
       prefabPanelTypesRepair: new Map(),
       installSections:0, replaceSections:0,
       wroughtInstallSections:0, wroughtReplaceSections:0,
@@ -7982,6 +8048,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let manHours = 0;
     let welderHours = 0;
     let helperHours = 0;
+    let shopFabricationLaborHours = 0;
     let weldedPanelHours = 0;
     let bracketPanelHours = 0;
     let woodHelperHours = 0;
@@ -8114,7 +8181,12 @@ document.addEventListener('DOMContentLoaded', function(){
           postCounts: installCounts,
           panelWidths,
           attachment: s.panelAttachment || 'Welding',
+          panelFabrication: normalizeWroughtPanelFabrication(s.wroughtPanelFabrication),
+          powderCoatPanels: !!s.wroughtPowderCoatPanels,
+          powderCoatPosts: !!s.wroughtPowderCoatPosts,
           finialStyle,
+          customPanels: 0,
+          prefabPanels: 0,
           removalCost: 0
         };
 
@@ -8347,6 +8419,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if(isInstall && installInfo){
         lines.push(`- Post spacing: ${installInfo.spacingFt} ft`);
         lines.push(`- Panel attachment: ${installInfo.attachment}`);
+        lines.push(`- Panel fabrication: ${installInfo.panelFabrication}`);
         lines.push(`- Posts to set: ${installInfo.postsTotal} (${s.postSize})`);
         if(installInfo.finialStyle){
           lines.push(`- Finials: ${installInfo.finialStyle}`);
@@ -8492,6 +8565,11 @@ document.addEventListener('DOMContentLoaded', function(){
         if(!Array.isArray(list) || list.length === 0) return;
         const prepared = [];
         const defaultRail = (Array.isArray(s.rails) && s.rails[0] && s.rails[0].size) || s.railSize || SEED.railSize[0];
+        const installFabricationMode = source === 'install'
+          ? normalizeWroughtPanelFabrication(extra.installInfo?.panelFabrication || s.wroughtPanelFabrication)
+          : WROUGHT_PANEL_FABRICATION_OPTIONS[0];
+        let installCustomCount = 0;
+        let installPrefabCount = 0;
         list.forEach(p=>{
           if(!p) return;
           const qty = parseInt(p.qty,10) || 0;
@@ -8521,22 +8599,42 @@ document.addEventListener('DOMContentLoaded', function(){
           const hasFinials = /Finials/i.test(style);
           const finStyleLabel = hasFinials ? (finialStyle || SEED.finialStyles[0]) : '';
           const finialNote = hasFinials && finStyleLabel ? ` (finials: ${finStyleLabel})` : '';
-          const desc = `${height}, ${style}${finialNote}, rails ${railSize}, pickets ${picketSize} ${eligible?'(prefab eligible)':'(build on site)'}`;
+          const locationLabel = eligible
+            ? 'prefab eligible'
+            : (source === 'install' && installFabricationMode === 'Shop')
+              ? 'shop fabricated'
+              : 'build on site';
+          const desc = `${height}, ${style}${finialNote}, rails ${railSize}, pickets ${picketSize} (${locationLabel})`;
           lines.push(`  - ${qty} × ${widthIn}" wide panel — ${desc}`);
-          const panelHours = eligible ? qty * 0.5 : qty * 1.5;
-          manHours += panelHours;
           const attachment = (source === 'install') ? (extra.attachment || 'Welding') : 'Welding';
           const usesBrackets = attachment === 'Brackets';
+          let onsitePanelHours = 0;
+          let shopPanelHours = 0;
+          if(eligible){
+            onsitePanelHours = qty * 0.5;
+          } else if(source === 'install' && installFabricationMode === 'Shop'){
+            onsitePanelHours = qty * 0.5;
+            shopPanelHours = qty * 1.5;
+          } else {
+            onsitePanelHours = qty * 1.5;
+          }
+          manHours += onsitePanelHours;
           if(!usesBrackets){
-            welderHours += panelHours;
-            weldedPanelHours += panelHours;
+            welderHours += onsitePanelHours;
+            weldedPanelHours += onsitePanelHours;
           }else{
-            helperHours += panelHours;
-            bracketPanelHours += panelHours;
+            helperHours += onsitePanelHours;
+            bracketPanelHours += onsitePanelHours;
+          }
+          if(shopPanelHours > 0){
+            shopFabricationLaborHours += shopPanelHours;
           }
           if(eligible){
             totals.panelsPrefab += qty;
-            if(source === 'install') totals.panelsInstallPrefab += qty;
+            if(source === 'install'){
+              totals.panelsInstallPrefab += qty;
+              installPrefabCount += qty;
+            }
             if(source === 'repair' && !isWood){
               const styleLabel = normalizeLabelText(style);
               const railLabel = normalizeSize(railSize);
@@ -8552,7 +8650,15 @@ document.addEventListener('DOMContentLoaded', function(){
             }
           } else {
             totals.panelsCustom += qty;
-            if(source === 'install') totals.panelsInstallCustom += qty;
+            if(source === 'install'){
+              totals.panelsInstallCustom += qty;
+              installCustomCount += qty;
+              if(installFabricationMode === 'Shop'){
+                totals.panelsInstallCustomShop += qty;
+              } else {
+                totals.panelsInstallCustomOnSite += qty;
+              }
+            }
           }
           if(!s._panelCalc) s._panelCalc = [];
           s._panelCalc.push({
@@ -8567,8 +8673,18 @@ document.addEventListener('DOMContentLoaded', function(){
             stickLengthFt,
             finialStyle,
             source,
-            attachment
+            attachment,
+            panelFabrication: !eligible && source === 'install' ? installFabricationMode : 'On Site'
           });
+          if(source === 'install' && extra.installInfo){
+            if(!extra.installInfo.panels) extra.installInfo.panels = [];
+            extra.installInfo.panels.push({
+              ...entry,
+              attachment: extra.attachment || 'Welding',
+              eligible,
+              panelFabrication: eligible ? 'Prefab' : installFabricationMode
+            });
+          }
           if(hasFinials){
             addMat(materials, `finials - Cast Iron - ${finStyleLabel} (${picketSize})`, qty*25);
           }
@@ -8577,10 +8693,8 @@ document.addEventListener('DOMContentLoaded', function(){
           }
         });
         if(source === 'install' && extra.installInfo){
-          if(!extra.installInfo.panels) extra.installInfo.panels = [];
-          prepared.forEach(entry=>{
-            extra.installInfo.panels.push({ ...entry, attachment: extra.attachment || 'Welding' });
-          });
+          extra.installInfo.customPanels = (extra.installInfo.customPanels || 0) + installCustomCount;
+          extra.installInfo.prefabPanels = (extra.installInfo.prefabPanels || 0) + installPrefabCount;
         }
       }
 
@@ -8616,6 +8730,37 @@ document.addEventListener('DOMContentLoaded', function(){
           style: installStyle,
           installInfo
         });
+        if(installInfo.customPanels > 0){
+          if(installInfo.panelFabrication === 'Shop'){
+            lines.push(`- Custom panels fabricated in shop: ${installInfo.customPanels}`);
+            if(installInfo.powderCoatPanels){
+              addMat(materials, 'powder coat panel', installInfo.customPanels);
+              totals.powderCoatPanels += installInfo.customPanels;
+            }
+            if(installInfo.powderCoatPosts){
+              const postPowderQty = Math.max(0, parseInt(installInfo.postsTotal || 0, 10) || 0);
+              if(postPowderQty > 0){
+                addMat(materials, 'powder coat post', postPowderQty);
+                totals.powderCoatPosts += postPowderQty;
+              }
+            }
+            const powderParts = [];
+            if(installInfo.powderCoatPanels){
+              powderParts.push(`${installInfo.customPanels} panel${installInfo.customPanels === 1 ? '' : 's'}`);
+            }
+            if(installInfo.powderCoatPosts){
+              const postQty = Math.max(0, parseInt(installInfo.postsTotal || 0, 10) || 0);
+              if(postQty > 0){
+                powderParts.push(`${postQty} post${postQty === 1 ? '' : 's'}`);
+              }
+            }
+            if(powderParts.length){
+              lines.push(`- Powder coating: ${powderParts.join('; ')}`);
+            }
+          } else {
+            lines.push(`- Custom panels fabricated on site: ${installInfo.customPanels}`);
+          }
+        }
       }
 
       // NEW: Caps
@@ -8985,7 +9130,13 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       if (t.panelsCustom) lines.push(`- Panels to custom-build: ${t.panelsCustom}`);
       if (t.panelsInstallPrefab) lines.push(`- New prefab panels: ${t.panelsInstallPrefab}`);
-      if (t.panelsInstallCustom) lines.push(`- New custom panels: ${t.panelsInstallCustom}`);
+      if (t.panelsInstallCustomShop) lines.push(`- New custom panels (shop fabricated): ${t.panelsInstallCustomShop}`);
+      if (t.panelsInstallCustomOnSite) lines.push(`- New custom panels (fabricated on site): ${t.panelsInstallCustomOnSite}`);
+      if (t.panelsInstallCustom && !t.panelsInstallCustomShop && !t.panelsInstallCustomOnSite){
+        lines.push(`- New custom panels: ${t.panelsInstallCustom}`);
+      }
+      if (t.powderCoatPanels) lines.push(`- Panels to powder coat: ${t.powderCoatPanels}`);
+      if (t.powderCoatPosts) lines.push(`- Posts to powder coat: ${t.powderCoatPosts}`);
     }
 
 
@@ -9679,6 +9830,22 @@ document.addEventListener('DOMContentLoaded', function(){
     const customSwapCount = Math.max(0, totals.panelsCustom - (totals.panelsInstallCustom || 0));
     if (customSwapCount > 0){
       addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(customSwapCount, 'custom panel', 'custom panels')} on site to match the wrought iron design.`);
+    }
+    if (totals.panelsInstallCustomOnSite > 0){
+      addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(totals.panelsInstallCustomOnSite, 'new custom panel', 'new custom panels')} on site to match the wrought iron design.`);
+    }
+    if (totals.panelsInstallCustomShop > 0){
+      addServiceLine('Shop Fabrication', `Fabricate ${describeCount(totals.panelsInstallCustomShop, 'new custom panel', 'new custom panels')} in the shop (1.5 hours per panel) and install on site.`);
+    }
+    if (totals.powderCoatPanels > 0 || totals.powderCoatPosts > 0){
+      const powderParts = [];
+      if(totals.powderCoatPanels > 0){
+        powderParts.push(describeCount(totals.powderCoatPanels, 'panel', 'panels'));
+      }
+      if(totals.powderCoatPosts > 0){
+        powderParts.push(describeCount(totals.powderCoatPosts, 'post', 'posts'));
+      }
+      addServiceLine('Powder Coating', `Powder coat ${joinParts(powderParts)} before installation.`);
     }
     if (totals.walkRealign > 0){
       addServiceLine('Realign Walk Gates', `Adjust and plumb ${describeCount(totals.walkRealign, 'walk gate', 'walk gates')} for smooth swing and latch.`);
@@ -11491,6 +11658,17 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push('');
       stageNumber += 1;
     };
+    if(totals.panelsInstallCustomShop > 0 && shopFabricationLaborHours > 0){
+      const shopWelder = welderNames[0] || leadName || 'Welder';
+      const shopPanelScope = describeCount(
+        totals.panelsInstallCustomShop,
+        'custom wrought iron panel',
+        'custom wrought iron panels'
+      );
+      pushStage('Shop fabrication', [
+        `${shopWelder}: fabricate ${shopPanelScope} in the shop (${formatTaskHours(shopFabricationLaborHours)}).`
+      ]);
+    }
     const woodPostReplaceManHours = ((totals.woodPostReplace6 || 0) * 2) + ((totals.woodPostReplace8 || 0) * 3);
     const woodPostRealignDigManHours = (totals.woodPostRealignDig || 0) * (45/60);
     const woodPostCutWeldWelderHours = (totals.woodPostRealignCutWeld || 0) * (20/60);
@@ -12333,7 +12511,13 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
     if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
-    if (totals.panelsInstallCustom > 0) sub.push('- New custom panels: '+totals.panelsInstallCustom);
+    if (totals.panelsInstallCustomShop > 0) sub.push('- New custom panels (shop fabricated): '+totals.panelsInstallCustomShop);
+    if (totals.panelsInstallCustomOnSite > 0) sub.push('- New custom panels (fabricated on site): '+totals.panelsInstallCustomOnSite);
+    if (totals.panelsInstallCustom > 0 && totals.panelsInstallCustomShop <= 0 && totals.panelsInstallCustomOnSite <= 0){
+      sub.push('- New custom panels: '+totals.panelsInstallCustom);
+    }
+    if (totals.powderCoatPanels > 0) sub.push('- Panels to powder coat: '+totals.powderCoatPanels);
+    if (totals.powderCoatPosts > 0) sub.push('- Posts to powder coat: '+totals.powderCoatPosts);
     if (totals.retainingWallSqft > 0) sub.push(`- Retaining wall: ${totals.retainingWallSqft.toFixed(2)} sq ft ($${money(totals.retainingWallCost)}). In-House 4 pours the wall (wall materials & labor included; post materials separate) and Jesus' crew installs the fence. Posts on the wall set in the pour—no extra concrete bags.`);
     const paintedSections = state.sections.filter(section=>{
       const fenceType = (section.fenceType || '').toLowerCase();
@@ -12494,13 +12678,15 @@ document.addEventListener('DOMContentLoaded', function(){
     if (notesSubEl) { notesSubEl.value = orderedSub.join('\n'); }
 
     const laborHoursOnsite = isFinite(estimatedOnsiteHours) ? estimatedOnsiteHours : 0;
-    const laborCost = laborHoursOnsite * LABOR_RATE;
+    const laborHoursShop = Math.max(0, Number(shopFabricationLaborHours || 0) || 0);
+    const laborHoursBillable = laborHoursOnsite + laborHoursShop;
+    const laborCost = laborHoursBillable * LABOR_RATE;
     const consumablesCost = scheduleEntries.length * 50;
     const removalCost = totals.removalCost || 0;
     const travelCostResult = await computeTravelCost({ crewSchedule, jobAddress, travelDayInfo });
     const travelCost = travelCostResult.cost || 0;
     const travelHours = isFinite(travelCostResult.hours) ? travelCostResult.hours : 0;
-    const totalHours = laborHoursOnsite + travelHours;
+    const totalHours = laborHoursBillable + travelHours;
     const directCosts = laborCost + travelCost + costMaterials + removalCost + consumablesCost;
     const revenueRes = computeChargeRevenue(directCosts, totalHours);
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
@@ -12517,16 +12703,30 @@ document.addEventListener('DOMContentLoaded', function(){
       const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
       return `${dayTitle}: ${entry.crewLabel}`;
     });
-    const laborTimeDetail = estimatedOnsiteLabel || 'time TBD';
+    const shopFabricationHoursLabel = formatHours(laborHoursShop);
+    const laborTimeParts = [];
+    if(estimatedOnsiteLabel){
+      laborTimeParts.push(`${estimatedOnsiteLabel} onsite`);
+    }
+    if(shopFabricationHoursLabel){
+      laborTimeParts.push(`${shopFabricationHoursLabel} shop fabrication`);
+    }
+    const laborTimeDetail = laborTimeParts.length ? laborTimeParts.join(' + ') : 'time TBD';
     const laborScheduleDetail = crewScheduleDetail.length ? `; ${crewScheduleDetail.join('; ')}` : '';
     cost.push(`- Labor ($${money(LABOR_RATE)}/hr, crew): $${money(laborCost)} (${laborTimeDetail}${laborScheduleDetail})`);
     const travelHoursLabel = formatHours(travelHours);
     const totalHoursLabel = formatHours(totalHours);
+    const totalLaborHoursOverallLabel = formatHours(Math.max(0, (Number(manHours) || 0) + laborHoursShop));
     if (estimatedOnsiteLabel) {
-      const timeDetail = totalLaborHoursLabel
-        ? `${estimatedOnsiteLabel} onsite (~${totalLaborHoursLabel} of labor time)`
-        : estimatedOnsiteLabel;
+      const timeDetail = (shopFabricationHoursLabel && totalLaborHoursOverallLabel)
+        ? `${estimatedOnsiteLabel} onsite (~${totalLaborHoursOverallLabel} of labor time total, including ${shopFabricationHoursLabel} shop fabrication)`
+        : totalLaborHoursLabel
+          ? `${estimatedOnsiteLabel} onsite (~${totalLaborHoursLabel} of labor time)`
+          : estimatedOnsiteLabel;
       cost.push(`- Estimated time (onsite): ${timeDetail}`);
+    }
+    if (shopFabricationHoursLabel){
+      cost.push(`- Estimated time (shop fabrication): ${shopFabricationHoursLabel}`);
     }
     if (travelHoursLabel){
       cost.push(`- Estimated time (travel): ${travelHoursLabel}`);
