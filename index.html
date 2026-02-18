@@ -6852,14 +6852,15 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   function steelDiscountRateForWeight(weightLbs){
     const lbs = Math.max(0, Number(weightLbs) || 0);
-    const tier = STEEL_DISCOUNT_TIERS.find(entry=> lbs >= entry.minLbs);
+    const tier = STEEL_DISCOUNT_TIERS.find(entry=> lbs >= (entry.minLbs * STEEL_DISCOUNT_SAFETY_FACTOR));
     return tier ? tier.rate : 0;
   }
   function steelThresholdSticksForSize(size, stickLengthFt, targetLbs){
     const lbPerFt = steelWeightPerFtBySize(size);
     const lengthFt = Math.max(1, wroughtCustomStickLengthFt(stickLengthFt));
     if(!(lbPerFt > 0) || !(targetLbs > 0)) return Infinity;
-    const feetNeeded = Math.ceil(targetLbs / lbPerFt);
+    const adjustedTargetLbs = targetLbs * STEEL_DISCOUNT_SAFETY_FACTOR;
+    const feetNeeded = Math.ceil(adjustedTargetLbs / lbPerFt);
     return Math.ceil(feetNeeded / lengthFt);
   }
   function isPanelPuppyInsertStyle(style){
@@ -6952,21 +6953,22 @@ document.addEventListener('DOMContentLoaded', function(){
   const PRICE_FT = {
     '1/2\"': 0.57,
     '5/8\"': 0.68,
-    '3/4\"': 0.74,
+    '3/4\"': 0.9041666667,
     '1\"':   1.07,
     '1x2\"': 1.65,
     '1 1/2\"': 1.46,
     '1 1/4\"': 1.46,
     '1 3/4\"': 2.57,
-    '2x2\"': 2.57,
+    '2x2\"': 2.39625,
     '3x3\"': 6.00,
-    '4x4': 11.6441666667,
-    '2\"': 2.57,
+    '4x4': 6.22375,
+    '2\"': 2.39625,
     '3\"': 6.00,
     'Flat Bar 1/4\" x 1\"': 0.58
   };
   const STEEL_16GA_WALL_IN = 0.065;
   const STEEL_DENSITY_LB_PER_IN3 = 0.283;
+  const STEEL_DISCOUNT_SAFETY_FACTOR = 1.2;
   const STEEL_DISCOUNT_TIERS = [
     { minLbs: 1000, rate: 0.3333 },
     { minLbs: 500, rate: 0.294 },
@@ -11031,7 +11033,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const appliedPct = appliedRate > 0
         ? `${(appliedRate * 100).toFixed(2).replace(/\.00$/, '')}%`
         : 'none';
-      matBreak.push(`  - Steel discount thresholds (${size}): ${thresholds}. Applied: ${appliedPct}.`);
+      matBreak.push(`  - Steel discount thresholds (${size}, includes 20% safety buffer): ${thresholds}. Applied: ${appliedPct}.`);
     });
 
     const addRawSteelCostBreakdown = (kind, perFtKey, displayLabel)=>{
