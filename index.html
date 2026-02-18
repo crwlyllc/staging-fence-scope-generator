@@ -1473,6 +1473,14 @@ document.addEventListener('DOMContentLoaded', function(){
     removalHaulMinimum: 100,
     skidSteerRentalPerDay: 500
   };
+  const WROUGHT_INSTALL_PRODUCTION = {
+    // Field production rates for wrought install/replacement post-setting scope.
+    layoutCrewHoursPerJob: 1,
+    digCrewHoursPerPostHand: 0.25,
+    digCrewHoursPerPostSkid: (5 / 60),
+    setCrewHoursPerPost: 0.125,
+    skidSteerRentalPerDay: 500
+  };
 
   const NOTES_DATA_VERSION = 1;
   const NOTES_DATA_START = '[[SP_SCOPE_DATA_START]]';
@@ -10360,7 +10368,21 @@ document.addEventListener('DOMContentLoaded', function(){
     let postInstallManHours = 0;
     let cureManHours = 0;
     if(installPostsNeedingCrew > 0){
-      const crewHours = installPostsNeedingCrew * (20/60);
+      const maxCrewDayHours = Math.max(0.25, CREW_SETTINGS.maxDayHours || 13);
+      const layoutCrewHoursPerJob = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.layoutCrewHoursPerJob || 1) || 0);
+      const digCrewHoursPerPostHand = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.digCrewHoursPerPostHand || 0.25) || 0);
+      const digCrewHoursPerPostSkid = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.digCrewHoursPerPostSkid || (5 / 60)) || 0);
+      const setCrewHoursPerPost = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.setCrewHoursPerPost || 0.125) || 0);
+      const layoutCrewHours = layoutCrewHoursPerJob;
+      const digCrewHoursHand = installPostsNeedingCrew * digCrewHoursPerPostHand;
+      const setCrewHours = installPostsNeedingCrew * setCrewHoursPerPost;
+      let crewHours = layoutCrewHours + digCrewHoursHand + setCrewHours;
+      if(crewHours > maxCrewDayHours){
+        const digCrewHoursSkid = installPostsNeedingCrew * digCrewHoursPerPostSkid;
+        crewHours = layoutCrewHours + digCrewHoursSkid + setCrewHours;
+        const skidDays = Math.max(1, Math.ceil(crewHours / maxCrewDayHours));
+        addMat(materials, 'Skid steer rental', skidDays);
+      }
       postInstallManHours = crewHours * ONSITE_CREW_SIZE;
       manHours += postInstallManHours;
       helperHours += postInstallManHours;
