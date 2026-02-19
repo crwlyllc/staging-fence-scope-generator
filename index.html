@@ -5229,6 +5229,33 @@ document.addEventListener('DOMContentLoaded', function(){
     return (replacementPostSpacingFt === 6 && isRoundSteel) ? 12 : 8;
   }
 
+  function woodInstallRailLengthsForSections(sections){
+    const lengths = new Set();
+    const list = Array.isArray(sections) ? sections : [];
+    list.forEach(section=>{
+      if((section?.fenceType || '').toLowerCase() !== 'wood') return;
+      const scopeType = String(section?.scopeType || 'repair').toLowerCase();
+      if(scopeType !== 'install' && scopeType !== 'replace') return;
+      const sectionLengthFt = Math.max(0, parseFloat(section?.length || 0) || 0);
+      if(sectionLengthFt <= 0) return;
+      lengths.add(woodInstallRailLengthFt(section));
+    });
+    return Array.from(lengths)
+      .map(value=>parseFloat(value))
+      .filter(value=>isFinite(value) && value > 0)
+      .sort((a,b)=>a-b);
+  }
+
+  function woodInstallRailLabelFromLengths(lengths){
+    const ordered = Array.isArray(lengths) ? lengths : [];
+    if(!ordered.length) return 'wood rails';
+    if(ordered.length === 1){
+      return `${formatFtValue(ordered[0])}ft wood rails`;
+    }
+    const labels = ordered.map(value=> `${formatFtValue(value)}ft`);
+    return `wood rails (${joinParts(labels)})`;
+  }
+
   function addPostCounts(target, counts){
     Object.keys(counts).forEach(key=>{
       target[key] = (target[key]||0) + (parseInt(counts[key],10) || 0);
@@ -6818,12 +6845,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!parts.length) return 'wood picket';
     return `wood picket (${parts.join(', ')})`;
   }
-  function woodRailMaterialLabel(section, railLengthFt=8){
+  function woodRailMaterialLabel(section, railLengthFt=8, includeLength=false){
     if(!section) return 'wood rail';
     const sizeLabel = normalizeLabelText(section.woodRailSize || '');
     const typeLabel = woodRailTypeLabel(section);
     const numericLength = Number(railLengthFt || 0);
-    const lengthLabel = (isFinite(numericLength) && numericLength > 0 && numericLength !== 8)
+    const showLength = isFinite(numericLength) && numericLength > 0 && (includeLength || numericLength !== 8);
+    const lengthLabel = showLength
       ? `${Math.round(numericLength)}ft`
       : '';
     const parts = [sizeLabel, typeLabel, lengthLabel].filter(Boolean);
@@ -10448,7 +10476,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const boardOnBoardBuildMultiplier = /board on board/i.test(String(s.woodStyle || '')) ? 1.2 : 1;
         let topCapPiecesForSection = 0;
 
-        addMat(materials, woodRailMaterialLabel(s, railLengthFt), totalRails);
+        addMat(materials, woodRailMaterialLabel(s, railLengthFt, true), totalRails);
         addMat(materials, woodPicketMaterialLabel(s), totalPickets);
 
         if(s.woodAddTopCap){
@@ -11736,6 +11764,9 @@ document.addEventListener('DOMContentLoaded', function(){
       return `${crewCount}-man crew`;
     };
 
+    const woodInstallRailLengths = woodInstallRailLengthsForSections(state.sections);
+    const woodInstallRailLabel = woodInstallRailLabelFromLengths(woodInstallRailLengths);
+    const woodInstallRailsAndPicketsLabel = `${woodInstallRailLabel} & pickets`;
     const returnSuffix = primePaintScheduled && hasWoodWash
       ? ' (return for finish coat & staining)'
       : (primePaintScheduled ? ' (return for finish coat)' : (hasWoodWash ? ' (return for staining)' : ''));
@@ -11748,21 +11779,23 @@ document.addEventListener('DOMContentLoaded', function(){
           && woodInstallPlan.buildCrewHours > 0
           && woodInstallPlan.sections > 0;
         const returnWoodDayNote = woodInstallPlan.totalPosts > 4 && woodInstallPlan.buildCrewHours > 0
-          ? '; return next day to install wood'
+          ? `; return next day to install ${woodInstallRailsAndPicketsLabel}`
           : '';
         suffix = sameDayWoodBuild
-          ? ' (set wood posts, allow concrete cure time, then install wood rails & pickets)'
+          ? ` (set wood posts, allow concrete cure time, then install ${woodInstallRailsAndPicketsLabel})`
           : ` (remove existing wood fence & set wood posts${returnWoodDayNote})`;
         if(sameDayWoodBuild && woodInstallPlan.removalLf > 0){
-          suffix = ' (remove existing wood fence, set wood posts, allow concrete cure time, then install wood rails & pickets)';
+          suffix = ` (remove existing wood fence, set wood posts, allow concrete cure time, then install ${woodInstallRailsAndPicketsLabel})`;
         }
         if(woodInstallPlan.removalLf <= 0){
           suffix = sameDayWoodBuild
-            ? ' (set wood posts, allow concrete cure time, then install wood rails & pickets)'
+            ? ` (set wood posts, allow concrete cure time, then install ${woodInstallRailsAndPicketsLabel})`
             : ` (set wood posts${returnWoodDayNote})`;
         }
       } else if(day.kind === 'wood-build'){
-        const buildPrefix = woodInstallPlan.totalPosts > 4 ? ' (return day: install wood rails & pickets' : ' (install wood rails & pickets';
+        const buildPrefix = woodInstallPlan.totalPosts > 4
+          ? ` (return day: install ${woodInstallRailsAndPicketsLabel}`
+          : ` (install ${woodInstallRailsAndPicketsLabel}`;
         suffix = day.hasBase
           ? `${buildPrefix} + remaining labor tasks)`
           : `${buildPrefix})`;
@@ -12144,7 +12177,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const woodInstallScopePhrase = woodInstallLengthLabel
       ? `install about ${woodInstallLengthLabel}ft of ${woodInstallDescriptor}`
       : `install ${woodInstallDescriptor}`;
-    const woodInstallBuildItems = ['wood rails', 'pickets'];
+    const woodInstallBuildItems = [woodInstallRailLabel, 'pickets'];
     if(woodInstallAdds.kick) woodInstallBuildItems.push('kick boards');
     if(woodInstallAdds.topCap) woodInstallBuildItems.push('top cap');
     if(woodInstallAdds.trim) woodInstallBuildItems.push('trim');
@@ -12194,9 +12227,9 @@ document.addEventListener('DOMContentLoaded', function(){
       woodDayOneSentences.push(`Run strings and mark ${woodInstallPlan.totalPosts} wood post ${plural(woodInstallPlan.totalPosts, 'location', 'locations')}.`);
       woodDayOneSentences.push('Dig post holes, clear out the holes, set your end posts, run a string and set your line posts.');
       if(woodInstallReturnNextDay){
-        woodDayOneSentences.push('Return another day to install wood.');
+        woodDayOneSentences.push(`Return another day to install ${woodInstallRailsAndPicketsLabel}.`);
       } else if(woodInstallSameDay && woodInstallCureWaitLabel){
-        woodDayOneSentences.push(`Wait about ${woodInstallCureWaitLabel} for concrete to cure before installing wood.`);
+        woodDayOneSentences.push(`Wait about ${woodInstallCureWaitLabel} for concrete to cure before installing ${woodInstallRailsAndPicketsLabel}.`);
       }
       postTaskParts.push(woodDayOneSentences.join(' '));
     } else if(woodInstallPlan.totalPosts > 0){
