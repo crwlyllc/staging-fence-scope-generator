@@ -5248,12 +5248,27 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function woodInstallRailLabelFromLengths(lengths){
     const ordered = Array.isArray(lengths) ? lengths : [];
+    const formatLength = (value)=>{
+      const num = parseFloat(value);
+      if(!isFinite(num) || num <= 0) return '';
+      if(Math.abs(num - Math.round(num)) < 0.001){
+        return String(Math.round(num));
+      }
+      return num.toFixed(2).replace(/\.?0+$/, '');
+    };
+    const joinLabels = (items)=>{
+      const list = Array.isArray(items) ? items.filter(Boolean) : [];
+      if(!list.length) return '';
+      if(list.length === 1) return list[0];
+      if(list.length === 2) return `${list[0]} and ${list[1]}`;
+      return `${list.slice(0, -1).join(', ')}, and ${list[list.length - 1]}`;
+    };
     if(!ordered.length) return 'wood rails';
     if(ordered.length === 1){
-      return `${formatFtValue(ordered[0])}ft wood rails`;
+      return `${formatLength(ordered[0])}ft wood rails`;
     }
-    const labels = ordered.map(value=> `${formatFtValue(value)}ft`);
-    return `wood rails (${joinParts(labels)})`;
+    const labels = ordered.map(value=> `${formatLength(value)}ft`).filter(Boolean);
+    return `wood rails (${joinLabels(labels)})`;
   }
 
   function addPostCounts(target, counts){
