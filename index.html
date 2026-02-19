@@ -10342,17 +10342,21 @@ document.addEventListener('DOMContentLoaded', function(){
             postLabel = woodRoundSteelPostLabelForHeight(heightFt);
           }
           addMat(materials, `${postLabel} posts`, postsTotal);
+        }
 
-          if(isRoundSteel){
-            const tiesPerPost = RAILS_PER_POST + kickStack;
-            const totalTies = postsTotal * tiesPerPost;
-            if(totalTies > 0){
+        if(isRoundSteel){
+          const tiesPerPost = RAILS_PER_POST + kickStack;
+          const totalTies = postsTotal * tiesPerPost;
+          if(totalTies > 0){
+            if(!useExistingPostsForReplacement){
               addMat(materials, 'Simpson 1 piece ties', totalTies);
-              addMat(materials, 'lag screws', totalTies * LAG_SCREWS_PER_TIE);
             }
-            if(postsTotal > 0){
-              addMat(materials, 'Dome cap post cap', postsTotal);
-            }
+            addMat(materials, 'lag screws', totalTies * LAG_SCREWS_PER_TIE);
+          }
+          if(!useExistingPostsForReplacement && postsTotal > 0){
+            addMat(materials, 'Dome cap post cap', postsTotal);
+          }
+          if(!useExistingPostsForReplacement){
             const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
             addMat(materials, 'Maximizer bags of concrete', postsTotal * bagsPerPost);
           }
