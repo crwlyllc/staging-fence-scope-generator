@@ -2438,6 +2438,7 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorInstallPower: DRIVE_GATE_POWER_TYPES_INSTALL[0],
       driveGateOperatorInstallPlatform: false,
       useExistingPostsForReplacement: 'no',
+      woodInstallPostSpacing: '8',
       woodReplacementPostSpacing: '8',
       scopeType: 'repair',
       postSpacing: '8',
@@ -2518,6 +2519,7 @@ document.addEventListener('DOMContentLoaded', function(){
       merged.woodRepairPostReplaceCap = defaultCapForWoodPost(merged.woodPost);
     }
     merged.useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(merged.useExistingPostsForReplacement);
+    merged.woodInstallPostSpacing = normalizeWoodInstallPostSpacing(merged.woodInstallPostSpacing);
     merged.woodReplacementPostSpacing = normalizeWoodReplacementPostSpacing(merged.woodReplacementPostSpacing);
     merged.wroughtCustomStickLength = normalizeWroughtCustomStickLength(merged.wroughtCustomStickLength);
     merged.wroughtPanelFabrication = normalizeWroughtPanelFabrication(merged.wroughtPanelFabrication);
@@ -3290,6 +3292,14 @@ document.addEventListener('DOMContentLoaded', function(){
                 <option value="Postmaster">Postmaster</option>
               </select>
             </div>
+            <div class="sp-field col-2" data-install-only data-wood-install-post-spacing-wrap style="display:none">
+              <label class="sp-label">Post Spacing (ft)</label>
+              <select class="sp-select" data-field="woodInstallPostSpacing">
+                <option value="8">8ft</option>
+                <option value="6">6ft</option>
+              </select>
+              <div class="sp-hint">Used when setting new wood posts for install/replace sections.</div>
+            </div>
             <div class="sp-field col-3">
               <label class="sp-label">Wood Type</label>
               <select class="sp-select" data-field="woodType">
@@ -4000,7 +4010,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodWalkAddPicketWidth','driveGateChainReplace','driveGateOperatorReplace','driveGateOperatorType',
     'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
     'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap','woodWalkGatesAdd',
-    'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie','useExistingPostsForReplacement','woodReplacementPostSpacing'
+    'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie','useExistingPostsForReplacement','woodInstallPostSpacing','woodReplacementPostSpacing'
   ];
 
   const BULK_WROUGHT_FIELDS = [
@@ -4011,7 +4021,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const BULK_WOOD_FIELDS = [
     'fenceType','scopeType','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodAddKickBoard','woodAddTopCap','woodAddTrim',
-    'woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodRepairStainBrand','useExistingPostsForReplacement','woodReplacementPostSpacing'
+    'woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodRepairStainBrand','useExistingPostsForReplacement','woodInstallPostSpacing','woodReplacementPostSpacing'
   ];
 
   function normalizeBulkFenceType(value){
@@ -4105,6 +4115,7 @@ document.addEventListener('DOMContentLoaded', function(){
       collapsed: section.collapsed,
       label: section.label,
       useExistingPostsForReplacement: normalizeUseExistingPostsForReplacement(section.useExistingPostsForReplacement),
+      woodInstallPostSpacing: normalizeWoodInstallPostSpacing(section.woodInstallPostSpacing),
       woodReplacementPostSpacing: normalizeWoodReplacementPostSpacing(section.woodReplacementPostSpacing),
       length: section.length,
       hardscape: section.hardscape,
@@ -4410,6 +4421,7 @@ document.addEventListener('DOMContentLoaded', function(){
       fenceType: currentFenceType,
       scopeType: scopeTypeValue,
       useExistingPostsForReplacement: normalizeUseExistingPostsForReplacement(val('useExistingPostsForReplacement')),
+      woodInstallPostSpacing: normalizeWoodInstallPostSpacing(val('woodInstallPostSpacing')),
       woodReplacementPostSpacing: normalizeWoodReplacementPostSpacing(val('woodReplacementPostSpacing')),
       style: val('style'),
       height: val('height'),
@@ -4598,6 +4610,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('fenceType', data.fenceType || 'Wrought Iron');
     set('scopeType', data.scopeType||'repair');
     set('useExistingPostsForReplacement', normalizeUseExistingPostsForReplacement(data.useExistingPostsForReplacement));
+    set('woodInstallPostSpacing', normalizeWoodInstallPostSpacing(data.woodInstallPostSpacing));
     set('woodReplacementPostSpacing', normalizeWoodReplacementPostSpacing(data.woodReplacementPostSpacing));
     set('style', data.style||SEED.style[0]);
     set('height', data.height||'4ft');
@@ -5173,6 +5186,19 @@ document.addEventListener('DOMContentLoaded', function(){
     const scopeType = String(section.scopeType || '').toLowerCase();
     if(scopeType !== 'replace') return false;
     return normalizeUseExistingPostsForReplacement(section.useExistingPostsForReplacement) === 'yes';
+  }
+
+  function normalizeWoodInstallPostSpacing(value){
+    const raw = String(value == null ? '' : value).trim().toLowerCase();
+    if(raw === '6' || raw === '6ft' || raw === '6 ft'){
+      return '6';
+    }
+    return '8';
+  }
+
+  function woodInstallPostSpacingFt(section){
+    if(!section) return 8;
+    return parseInt(normalizeWoodInstallPostSpacing(section.woodInstallPostSpacing), 10) || 8;
   }
 
   function normalizeWoodReplacementPostSpacing(value){
@@ -6078,10 +6104,19 @@ document.addEventListener('DOMContentLoaded', function(){
     const isWood = fenceType === 'wood';
     const useExistingPostsSel = card.querySelector('[data-field="useExistingPostsForReplacement"]');
     const useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(useExistingPostsSel ? useExistingPostsSel.value : 'no') === 'yes';
+    const woodInstallPostSpacingWrap = card.querySelector('[data-wood-install-post-spacing-wrap]');
+    const woodInstallPostSpacingSel = card.querySelector('[data-field="woodInstallPostSpacing"]');
     const existingPostSpacingWrap = card.querySelector('[data-existing-post-spacing-wrap]');
     const existingPostSpacingSel = card.querySelector('[data-field="woodReplacementPostSpacing"]');
+    if(woodInstallPostSpacingSel){
+      woodInstallPostSpacingSel.value = normalizeWoodInstallPostSpacing(woodInstallPostSpacingSel.value);
+    }
     if(existingPostSpacingSel){
       existingPostSpacingSel.value = normalizeWoodReplacementPostSpacing(existingPostSpacingSel.value);
+    }
+    if(woodInstallPostSpacingWrap){
+      const showInstallPostSpacing = isWood && isInstall && !(isReplace && useExistingPostsForReplacement);
+      woodInstallPostSpacingWrap.style.display = showInstallPostSpacing ? '' : 'none';
     }
     if(existingPostSpacingWrap){
       const showExistingPostSpacing = isWood && isReplace && useExistingPostsForReplacement;
@@ -6216,6 +6251,7 @@ document.addEventListener('DOMContentLoaded', function(){
       label: existing.label,
       scopeType: existing.scopeType,
       useExistingPostsForReplacement: normalizeUseExistingPostsForReplacement(existing.useExistingPostsForReplacement),
+      woodInstallPostSpacing: normalizeWoodInstallPostSpacing(existing.woodInstallPostSpacing),
       woodReplacementPostSpacing: normalizeWoodReplacementPostSpacing(existing.woodReplacementPostSpacing),
       length: existing.length,
       hardscape: existing.hardscape,
@@ -8081,7 +8117,9 @@ document.addEventListener('DOMContentLoaded', function(){
           group.picketSizes.add(normalizeSize(section.picketSize));
         }
         if(!useExistingPostsForReplacement){
-          const spacingCandidate = (section._installCalc && section._installCalc.spacingFt) || parseFloat(section.postSpacing||'');
+          const spacingCandidate = isWood
+            ? woodInstallPostSpacingFt(section)
+            : ((section._installCalc && section._installCalc.spacingFt) || parseFloat(section.postSpacing||''));
           const spacingStr = formatFtValue(spacingCandidate);
           if(spacingStr){ spacing.add(spacingStr); }
         } else {
@@ -8526,7 +8564,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
         if(wallLength > 0 && wallHeight > 0){
           const lengthFtForWall = parseInt(s.length||0,10) || 0;
-          const spacingRawForWall = parseFloat(s.postSpacing||'8');
+          const spacingRawForWall = isWood ? woodInstallPostSpacingFt(s) : parseFloat(s.postSpacing||'8');
           const spacingFtForWall = (isFinite(spacingRawForWall) && spacingRawForWall > 0) ? spacingRawForWall : 8;
           const spanCountForWall = lengthFtForWall > 0 ? Math.max(1, Math.ceil(lengthFtForWall / spacingFtForWall)) : 0;
           const postsTotalForWall = spanCountForWall > 0 ? spanCountForWall + 1 : (lengthFtForWall > 0 ? 2 : 0);
@@ -10361,8 +10399,10 @@ document.addEventListener('DOMContentLoaded', function(){
         const scopeType = (s.scopeType || 'repair');
         if(scopeType !== 'install' && scopeType !== 'replace') return;
         const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(s);
+        const installPostSpacingFt = Math.max(0.1, woodInstallPostSpacingFt(s) || defaultPostSpacingFt);
         const replacementPostSpacingFt = woodReplacementPostSpacingFt(s);
-        const sectionPostSpacingFt = useExistingPostsForReplacement ? replacementPostSpacingFt : defaultPostSpacingFt;
+        const sectionPostSpacingFt = useExistingPostsForReplacement ? replacementPostSpacingFt : installPostSpacingFt;
+        const isRoundSteel = isRoundSteelPost(s.woodPost || '');
 
         const lengthFt = Math.max(0, parseFloat(s.length || 0) || 0);
         if(lengthFt <= 0) return;
@@ -10370,7 +10410,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const postsTotal = spanCount + 1;
         const gateAddsForInstall = walkGateAddCount(s);
         const postsToSet = useExistingPostsForReplacement ? 0 : (postsTotal + gateAddsForInstall);
-        const use12FtRailsForExistingPosts = useExistingPostsForReplacement && replacementPostSpacingFt === 6;
+        const use12FtRailsForExistingPosts = useExistingPostsForReplacement && replacementPostSpacingFt === 6 && isRoundSteel;
         const railSectionsForLength = use12FtRailsForExistingPosts
           ? Math.max(1, Math.ceil(spanCount / 2))
           : (useExistingPostsForReplacement ? spanCount : postsTotal);
@@ -10383,7 +10423,6 @@ document.addEventListener('DOMContentLoaded', function(){
         const hasKickBoard = !!s.woodAddKickBoard;
         const kickStack = hasKickBoard ? parseStack(s.woodKickBoardStack) : 0;
         const heightFt = Math.max(0, feetFromStr(s.woodHeight || s.height));
-        const isRoundSteel = isRoundSteelPost(s.woodPost || '');
         const isPostmaster = isPostmasterPost(s.woodPost || '');
         const isTallFence = heightFt >= 8;
         const boardOnBoardBuildMultiplier = /board on board/i.test(String(s.woodStyle || '')) ? 1.2 : 1;
