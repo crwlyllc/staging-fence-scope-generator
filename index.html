@@ -5214,6 +5214,21 @@ document.addEventListener('DOMContentLoaded', function(){
     return parseInt(normalizeWoodReplacementPostSpacing(section.woodReplacementPostSpacing), 10) || 8;
   }
 
+  function woodInstallRailLengthFt(section){
+    if(!section) return 8;
+    const scopeType = String(section.scopeType || 'repair').toLowerCase();
+    if(scopeType !== 'install' && scopeType !== 'replace'){
+      return 8;
+    }
+    const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(section);
+    if(!useExistingPostsForReplacement){
+      return 8;
+    }
+    const replacementPostSpacingFt = woodReplacementPostSpacingFt(section);
+    const isRoundSteel = isRoundSteelPost(section.woodPost || '');
+    return (replacementPostSpacingFt === 6 && isRoundSteel) ? 12 : 8;
+  }
+
   function addPostCounts(target, counts){
     Object.keys(counts).forEach(key=>{
       target[key] = (target[key]||0) + (parseInt(counts[key],10) || 0);
@@ -8443,6 +8458,9 @@ document.addEventListener('DOMContentLoaded', function(){
       const fenceType = (s.fenceType || '').toLowerCase();
       const isWood = fenceType === 'wood';
       const isWrought = fenceType === 'wrought iron';
+      const isInstall = scopeType === 'install' || scopeType === 'replace';
+      const isRepair = !isInstall;
+      const woodRailLengthFt = (isWood && isInstall) ? woodInstallRailLengthFt(s) : 0;
       const railsDesc = isWood
         ? (s.woodRailSize || '-')
         : (Array.isArray(s.rails) && s.rails.length)
@@ -8455,8 +8473,6 @@ document.addEventListener('DOMContentLoaded', function(){
               ).join('; ');
             })()
           : (s.railStacked ? `${s.railSize} + ${s.railSize2} (stacked)` : `${s.railSize}`);
-      const isInstall = scopeType === 'install' || scopeType === 'replace';
-      const isRepair = !isInstall;
       if(isRepair && isWrought){
         hasWroughtRepair = true;
       }
@@ -8696,6 +8712,9 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`- Style: ${isWood ? woodStyle : s.style}`);
         lines.push(`- Height: ${isWood ? woodHeight : s.height}`);
         lines.push(`- Rails: ${railsDesc}`);
+        if(isWood && isInstall){
+          lines.push(`- Rail length: ${woodRailLengthFt} ft`);
+        }
         lines.push(`- Picket: ${isWood ? (s.woodPicketWidth || '-') : picket}`);
         lines.push(`- Puppy Pickets: ${isWood ? 'N/A' : s.puppy}`);
         if(isWood){
@@ -8725,6 +8744,7 @@ document.addEventListener('DOMContentLoaded', function(){
             `Height: ${woodHeight || '-'}`,
             `Picket: ${s.woodPicketWidth || '-'}`,
             `Rails: ${railsDesc}`,
+            isInstall ? `Rail length: ${woodRailLengthFt} ft` : '',
             `Wood type: ${s.woodType || 'Cedar'}`,
             `Finish: ${woodFinish}`,
             `Posts: ${woodPosts}`,
@@ -10410,11 +10430,11 @@ document.addEventListener('DOMContentLoaded', function(){
         const postsTotal = spanCount + 1;
         const gateAddsForInstall = walkGateAddCount(s);
         const postsToSet = useExistingPostsForReplacement ? 0 : (postsTotal + gateAddsForInstall);
-        const use12FtRailsForExistingPosts = useExistingPostsForReplacement && replacementPostSpacingFt === 6 && isRoundSteel;
+        const railLengthFt = woodInstallRailLengthFt(s);
+        const use12FtRailsForExistingPosts = railLengthFt === 12;
         const railSectionsForLength = use12FtRailsForExistingPosts
           ? Math.max(1, Math.ceil(spanCount / 2))
           : (useExistingPostsForReplacement ? spanCount : postsTotal);
-        const railLengthFt = use12FtRailsForExistingPosts ? 12 : 8;
         const totalRails = (railSectionsForLength * RAILS_PER_POST) + (gateAddsForInstall * RAILS_PER_POST);
         const linearInches = lengthFt * 12;
         const useOverlapCount = woodStyleUsesOverlapPickets(s.woodStyle || '');
