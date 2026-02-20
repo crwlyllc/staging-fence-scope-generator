@@ -1368,6 +1368,12 @@ document.addEventListener('DOMContentLoaded', function(){
   const WOOD_PICKET_WIDTHS = ['3.5"','4"','5.5"','6"'];
   const WOOD_RAIL_SIZES = ['2x3','2x4'];
   const WOOD_TRIM_TYPES = ['1x2','1x4','1x4 & 1x2'];
+  const POST_INSTALL_METHODS = [
+    { value: 'dig-set-concrete', label: 'Dig and Set in Concrete' },
+    { value: 'anchored', label: 'Anchor to Concrete' }
+  ];
+  const POST_ANCHOR_PLATE_LABEL = '4x4 anchor plate';
+  const POST_ANCHOR_HARDWARE_LABEL = 'concrete anchor';
   const WROUGHT_PANEL_FABRICATION_OPTIONS = ['On Site','Shop'];
   const WOOD_STAIN_BRANDS = ['HueMiller','Ready Seal','Wood Defender'];
   const DEFAULT_WOOD_STAIN_BRAND = WOOD_STAIN_BRANDS[0];
@@ -2438,6 +2444,7 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorInstallPower: DRIVE_GATE_POWER_TYPES_INSTALL[0],
       driveGateOperatorInstallPlatform: false,
       useExistingPostsForReplacement: 'no',
+      postInstallMethod: POST_INSTALL_METHODS[0].value,
       woodInstallPostSpacing: '8',
       woodReplacementPostSpacing: '8',
       scopeType: 'repair',
@@ -2518,6 +2525,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!Object.prototype.hasOwnProperty.call(data, 'woodRepairPostReplaceCap')){
       merged.woodRepairPostReplaceCap = defaultCapForWoodPost(merged.woodPost);
     }
+    merged.postInstallMethod = normalizePostInstallMethod(merged.postInstallMethod);
     merged.useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(merged.useExistingPostsForReplacement);
     merged.woodInstallPostSpacing = normalizeWoodInstallPostSpacing(merged.woodInstallPostSpacing);
     merged.woodReplacementPostSpacing = normalizeWoodReplacementPostSpacing(merged.woodReplacementPostSpacing);
@@ -3281,7 +3289,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 <option value="no">No</option>
                 <option value="yes">Yes</option>
               </select>
-              <div class="sp-hint">When yes, post labor/materials and concrete are excluded for this replacement section.</div>
+              <div class="sp-hint">When yes, this section excludes new post labor/materials.</div>
             </div>
             <div class="sp-field col-2" data-replace-only data-wood-only data-existing-post-spacing-wrap style="display:none">
               <label class="sp-label">Existing Post Spacing</label>
@@ -3290,6 +3298,11 @@ document.addEventListener('DOMContentLoaded', function(){
                 <option value="6">6ft</option>
               </select>
               <div class="sp-hint">For wood replacements using existing posts.</div>
+            </div>
+            <div class="sp-field col-3" data-install-only data-post-install-method-wrap style="display:none">
+              <label class="sp-label">Post Setting Method</label>
+              <select class="sp-select" data-field="postInstallMethod">${POST_INSTALL_METHODS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select>
+              <div class="sp-hint">Anchored posts use 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post.</div>
             </div>
             <div class="sp-field col-3">
               <label class="sp-label">Section Length (ft)</label>
@@ -3931,7 +3944,7 @@ document.addEventListener('DOMContentLoaded', function(){
               <select class="sp-select" data-field="walkAddHinges">${createSelect(GATE.hingeTypes)}</select>
             </div>
           </div>
-          <div class="sp-hint">Single swing: adds 2 labor hours, 1 post, 1 bag concrete, and 2× 12ft rails per rail size. Double swing: adds 3 labor hours, 1 post, 1 bag concrete, and 4× 12ft rails per rail size.</div>
+          <div class="sp-hint">Single swing: adds 2 labor hours, 1 post, and 2× 12ft rails per rail size. Double swing: adds 3 labor hours, 1 post, and 4× 12ft rails per rail size. For install/replace sections set to Anchored, use 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per gate post; otherwise use 1 bag concrete per gate post.</div>
         </div>
 
         <!-- Add a Wood Walk Gate -->
@@ -4055,18 +4068,18 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodWalkAddPicketWidth','driveGateChainReplace','driveGateOperatorReplace','driveGateOperatorType',
     'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
     'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap','woodWalkGatesAdd',
-    'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie','useExistingPostsForReplacement','woodInstallPostSpacing','woodReplacementPostSpacing'
+    'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie','useExistingPostsForReplacement','postInstallMethod','woodInstallPostSpacing','woodReplacementPostSpacing'
   ];
 
   const BULK_WROUGHT_FIELDS = [
     'fenceType','scopeType','style','height','postSize','panelAttachment','wroughtCustomStickLength','wroughtPanelFabrication','wroughtPowderCoatPanels','wroughtPowderCoatPosts',
-    'railsCount','rails','picketSize','picketHeight','puppy','useExistingPostsForReplacement'
+    'railsCount','rails','picketSize','picketHeight','puppy','useExistingPostsForReplacement','postInstallMethod'
   ];
 
   const BULK_WOOD_FIELDS = [
     'fenceType','scopeType','woodHeight','woodStyle','woodPicketWidth','woodRailSize',
     'woodPost','woodType','woodFinish','woodAddKickBoard','woodAddTopCap','woodAddTrim',
-    'woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodRepairStainBrand','useExistingPostsForReplacement','woodInstallPostSpacing','woodReplacementPostSpacing'
+    'woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodRepairStainBrand','useExistingPostsForReplacement','postInstallMethod','woodInstallPostSpacing','woodReplacementPostSpacing'
   ];
 
   function normalizeBulkFenceType(value){
@@ -4118,6 +4131,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     values.scopeType = values.scopeType || source.scopeType || 'repair';
+    values.postInstallMethod = normalizePostInstallMethod(source.postInstallMethod);
 
     if(isWood){
       values.woodHeight = source.woodHeight || '6ft';
@@ -4466,6 +4480,7 @@ document.addEventListener('DOMContentLoaded', function(){
       fenceType: currentFenceType,
       scopeType: scopeTypeValue,
       useExistingPostsForReplacement: normalizeUseExistingPostsForReplacement(val('useExistingPostsForReplacement')),
+      postInstallMethod: normalizePostInstallMethod(val('postInstallMethod')),
       woodInstallPostSpacing: normalizeWoodInstallPostSpacing(val('woodInstallPostSpacing')),
       woodReplacementPostSpacing: normalizeWoodReplacementPostSpacing(val('woodReplacementPostSpacing')),
       style: val('style'),
@@ -4656,6 +4671,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('fenceType', data.fenceType || 'Wrought Iron');
     set('scopeType', data.scopeType||'repair');
     set('useExistingPostsForReplacement', normalizeUseExistingPostsForReplacement(data.useExistingPostsForReplacement));
+    set('postInstallMethod', normalizePostInstallMethod(data.postInstallMethod));
     set('woodInstallPostSpacing', normalizeWoodInstallPostSpacing(data.woodInstallPostSpacing));
     set('woodReplacementPostSpacing', normalizeWoodReplacementPostSpacing(data.woodReplacementPostSpacing));
     set('style', data.style||SEED.style[0]);
@@ -5216,6 +5232,27 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
     return total;
+  }
+
+  function normalizePostInstallMethod(value){
+    const raw = String(value == null ? '' : value).trim().toLowerCase();
+    if(
+      raw === 'anchored' ||
+      raw === 'anchor' ||
+      raw === 'anchor-to-concrete' ||
+      raw === 'anchor to concrete' ||
+      raw === 'surface-anchor' ||
+      raw === 'surface anchor'
+    ){
+      return 'anchored';
+    }
+    return 'dig-set-concrete';
+  }
+
+  function postInstallMethodLabel(value){
+    return normalizePostInstallMethod(value) === 'anchored'
+      ? 'Anchor to Concrete'
+      : 'Dig and Set in Concrete';
   }
 
   function normalizeUseExistingPostsForReplacement(value){
@@ -6207,15 +6244,24 @@ document.addEventListener('DOMContentLoaded', function(){
     const isWood = fenceType === 'wood';
     const useExistingPostsSel = card.querySelector('[data-field="useExistingPostsForReplacement"]');
     const useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(useExistingPostsSel ? useExistingPostsSel.value : 'no') === 'yes';
+    const postInstallMethodWrap = card.querySelector('[data-post-install-method-wrap]');
+    const postInstallMethodSel = card.querySelector('[data-field="postInstallMethod"]');
     const woodInstallPostSpacingWrap = card.querySelector('[data-wood-install-post-spacing-wrap]');
     const woodInstallPostSpacingSel = card.querySelector('[data-field="woodInstallPostSpacing"]');
     const existingPostSpacingWrap = card.querySelector('[data-existing-post-spacing-wrap]');
     const existingPostSpacingSel = card.querySelector('[data-field="woodReplacementPostSpacing"]');
+    if(postInstallMethodSel){
+      postInstallMethodSel.value = normalizePostInstallMethod(postInstallMethodSel.value);
+    }
     if(woodInstallPostSpacingSel){
       woodInstallPostSpacingSel.value = normalizeWoodInstallPostSpacing(woodInstallPostSpacingSel.value);
     }
     if(existingPostSpacingSel){
       existingPostSpacingSel.value = normalizeWoodReplacementPostSpacing(existingPostSpacingSel.value);
+    }
+    if(postInstallMethodWrap){
+      const showPostInstallMethod = isInstall && !(isReplace && useExistingPostsForReplacement);
+      postInstallMethodWrap.style.display = showPostInstallMethod ? '' : 'none';
     }
     if(woodInstallPostSpacingWrap){
       const showInstallPostSpacing = isWood && isInstall && !(isReplace && useExistingPostsForReplacement);
@@ -7122,6 +7168,13 @@ document.addEventListener('DOMContentLoaded', function(){
     map[cleanLabel] = (map[cleanLabel]||0) + qty;
   }
 
+  function addPostAnchorMaterials(map, postCount){
+    const qty = Math.max(0, parseInt(postCount, 10) || 0);
+    if(qty <= 0) return;
+    addMat(map, POST_ANCHOR_PLATE_LABEL, qty);
+    addMat(map, POST_ANCHOR_HARDWARE_LABEL, qty * 4);
+  }
+
   function normalizeSize(txt){
     return String(txt||'')
       .replace(/\\u201D|”/g,'"')
@@ -7274,6 +7327,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'Drive gate power run (new wiring)': 2000,
     'Solar gate power kit': 500,
     'Sliding drive gate chain': 150,
+    [POST_ANCHOR_PLATE_LABEL]: 0,
+    [POST_ANCHOR_HARDWARE_LABEL]: 0,
     'panel mount bracket': 1.27,
     'powder coat panel': 40,
     'powder coat post': 10,
@@ -7293,7 +7348,10 @@ document.addEventListener('DOMContentLoaded', function(){
     'wood rail (2x4)': 10.81,
     'wood rail': 10.81
   };
-  const PRICE_MISC_UNPRICED_LABELS = new Set();
+  const PRICE_MISC_UNPRICED_LABELS = new Set([
+    POST_ANCHOR_PLATE_LABEL,
+    POST_ANCHOR_HARDWARE_LABEL
+  ]);
   const SKID_STEER_WEEKLY_RATE = 1200;
 
   const WOOD_BOARD_PIECE_PRICING = {
@@ -8009,8 +8067,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const actionPrefix = includeRemoval ? 'Remove existing fence and install new' : 'Install';
       const label = fenceTypeLabel(type);
       const postsSentence = includeRemoval
-        ? 'Posts will be set in concrete 36" deep unless existing posts are reused.'
-        : 'Posts will be set in concrete 36" deep.';
+        ? `When new posts are needed, each section uses its selected post setting method: set in concrete 36" deep or anchor to concrete with 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post.`
+        : `Each section uses its selected post setting method: set in concrete 36" deep or anchor to concrete with 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post.`;
       return `${actionPrefix} ${label.toLowerCase()} fence. ${postsSentence}`;
     }
     function buildWoodInstallationServiceLineTitle(sections){
@@ -8108,7 +8166,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const styles = new Set();
       const rails = new Set();
       const railSizes = new Set();
-      const spacing = new Set();
+      const spacingConcrete = new Set();
+      const spacingAnchored = new Set();
       const existingPostSpacing = new Set();
       const postSizes = new Set();
       const styleGroups = new Map();
@@ -8117,6 +8176,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const woodTrims = new Set();
       let replacementReusePostSections = 0;
       let replacementNewPostSections = 0;
+      let concreteSetSections = 0;
+      let anchoredSections = 0;
 
       sections.forEach(section=>{
         const useExistingPostsForReplacement = includeRemoval && shouldUseExistingPostsForReplacement(section);
@@ -8221,11 +8282,23 @@ document.addEventListener('DOMContentLoaded', function(){
           group.picketSizes.add(normalizeSize(section.picketSize));
         }
         if(!useExistingPostsForReplacement){
+          const postInstallMethod = normalizePostInstallMethod(section.postInstallMethod);
+          if(postInstallMethod === 'anchored'){
+            anchoredSections += 1;
+          } else {
+            concreteSetSections += 1;
+          }
           const spacingCandidate = isWood
             ? woodInstallPostSpacingFt(section)
             : ((section._installCalc && section._installCalc.spacingFt) || parseFloat(section.postSpacing||''));
           const spacingStr = formatFtValue(spacingCandidate);
-          if(spacingStr){ spacing.add(spacingStr); }
+          if(spacingStr){
+            if(postInstallMethod === 'anchored'){
+              spacingAnchored.add(spacingStr);
+            } else {
+              spacingConcrete.add(spacingStr);
+            }
+          }
         } else {
           const spacingCandidate = isWood
             ? woodReplacementPostSpacingFt(section)
@@ -8275,32 +8348,45 @@ document.addEventListener('DOMContentLoaded', function(){
           : `${actionPrefix} ${descriptor}${withText}.`;
       }
 
-      const spacingValues = Array.from(spacing).sort((a,b)=> parseFloat(a) - parseFloat(b));
+      const spacingValuesConcrete = Array.from(spacingConcrete).sort((a,b)=> parseFloat(a) - parseFloat(b));
+      const spacingValuesAnchored = Array.from(spacingAnchored).sort((a,b)=> parseFloat(a) - parseFloat(b));
       const railSizeValues = Array.from(railSizes).filter(Boolean);
       const postSizeValues = Array.from(postSizes).filter(Boolean);
       let postsSentence = '';
       if(replacementReusePostSections > 0 && replacementNewPostSections === 0){
         const spacingValues = Array.from(existingPostSpacing).sort((a,b)=> parseFloat(a) - parseFloat(b));
         if(spacingValues.length === 1){
-          postsSentence = `Use existing posts (${spacingValues[0]}ft spacing; no new post set or concrete).`;
+          postsSentence = `Use existing posts (${spacingValues[0]}ft spacing; no new post set or anchoring).`;
         } else if(spacingValues.length > 1){
           const spacingLabels = spacingValues.map(v=> `${v}ft`);
-          postsSentence = `Use existing posts (${joinParts(spacingLabels)} spacing mix; no new post set or concrete).`;
+          postsSentence = `Use existing posts (${joinParts(spacingLabels)} spacing mix; no new post set or anchoring).`;
         } else {
-          postsSentence = 'Use existing posts (no new post set or concrete).';
+          postsSentence = 'Use existing posts (no new post set or anchoring).';
         }
       } else {
         const postSizeLabel = postSizeValues.length ? ` (${joinParts(postSizeValues)})` : '';
-        if(spacingValues.length){
-          if(spacingValues.length === 1){
-            postsSentence = `Posts${postSizeLabel} will be spaced ${spacingValues[0]}ft apart and set in concrete 36\" deep.`;
+        const methodSentences = [];
+        if(concreteSetSections > 0){
+          if(spacingValuesConcrete.length === 1){
+            methodSentences.push(`Posts${postSizeLabel} will be spaced ${spacingValuesConcrete[0]}ft apart and set in concrete 36\" deep.`);
+          } else if(spacingValuesConcrete.length > 1){
+            const spacingLabels = spacingValuesConcrete.map(v=> `${v}ft`);
+            methodSentences.push(`Posts${postSizeLabel} will be spaced between ${joinParts(spacingLabels)} apart and set in concrete 36\" deep.`);
           } else {
-            const spacingLabels = spacingValues.map(v=> `${v}ft`);
-            postsSentence = `Posts${postSizeLabel} will be spaced between ${joinParts(spacingLabels)} apart and set in concrete 36\" deep.`;
+            methodSentences.push(`Posts${postSizeLabel} will be set in concrete 36\" deep.`);
           }
-        } else {
-          postsSentence = `Posts${postSizeLabel} will be set in concrete 36\" deep.`;
         }
+        if(anchoredSections > 0){
+          if(spacingValuesAnchored.length === 1){
+            methodSentences.push(`Posts${postSizeLabel} will be spaced ${spacingValuesAnchored[0]}ft apart and anchored to concrete with 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post.`);
+          } else if(spacingValuesAnchored.length > 1){
+            const spacingLabels = spacingValuesAnchored.map(v=> `${v}ft`);
+            methodSentences.push(`Posts${postSizeLabel} will be spaced between ${joinParts(spacingLabels)} apart and anchored to concrete with 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post.`);
+          } else {
+            methodSentences.push(`Posts${postSizeLabel} will be anchored to concrete with 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post.`);
+          }
+        }
+        postsSentence = methodSentences.join(' ');
       }
 
       let railSentence = '';
@@ -8326,7 +8412,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       const mixedPostHandlingSentence = (replacementReusePostSections > 0 && replacementNewPostSections > 0)
-        ? 'Replacement sections marked to use existing posts exclude new post set and concrete.'
+        ? 'Replacement sections marked to use existing posts exclude new post set or anchoring.'
         : '';
       return [firstSentence, postsSentence, railSentence, woodAddOnSentence, mixedPostHandlingSentence].filter(Boolean).join(' ');
     }
@@ -8403,6 +8489,8 @@ document.addEventListener('DOMContentLoaded', function(){
       wroughtInstallSections:0, wroughtReplaceSections:0,
       removalLf:0, removalCost:0,
       postsInstall: zeroPostCounts(),
+      postsInstallConcrete: zeroPostCounts(),
+      postsInstallAnchored: zeroPostCounts(),
       postsReplace: zeroPostCounts(),
       woodPostInstallMethods: zeroWoodMethodCounts()
     };
@@ -8579,6 +8667,7 @@ document.addEventListener('DOMContentLoaded', function(){
       let installInfo = null;
       if(isInstall && isWrought){
         const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(s);
+        const postInstallMethod = normalizePostInstallMethod(s.postInstallMethod);
         const lengthFt = parseInt(s.length||0,10) || 0;
         const spacingRaw = parseFloat(s.postSpacing||'8');
         const spacingFt = (isFinite(spacingRaw) && spacingRaw > 0) ? spacingRaw : 8;
@@ -8588,10 +8677,6 @@ document.addEventListener('DOMContentLoaded', function(){
         const installCounts = zeroPostCounts();
         const pKey = postSizeKey(s.postSize);
         if(pKey && postsTotal > 0){ installCounts[pKey] = postsTotal; }
-        if(!useExistingPostsForReplacement){
-          addPostCounts(totals.postsInstall, installCounts);
-          addPostCounts(totals, installCounts);
-        }
 
         const panelWidths = [];
         if(spanCount > 0){
@@ -8617,6 +8702,15 @@ document.addEventListener('DOMContentLoaded', function(){
         if(!useExistingPostsForReplacement && gateAddsForInstall>0 && gatePostKey){
           installCounts[gatePostKey] = (installCounts[gatePostKey]||0) + gateAddsForInstall;
         }
+        if(!useExistingPostsForReplacement){
+          addPostCounts(totals.postsInstall, installCounts);
+          if(postInstallMethod === 'anchored'){
+            addPostCounts(totals.postsInstallAnchored, installCounts);
+          } else {
+            addPostCounts(totals.postsInstallConcrete, installCounts);
+          }
+          addPostCounts(totals, installCounts);
+        }
 
         installInfo = {
           lengthFt,
@@ -8629,6 +8723,7 @@ document.addEventListener('DOMContentLoaded', function(){
           panelFabrication: normalizeWroughtPanelFabrication(s.wroughtPanelFabrication),
           powderCoatPanels: !!s.wroughtPowderCoatPanels,
           powderCoatPosts: !!s.wroughtPowderCoatPosts,
+          postInstallMethod,
           useExistingPosts: useExistingPostsForReplacement,
           finialStyle,
           customPanels: 0,
@@ -8872,9 +8967,15 @@ document.addEventListener('DOMContentLoaded', function(){
         lines.push(`- Panel attachment: ${installInfo.attachment}`);
         lines.push(`- Panel fabrication: ${installInfo.panelFabrication}`);
         if(installInfo.useExistingPosts){
-          lines.push('- Use existing posts: yes (no new post set or concrete)');
+          lines.push('- Use existing posts: yes (no new post set or anchoring)');
         } else {
           lines.push(`- Posts to set: ${installInfo.postsTotal} (${s.postSize})`);
+          const postMethod = normalizePostInstallMethod(installInfo.postInstallMethod);
+          if(postMethod === 'anchored'){
+            lines.push(`- Post setting method: ${postInstallMethodLabel(postMethod)} (1x ${POST_ANCHOR_PLATE_LABEL} + 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post)`);
+          } else {
+            lines.push(`- Post setting method: ${postInstallMethodLabel(postMethod)} (set in concrete 36" deep)`);
+          }
         }
         if(installInfo.finialStyle){
           lines.push(`- Finials: ${installInfo.finialStyle}`);
@@ -9545,7 +9646,8 @@ document.addEventListener('DOMContentLoaded', function(){
         if(parts.length) lines.push(`- ${label}: ${parts.join(', ')}`);
       };
       postSummary('Posts to replace', t.postsReplace || zeroPostCounts());
-      postSummary('Posts to set (new sections)', t.postsInstall || zeroPostCounts());
+      postSummary('Posts to set in concrete (new sections)', t.postsInstallConcrete || zeroPostCounts());
+      postSummary('Posts to anchor (new sections)', t.postsInstallAnchored || zeroPostCounts());
       if (t.postsRealign2x2) lines.push(`- 2x2 posts to realign: ${t.postsRealign2x2}`);
       if (t.postsRealign3x3) lines.push(`- 3x3 posts to realign: ${t.postsRealign3x3}`);
       if (t.postsRealignCutWeld) lines.push(`- Posts to realign (cut & weld): ${t.postsRealignCutWeld}`);
@@ -10352,7 +10454,7 @@ document.addEventListener('DOMContentLoaded', function(){
       addServiceLine('Remove Fence Sections', `Take down and haul away ${describeCount(totals.wroughtReplaceSections, 'existing fence section', 'existing fence sections')} prior to installation.`);
     }
     if (totals.wroughtInstallSections > 0){
-      addServiceLine('Install New Fence Sections', `Set posts in concrete and install panels for ${describeCount(totals.wroughtInstallSections, 'new wrought iron fence section', 'new wrought iron fence sections')}.`);
+      addServiceLine('Install New Fence Sections', `Install panels for ${describeCount(totals.wroughtInstallSections, 'new wrought iron fence section', 'new wrought iron fence sections')} and set posts per section using the selected method (concrete-set or anchored with 1x ${POST_ANCHOR_PLATE_LABEL} + 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post).`);
     }
 
     const serviceLines = buildServiceLineOutput();
@@ -10508,6 +10610,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const scopeType = (s.scopeType || 'repair');
         if(scopeType !== 'install' && scopeType !== 'replace') return;
         const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(s);
+        const postInstallMethod = normalizePostInstallMethod(s.postInstallMethod);
         const installPostSpacingFt = Math.max(0.1, woodInstallPostSpacingFt(s) || defaultPostSpacingFt);
         const replacementPostSpacingFt = woodReplacementPostSpacingFt(s);
         const sectionPostSpacingFt = useExistingPostsForReplacement ? replacementPostSpacingFt : installPostSpacingFt;
@@ -10586,6 +10689,9 @@ document.addEventListener('DOMContentLoaded', function(){
             postLabel = woodRoundSteelPostLabelForHeight(heightFt);
           }
           addMat(materials, `${postLabel} posts`, postsTotal);
+          if(postInstallMethod === 'anchored'){
+            addPostAnchorMaterials(materials, postsTotal);
+          }
         }
 
         if(isRoundSteel){
@@ -10602,7 +10708,9 @@ document.addEventListener('DOMContentLoaded', function(){
           }
           if(!useExistingPostsForReplacement){
             const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
-            addMat(materials, 'Maximizer bags of concrete', postsTotal * bagsPerPost);
+            if(postInstallMethod !== 'anchored'){
+              addMat(materials, 'Maximizer bags of concrete', postsTotal * bagsPerPost);
+            }
           }
         }
         if(isPostmaster){
@@ -10927,11 +11035,21 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Concrete (exclude posts set within retaining walls)
     const wallPostCounts = totals.retainingWallPosts || zeroPostCounts();
-    const posts1p5NeedingConcrete = Math.max(0, totals.posts1p5 - (wallPostCounts.posts1p5 || 0));
-    const posts2x2NeedingConcrete = Math.max(0, totals.posts2x2 - (wallPostCounts.posts2x2 || 0));
-    const posts3x3NeedingConcrete = Math.max(0, totals.posts3x3 - (wallPostCounts.posts3x3 || 0));
-    const posts4x4NeedingConcrete = Math.max(0, totals.posts4x4 - (wallPostCounts.posts4x4 || 0));
+    const installAnchoredCounts = totals.postsInstallAnchored || zeroPostCounts();
+    const posts1p5NeedingConcrete = Math.max(0, totals.posts1p5 - (wallPostCounts.posts1p5 || 0) - (installAnchoredCounts.posts1p5 || 0));
+    const posts2x2NeedingConcrete = Math.max(0, totals.posts2x2 - (wallPostCounts.posts2x2 || 0) - (installAnchoredCounts.posts2x2 || 0));
+    const posts3x3NeedingConcrete = Math.max(0, totals.posts3x3 - (wallPostCounts.posts3x3 || 0) - (installAnchoredCounts.posts3x3 || 0));
+    const posts4x4NeedingConcrete = Math.max(0, totals.posts4x4 - (wallPostCounts.posts4x4 || 0) - (installAnchoredCounts.posts4x4 || 0));
+    const anchoredInstallPostsNeedingHardware = (
+      Math.max(0, (installAnchoredCounts.posts1p5 || 0) - (wallPostCounts.posts1p5 || 0)) +
+      Math.max(0, (installAnchoredCounts.posts2x2 || 0) - (wallPostCounts.posts2x2 || 0)) +
+      Math.max(0, (installAnchoredCounts.posts3x3 || 0) - (wallPostCounts.posts3x3 || 0)) +
+      Math.max(0, (installAnchoredCounts.posts4x4 || 0) - (wallPostCounts.posts4x4 || 0))
+    );
     const concreteBagsCalc = posts2x2NeedingConcrete + posts3x3NeedingConcrete + posts1p5NeedingConcrete + posts4x4NeedingConcrete + Math.ceil((totals.postsRealign2x2 + totals.postsRealign3x3) * 0.5) + totals.walkRealign + totals.walkGateAddsRepair;
+    if(anchoredInstallPostsNeedingHardware > 0){
+      addPostAnchorMaterials(materials, anchoredInstallPostsNeedingHardware);
+    }
 
     // Gate bits + gate materials
     const latchCounts = {};
@@ -10966,6 +11084,10 @@ document.addEventListener('DOMContentLoaded', function(){
       if(addG>0){
         const isWoodSection = (s.fenceType || '').toLowerCase() === 'wood';
         if(isWoodSection){
+          const scopeType = String(s.scopeType || 'repair').toLowerCase();
+          const isInstallScope = scopeType === 'install' || scopeType === 'replace';
+          const postInstallMethod = normalizePostInstallMethod(s.postInstallMethod);
+          const shouldAnchorGatePosts = isInstallScope && postInstallMethod === 'anchored';
           const gateType = walkGateAddType(s);
           const leafCount = walkGateTypeIsDouble(gateType) ? 2 : 1;
           const frameSize = walkGateAddFrameLabel(s);
@@ -10996,12 +11118,22 @@ document.addEventListener('DOMContentLoaded', function(){
               addMat(materials, 'lag screws', totalTies * 4);
             }
             addMat(materials, 'Dome cap post cap', addG);
-            const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
-            addMat(materials, 'Maximizer bags of concrete', addG * bagsPerPost);
+            if(shouldAnchorGatePosts){
+              addPostAnchorMaterials(materials, addG);
+            } else {
+              const bagsPerPost = heightFt >= 8 ? 1.25 : 1;
+              addMat(materials, 'Maximizer bags of concrete', addG * bagsPerPost);
+            }
           } else if(isPostmasterPost(postType)){
             addMat(materials, 'Postmaster posts', addG);
+            if(shouldAnchorGatePosts){
+              addPostAnchorMaterials(materials, addG);
+            }
           } else {
             addMat(materials, 'Wood 4x4 posts', addG);
+            if(shouldAnchorGatePosts){
+              addPostAnchorMaterials(materials, addG);
+            }
           }
 
           if(s.woodAddTopCap){
@@ -12265,7 +12397,8 @@ document.addEventListener('DOMContentLoaded', function(){
       woodInstallRemovalManHours +
       woodInstallPostManHours;
     const replacePostSummary = compactPostSummary(totals.postsReplace || zeroPostCounts());
-    const installPostSummary = compactPostSummary(totals.postsInstall || zeroPostCounts());
+    const installPostSummaryConcrete = compactPostSummary(totals.postsInstallConcrete || zeroPostCounts());
+    const installPostSummaryAnchored = compactPostSummary(totals.postsInstallAnchored || zeroPostCounts());
     const postTaskParts = [];
     const sentenceCase = (text)=>{
       const raw = String(text || '').trim();
@@ -12296,7 +12429,8 @@ document.addEventListener('DOMContentLoaded', function(){
     } else if(woodInstallPlan.totalPosts > 0){
       postTaskParts.push(`run strings and mark ${woodInstallPlan.totalPosts} wood post ${plural(woodInstallPlan.totalPosts, 'location', 'locations')}`);
     }
-    if(installPostSummary) postTaskParts.push(`set ${installPostSummary} new posts`);
+    if(installPostSummaryConcrete) postTaskParts.push(`set ${installPostSummaryConcrete} new posts in concrete`);
+    if(installPostSummaryAnchored) postTaskParts.push(`anchor ${installPostSummaryAnchored} new posts to concrete`);
     if(wroughtPanelInstallReturnNextDay){
       postTaskParts.push('return another day to install panels');
     }
@@ -12933,7 +13067,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.postsRealignCutWeld > 0) sub.push('- Posts to realign (cut & weld): '+totals.postsRealignCutWeld);
     if (totals.woodPostRealignCutWeld > 0) sub.push('- Wood posts to realign (cut & weld): '+totals.woodPostRealignCutWeld);
     if (totals.woodPostRealignDig > 0) sub.push('- Wood posts to realign (dig): '+totals.woodPostRealignDig);
-    pushPostLinesSub('Posts to set (new sections)', totals.postsInstall || zeroPostCounts());
+    pushPostLinesSub('Posts to set in concrete (new sections)', totals.postsInstallConcrete || zeroPostCounts());
+    pushPostLinesSub('Posts to anchor (new sections)', totals.postsInstallAnchored || zeroPostCounts());
     const nonWoodReplacementSections = replacementSectionsOnly.filter(section=> ((section.fenceType || '').toLowerCase() !== 'wood'));
     const nonWoodInstallSections = installSectionsOnly.filter(section=> ((section.fenceType || '').toLowerCase() !== 'wood'));
     const replacementUsingExistingPosts = replacementSectionsOnly.filter(section=> shouldUseExistingPostsForReplacement(section));
