@@ -13998,6 +13998,11 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
 
+    const confirmMessage = `Send ${serviceLines.length} service line item${serviceLines.length === 1 ? '' : 's'} to Housecall Pro (Estimate ${estimateNumber}, Option ${optionNumber})?`;
+    if(!confirm(confirmMessage)){
+      return;
+    }
+
     if(typeof fetch !== 'function'){
       alert('This browser does not support automatic line item sending. Please copy the service line items manually.');
       return;
