@@ -2534,6 +2534,51 @@ document.addEventListener('DOMContentLoaded', function(){
     return merged;
   }
 
+  function sanitizeWroughtFieldsForFenceType(section){
+    if(!section) return section;
+    if(String(section.fenceType || '').toLowerCase() !== 'wood'){
+      return section;
+    }
+    return {
+      ...section,
+      wiPickets: 0,
+      weldRedos: 0,
+      walkGates: 0,
+      walkGatesRealign: 0,
+      walkGatesHardware: 0,
+      walkGatesRebuild: 0,
+      walkLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      walkRebuildFrame: SEED.railSize[0],
+      walkRebuildPicket: SEED.picketSize[0],
+      walkRebuildLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkRebuildHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      walkGatesAdd: 0,
+      walkAddType: WALK_GATE_TYPES[0],
+      walkAddPostSize: section.postSize || '2x2',
+      walkAddFrameSize: SEED.railSize[0],
+      walkAddPicketSize: SEED.picketSize[0],
+      walkAddLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
+      walkAddHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
+      driveGateChainReplace: 0,
+      driveGateOperatorReplace: 0,
+      driveGateOperatorType: DRIVE_GATE_OPERATOR_TYPES[0],
+      driveGateOperatorPower: DRIVE_GATE_POWER_TYPES[0],
+      driveGateOperatorInstall: 0,
+      driveGateOperatorInstallType: DRIVE_GATE_OPERATOR_TYPES[0],
+      driveGateOperatorInstallPower: DRIVE_GATE_POWER_TYPES_INSTALL[0],
+      driveGateOperatorInstallPlatform: false,
+      postReplacements: [],
+      postRealignments: [],
+      finials: [],
+      puppyInserts: [],
+      caps: [],
+      panels: [],
+      gapAdditions: [],
+      diagonalBraces: []
+    };
+  }
+
   function isSectionPristine(section){
     if(!section) return false;
     const clean = v => String(v||'').trim();
@@ -3673,7 +3718,7 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
         </div>
         </div>
-        <div class="sp-scope-group col-12 is-repair" data-section-detail data-repair-only>
+        <div class="sp-scope-group col-12 is-repair" data-section-detail data-repair-only data-wrought-only>
           <div class="sp-scope-head">
             <div class="sp-scope-pill">Repairs</div>
             <div>
@@ -3801,11 +3846,11 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
           <div class="sp-grid sp-scope-grid">
         <!-- ========== GROUP: Gates (unchanged, follows after above groups) ========== -->
-        <div class="sp-field col-3" data-repair-only>
+        <div class="sp-field col-3" data-repair-only data-wrought-only>
           <label class="sp-label"># Walk Gates</label>
           ${numberControl('walkGates','0')}
         </div>
-        <div class="sp-field col-12" data-wg-wrap data-repair-only style="display:none">
+        <div class="sp-field col-12" data-wg-wrap data-repair-only data-wrought-only style="display:none">
           <div class="sp-grid">
             <div class="sp-field col-3">
               <label class="sp-label"># Walk Gates to Realign</label>
@@ -3917,18 +3962,18 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
 
         <!-- NEW: Replace Sliding Drive Gate Chain -->
-        <div class="sp-field col-3" data-repair-only>
+        <div class="sp-field col-3" data-repair-only data-wrought-only>
           <label class="sp-label"># Sliding Drive Gate Chains to Replace</label>
           ${numberControl('driveGateChainReplace','0')}
           <div class="sp-hint">Adds $150 materials and 1 crew hour per chain.</div>
         </div>
 
         <!-- NEW: Replace Drive Gate Operator -->
-        <div class="sp-field col-3">
+        <div class="sp-field col-3" data-wrought-only>
           <label class="sp-label"># Drive Gate Operators to Replace</label>
           ${numberControl('driveGateOperatorReplace','0')}
         </div>
-        <div class="sp-field col-12" data-drive-operator-wrap style="display:none">
+        <div class="sp-field col-12" data-drive-operator-wrap data-wrought-only style="display:none">
           <div class="sp-grid">
             <div class="sp-field col-3">
               <label class="sp-label">Drive Gate Type</label>
@@ -3943,11 +3988,11 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
 
         <!-- NEW: Install Drive Gate Operator -->
-        <div class="sp-field col-3">
+        <div class="sp-field col-3" data-wrought-only>
           <label class="sp-label"># Drive Gate Operators to Install</label>
           ${numberControl('driveGateOperatorInstall','0')}
         </div>
-        <div class="sp-field col-12" data-drive-operator-install-wrap style="display:none">
+        <div class="sp-field col-12" data-drive-operator-install-wrap data-wrought-only style="display:none">
           <div class="sp-grid">
             <div class="sp-field col-3">
               <label class="sp-label">Drive Gate Type</label>
@@ -4415,7 +4460,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const mapLengthOverride = parsePositiveInt(card.dataset.mapLengthOverride);
     const mapMeasuredLength = parsePositiveInt(card.dataset.mapMeasuredLength);
 
-    return {
+    const sectionData = {
       id,
       label: val('label').trim(),
       fenceType: currentFenceType,
@@ -4556,6 +4601,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       notes: val('notes').trim()
     };
+    return sanitizeWroughtFieldsForFenceType(sectionData);
   }
 
   function syncStateFromDOM(){
@@ -8936,7 +8982,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // NEW: Finials
-      const finArr = isRepair && Array.isArray(s.finials) ? s.finials : [];
+      const finArr = isRepair && isWrought && Array.isArray(s.finials) ? s.finials : [];
       const finCount = finArr.reduce((acc,f)=> acc + (parseInt(f?.qty||0,10) || 0), 0);
       if(finCount){
         lines.push(`- Finial replacements: ${finCount}`);
@@ -8949,7 +8995,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const panelPuppyInsertInfo = (!isWood && isRepair)
         ? collectPanelPuppyInsertInfo(s.panels, s.picketSize)
         : { total: 0, sizes: new Map() };
-      const puppyInsertArr = isRepair && Array.isArray(s.puppyInserts) ? s.puppyInserts : [];
+      const puppyInsertArr = isRepair && isWrought && Array.isArray(s.puppyInserts) ? s.puppyInserts : [];
       const puppyInsertCount = puppyInsertArr.reduce((acc,item)=> acc + (parseInt(item?.qty||0,10) || 0), 0)
         + (panelPuppyInsertInfo.total || 0);
       if(puppyInsertCount){
@@ -9123,7 +9169,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // PANEL REPLACEMENTS (per-row)
-      const panelArr = isRepair && Array.isArray(s.panels) ? s.panels : [];
+      const panelArr = isRepair && isWrought && Array.isArray(s.panels) ? s.panels : [];
       processPanels(panelArr, '- Panel replacements:', 'repair');
 
       if(installInfo && installInfo.spanCount > 0){
@@ -9188,7 +9234,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // NEW: Caps
-      const capArr = isRepair && Array.isArray(s.caps) ? s.caps : [];
+      const capArr = isRepair && isWrought && Array.isArray(s.caps) ? s.caps : [];
       const capCount = capArr.reduce((acc,c)=> acc + (parseInt(c?.qty||0,10) || 0), 0);
       if(capCount){
         lines.push(`- Post cap replacements: ${capCount}`);
@@ -9203,10 +9249,10 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // Walk gate details
-      const wg  = isRepair ? i(s.walkGates) : 0;
-      const wgr = isRepair ? i(s.walkGatesRealign) : 0;
-      const wgh = isRepair ? i(s.walkGatesHardware) : 0;
-      const wgb = isRepair ? i(s.walkGatesRebuild) : 0;
+      const wg  = (isRepair && isWrought) ? i(s.walkGates) : 0;
+      const wgr = (isRepair && isWrought) ? i(s.walkGatesRealign) : 0;
+      const wgh = (isRepair && isWrought) ? i(s.walkGatesHardware) : 0;
+      const wgb = (isRepair && isWrought) ? i(s.walkGatesRebuild) : 0;
       if (isRepair && (wg || wgr || wgh || wgb)){
         lines.push(`- Walk gates: ${wg}`);
         if (wgr) lines.push(`  - Realign: ${wgr}`);
@@ -9231,7 +9277,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
 
-      const driveGateChainReplace = isRepair ? i(s.driveGateChainReplace) : 0;
+      const driveGateChainReplace = (isRepair && isWrought) ? i(s.driveGateChainReplace) : 0;
       if(driveGateChainReplace){
         lines.push(`- Sliding drive gate chains to replace: ${driveGateChainReplace}`);
         totals.driveGateChainReplacements += driveGateChainReplace;
@@ -9243,7 +9289,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // Drive gate operator replacement
-      const dgo = i(s.driveGateOperatorReplace);
+      const dgo = isWrought ? i(s.driveGateOperatorReplace) : 0;
       if(dgo){
         const rawType = (s.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
         const rawPower = (s.driveGateOperatorPower || DRIVE_GATE_POWER_TYPES[0] || '').trim();
@@ -9283,7 +9329,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // Drive gate operator installation
-      const dgi = i(s.driveGateOperatorInstall);
+      const dgi = isWrought ? i(s.driveGateOperatorInstall) : 0;
       if(dgi){
         const rawType = (s.driveGateOperatorInstallType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
         const rawPower = (s.driveGateOperatorInstallPower || DRIVE_GATE_POWER_TYPES_INSTALL[0] || '').trim();
