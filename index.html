@@ -13576,6 +13576,7 @@ document.addEventListener('DOMContentLoaded', function(){
       titleBtn.textContent = 'Copy';
       titleBtn.dataset.text = item.name || '';
       titleBtn.dataset.kind = 'title';
+      titleBtn.addEventListener('click', copyServiceLineButton);
       titleRow.appendChild(titleInput);
       titleRow.appendChild(titleBtn);
       titleField.appendChild(titleLabel);
@@ -13598,6 +13599,7 @@ document.addEventListener('DOMContentLoaded', function(){
       descBtn.textContent = 'Copy';
       descBtn.dataset.text = item.desc || '';
       descBtn.dataset.kind = 'description';
+      descBtn.addEventListener('click', copyServiceLineButton);
       descRow.appendChild(descTextarea);
       descRow.appendChild(descBtn);
       descField.appendChild(descLabel);
@@ -13775,12 +13777,8 @@ document.addEventListener('DOMContentLoaded', function(){
       .catch(()=>flashButton(serviceCopyAllBtn, 'Copy failed', { revertMs: 1600, disable: false }));
   }
 
-  function handleServiceListClick(event){
-    const rawTarget = event ? event.target : null;
-    const targetEl = rawTarget && rawTarget.nodeType === 1
-      ? rawTarget
-      : (rawTarget && rawTarget.parentElement ? rawTarget.parentElement : null);
-    const btn = targetEl ? targetEl.closest('.sp-copy-service') : null;
+  function copyServiceLineButton(event){
+    const btn = event?.currentTarget;
     if(!btn || btn.disabled){
       return;
     }
@@ -14136,7 +14134,6 @@ document.addEventListener('DOMContentLoaded', function(){
     pushHcpBtn.addEventListener('click', pushNotesToHcp);
   }
   if(serviceCopyAllBtn){ serviceCopyAllBtn.addEventListener('click', copyAllServiceLines); }
-  if(serviceListEl){ serviceListEl.addEventListener('click', handleServiceListClick); }
   if(importBtn){
     importBtn.addEventListener('click', handleNotesImport);
   }
