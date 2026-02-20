@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Changelog | Strong Perimeter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="assets/strong-perimeter-favicon.svg" />
+  <style>
+    :root{
+      --sp-green:#004B3D;
+      --sp-green-dark:#003428;
+      --sp-ink:#1f2937;
+      --sp-muted:#4b5563;
+      --sp-border:#d1d5db;
+      --sp-stage:#ebebeb;
+      --sp-card:#ffffff;
+      --sp-shadow:0 14px 28px rgba(15,23,42,0.08);
+      --sp-radius:16px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Open Sans","Segoe UI",Arial,sans-serif;
+      background:var(--sp-stage);
+      color:var(--sp-ink);
+    }
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:24px 20px 48px;
+      display:grid;
+      gap:16px;
+    }
+    .hero{
+      background:linear-gradient(165deg,var(--sp-green) 0%,var(--sp-green-dark) 100%);
+      border:1px solid #47655b;
+      border-radius:var(--sp-radius);
+      box-shadow:var(--sp-shadow);
+      padding:18px 20px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+      color:#f8fafc;
+    }
+    .brand{display:grid;gap:8px;max-width:760px}
+    .brand img{height:36px;width:auto;display:block}
+    .hero h1{
+      margin:0;
+      font-size:30px;
+      line-height:1.2;
+      letter-spacing:0.2px;
+    }
+    .hero p{
+      margin:0;
+      color:#dbe8e2;
+      font-size:14px;
+      line-height:1.55;
+      max-width:760px;
+    }
+    .hero-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{
+      text-decoration:none;
+      border:1px solid #8aa99e;
+      background:#f8fafc;
+      color:#0f172a;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:700;
+      font-size:14px;
+      min-height:44px;
+      display:inline-flex;
+      align-items:center;
+      white-space:nowrap;
+      cursor:pointer;
+    }
+    .btn.secondary{
+      background:transparent;
+      color:#e2ece7;
+      border-color:#90ad9f;
+    }
+
+    .card{
+      background:var(--sp-card);
+      border:1px solid var(--sp-border);
+      border-radius:var(--sp-radius);
+      box-shadow:var(--sp-shadow);
+      padding:18px;
+      display:grid;
+      gap:14px;
+    }
+    .summary-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:10px;
+    }
+    .metric{
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      padding:10px 12px;
+      background:#fafafa;
+      display:grid;
+      gap:4px;
+    }
+    .metric-label{
+      font-size:12px;
+      letter-spacing:0.04em;
+      text-transform:uppercase;
+      color:#6b7280;
+      font-weight:700;
+    }
+    .metric-value{
+      font-size:20px;
+      font-weight:700;
+      color:#111827;
+    }
+    .metric-sub{
+      font-size:12px;
+      color:#6b7280;
+    }
+
+    .filters{
+      display:grid;
+      grid-template-columns:2fr 1fr 1fr auto;
+      gap:10px;
+      align-items:end;
+    }
+    .field{display:grid;gap:6px}
+    .label{font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em}
+    .input,
+    .select{
+      width:100%;
+      border:1px solid #cfd6de;
+      border-radius:12px;
+      min-height:42px;
+      padding:10px 12px;
+      font:inherit;
+      color:#0f172a;
+      background:#fff;
+    }
+
+    .timeline-wrap{
+      position:relative;
+      padding-left:28px;
+      display:grid;
+      gap:16px;
+    }
+    .timeline-wrap::before{
+      content:"";
+      position:absolute;
+      left:8px;
+      top:2px;
+      bottom:2px;
+      width:2px;
+      background:#cedad3;
+    }
+    .month-group{
+      display:grid;
+      gap:10px;
+    }
+    .month-head{
+      margin:0;
+      font-size:13px;
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+      color:#6b7280;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    .month-count{
+      font-size:12px;
+      color:#6b7280;
+      font-weight:600;
+      letter-spacing:normal;
+      text-transform:none;
+    }
+    .entry{
+      position:relative;
+      background:#fff;
+      border:1px solid #dfe4ea;
+      border-radius:12px;
+      padding:12px;
+      box-shadow:0 4px 10px rgba(15,23,42,0.03);
+      display:grid;
+      gap:6px;
+    }
+    .entry::before{
+      content:"";
+      position:absolute;
+      left:-24px;
+      top:16px;
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:#0f766e;
+      border:2px solid #e7f0eb;
+    }
+    .entry-meta{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      flex-wrap:wrap;
+      font-size:13px;
+      color:#4b5563;
+    }
+    .hash{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:0.03em;
+      background:#eef4f2;
+      color:#0f5132;
+      border:1px solid #d8e4df;
+      border-radius:999px;
+      padding:3px 8px;
+    }
+    .entry-message{
+      margin:0;
+      font-size:14px;
+      line-height:1.5;
+      color:#111827;
+      word-break:break-word;
+    }
+    .status{
+      margin:0;
+      color:#6b7280;
+      font-size:13px;
+    }
+    .status.error{color:#b91c1c}
+
+    @media(max-width:900px){
+      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .filters{grid-template-columns:1fr 1fr;}
+      .filters .field:first-child{grid-column:1 / -1}
+      .filters .btn{width:100%;justify-content:center}
+    }
+    @media(max-width:719px){
+      .wrap{padding:16px 14px 32px}
+      .hero h1{font-size:24px}
+      .card{padding:14px}
+      .summary-grid{grid-template-columns:1fr}
+      .filters{grid-template-columns:1fr}
+      .timeline-wrap{padding-left:22px}
+      .timeline-wrap::before{left:6px}
+      .entry::before{left:-18px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="brand">
+        <img src="assets/strong-perimeter-logo-white.svg" alt="Strong Perimeter" />
+        <h1>Software Changelog Timeline</h1>
+        <p>
+          Full change history pulled from repository commits. Use filters to review what changed,
+          when it changed, and how quickly updates are shipping.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn secondary" href="crew-policies.html">Crew Policies</a>
+        <a class="btn" href="index.html">Back to Scope Generator</a>
+      </div>
+    </header>
+
+    <section class="card" aria-label="Changelog metrics">
+      <div class="summary-grid">
+        <article class="metric">
+          <div class="metric-label">Total Changes</div>
+          <div class="metric-value" id="metric-total">0</div>
+          <div class="metric-sub">All commits in history</div>
+        </article>
+        <article class="metric">
+          <div class="metric-label">Showing</div>
+          <div class="metric-value" id="metric-visible">0</div>
+          <div class="metric-sub">Filtered timeline entries</div>
+        </article>
+        <article class="metric">
+          <div class="metric-label">First Change</div>
+          <div class="metric-value" id="metric-first">-</div>
+          <div class="metric-sub">Earliest timeline point</div>
+        </article>
+        <article class="metric">
+          <div class="metric-label">Latest Change</div>
+          <div class="metric-value" id="metric-latest">-</div>
+          <div class="metric-sub">Most recent timeline point</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Changelog filters">
+      <div class="filters">
+        <label class="field" for="search-input">
+          <span class="label">Search</span>
+          <input id="search-input" class="input" type="search" placeholder="Find changes by keyword..." />
+        </label>
+        <label class="field" for="month-filter">
+          <span class="label">Month</span>
+          <select id="month-filter" class="select">
+            <option value="">All months</option>
+          </select>
+        </label>
+        <label class="field" for="sort-order">
+          <span class="label">Order</span>
+          <select id="sort-order" class="select">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </label>
+        <button class="btn" id="reset-filters" type="button">Reset Filters</button>
+      </div>
+      <p class="status" id="timeline-status">Loading timeline...</p>
+    </section>
+
+    <section class="card" aria-label="Changelog timeline">
+      <div class="timeline-wrap" id="timeline"></div>
+    </section>
+  </div>
+
+  <script>
+    (function(){
+      const HISTORY_FILE = 'changelog-history.tsv';
+      const searchInput = document.getElementById('search-input');
+      const monthFilter = document.getElementById('month-filter');
+      const sortOrder = document.getElementById('sort-order');
+      const resetFiltersBtn = document.getElementById('reset-filters');
+      const timelineEl = document.getElementById('timeline');
+      const statusEl = document.getElementById('timeline-status');
+
+      const totalEl = document.getElementById('metric-total');
+      const visibleEl = document.getElementById('metric-visible');
+      const firstEl = document.getElementById('metric-first');
+      const latestEl = document.getElementById('metric-latest');
+
+      let allEntries = [];
+
+      function parseHistory(raw){
+        return String(raw || '')
+          .split(/\r?\n/)
+          .map(line=>line.trim())
+          .filter(Boolean)
+          .map(line=>{
+            const [date, hash, ...parts] = line.split('\t');
+            return {
+              date: (date || '').trim(),
+              hash: (hash || '').trim(),
+              message: parts.join('\t').trim()
+            };
+          })
+          .filter(item=>/^\d{4}-\d{2}-\d{2}$/.test(item.date) && item.hash && item.message);
+      }
+
+      function formatDate(value){
+        const dt = new Date(`${value}T00:00:00`);
+        if(Number.isNaN(dt.getTime())) return value;
+        return dt.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+      }
+
+      function formatMonth(value){
+        const dt = new Date(`${value}-01T00:00:00`);
+        if(Number.isNaN(dt.getTime())) return value;
+        return dt.toLocaleDateString(undefined, { month:'long', year:'numeric' });
+      }
+
+      function monthKey(date){
+        return String(date || '').slice(0,7);
+      }
+
+      function updateMetrics(filtered){
+        totalEl.textContent = String(allEntries.length);
+        visibleEl.textContent = String(filtered.length);
+
+        if(allEntries.length){
+          const newest = allEntries[0];
+          const oldest = allEntries[allEntries.length - 1];
+          latestEl.textContent = formatDate(newest.date);
+          firstEl.textContent = formatDate(oldest.date);
+        } else {
+          latestEl.textContent = '-';
+          firstEl.textContent = '-';
+        }
+      }
+
+      function applyFilters(){
+        const query = (searchInput.value || '').trim().toLowerCase();
+        const month = monthFilter.value || '';
+        const sort = sortOrder.value || 'newest';
+
+        let next = allEntries.filter(item=>{
+          if(month && monthKey(item.date) !== month) return false;
+          if(!query) return true;
+          const haystack = `${item.hash} ${item.message} ${item.date}`.toLowerCase();
+          return haystack.includes(query);
+        });
+
+        if(sort === 'oldest'){
+          next = next.slice().reverse();
+        }
+
+        return next;
+      }
+
+      function populateMonthFilter(entries){
+        const seen = new Set();
+        entries.forEach(item=>{
+          const key = monthKey(item.date);
+          if(key) seen.add(key);
+        });
+        const months = Array.from(seen).sort().reverse();
+
+        monthFilter.innerHTML = '';
+        const allOpt = document.createElement('option');
+        allOpt.value = '';
+        allOpt.textContent = 'All months';
+        monthFilter.appendChild(allOpt);
+
+        months.forEach(key=>{
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = formatMonth(key);
+          monthFilter.appendChild(opt);
+        });
+      }
+
+      function render(){
+        const filtered = applyFilters();
+        updateMetrics(filtered);
+
+        if(!filtered.length){
+          timelineEl.innerHTML = '';
+          statusEl.textContent = 'No timeline entries match the current filters.';
+          statusEl.classList.remove('error');
+          return;
+        }
+
+        statusEl.textContent = `${filtered.length} timeline entr${filtered.length === 1 ? 'y' : 'ies'} shown.`;
+        statusEl.classList.remove('error');
+
+        const grouped = new Map();
+        filtered.forEach(item=>{
+          const key = monthKey(item.date);
+          if(!grouped.has(key)) grouped.set(key, []);
+          grouped.get(key).push(item);
+        });
+
+        const frag = document.createDocumentFragment();
+        grouped.forEach((items, key)=>{
+          const groupEl = document.createElement('section');
+          groupEl.className = 'month-group';
+
+          const head = document.createElement('h2');
+          head.className = 'month-head';
+          const title = document.createElement('span');
+          title.textContent = formatMonth(key);
+          const count = document.createElement('span');
+          count.className = 'month-count';
+          count.textContent = `${items.length} change${items.length === 1 ? '' : 's'}`;
+          head.appendChild(title);
+          head.appendChild(count);
+          groupEl.appendChild(head);
+
+          items.forEach(item=>{
+            const entry = document.createElement('article');
+            entry.className = 'entry';
+
+            const meta = document.createElement('div');
+            meta.className = 'entry-meta';
+
+            const time = document.createElement('time');
+            time.dateTime = item.date;
+            time.textContent = formatDate(item.date);
+
+            const hash = document.createElement('span');
+            hash.className = 'hash';
+            hash.textContent = `#${item.hash}`;
+
+            meta.appendChild(time);
+            meta.appendChild(hash);
+
+            const msg = document.createElement('p');
+            msg.className = 'entry-message';
+            msg.textContent = item.message;
+
+            entry.appendChild(meta);
+            entry.appendChild(msg);
+            groupEl.appendChild(entry);
+          });
+
+          frag.appendChild(groupEl);
+        });
+
+        timelineEl.innerHTML = '';
+        timelineEl.appendChild(frag);
+      }
+
+      async function load(){
+        try{
+          const response = await fetch(`${HISTORY_FILE}?v=${Date.now()}`, { cache: 'no-store' });
+          if(!response.ok){
+            throw new Error(`HTTP ${response.status}`);
+          }
+          const raw = await response.text();
+          allEntries = parseHistory(raw);
+          if(!allEntries.length){
+            statusEl.textContent = 'No changelog history entries were found in changelog-history.tsv.';
+            statusEl.classList.add('error');
+            return;
+          }
+          populateMonthFilter(allEntries);
+          render();
+        }catch(err){
+          console.error('Failed to load changelog history', err);
+          statusEl.textContent = 'Unable to load changelog-history.tsv. Regenerate it with: git log --date=short --pretty=format:"%ad\t%h\t%s" > changelog-history.tsv';
+          statusEl.classList.add('error');
+        }
+      }
+
+      searchInput.addEventListener('input', render);
+      monthFilter.addEventListener('change', render);
+      sortOrder.addEventListener('change', render);
+      resetFiltersBtn.addEventListener('click', ()=>{
+        searchInput.value = '';
+        monthFilter.value = '';
+        sortOrder.value = 'newest';
+        render();
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

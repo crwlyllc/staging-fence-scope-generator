@@ -1,0 +1,606 @@
+2026-02-20	2133299	copy buttons
+2026-02-20	988e59e	copy buttons
+2026-02-20	108cb23	custom panels
+2026-02-20	834e7f6	Fix copy buttons
+2026-02-20	a774e3f	post set type
+2026-02-20	d83467b	Hide wrought iron gates on wood sections
+2026-02-19	a60a794	Patch rail length
+2026-02-19	5830ad4	rail length
+2026-02-19	d954f9c	wood install/replace sections to explicitly include rail length
+2026-02-19	762996d	Post spacing on wood fences
+2026-02-19	4b6dec1	Replacement Post Spacing
+2026-02-19	0c71c21	Include fasteners when using existing posts
+2026-02-19	3b4aa04	use existing posts
+2026-02-18	67f30ad	Fix Button Clicking
+2026-02-18	fc095f3	Crew notes
+2026-02-18	f8322c8	crew notes
+2026-02-18	4483ac1	Crew notes
+2026-02-17	ad1bb6d	Remove steel discounts
+2026-02-17	eb5c5cb	steel discount & remove preferred
+2026-02-17	df08407	Preferred type
+2026-02-17	08be6a0	Remove steel discounts
+2026-02-17	5f6a032	shop fab labor
+2026-02-17	16e047d	customer type refresh
+2026-02-17	c873b7f	wrought iron posts then panels, paint
+2026-02-17	b6d069a	Skid steer weekly
+2026-02-17	0ae706b	preferrred customer
+2026-02-17	232ae33	Shop fab labor
+2026-02-17	e8ae3d5	wrought iron 250lf per day of panels
+2026-02-17	75984f9	Shop welders
+2026-02-17	904358f	Skid steer on wrought iron
+2026-02-17	648a97a	Steel discounts & consumables
+2026-02-17	91bcdce	wrought iron post cure time
+2026-02-17	55fca16	Removed steel discounts
+2026-02-17	bc41373	Pricing
+2026-02-17	ca0eba0	Update index.html
+2026-02-17	5183ab8	12 vs 2ft sticks
+2026-02-17	eb153ec	fabrication of custom panels
+2026-02-17	3462b3a	Stick length
+2026-02-17	eabb197	Crew hours all stages
+2026-02-17	ce25aab	material pricing
+2026-02-17	d5e6fe0	Material pricing update
+2026-02-17	e319033	notes
+2026-02-17	0f489e0	30% gross minimum
+2026-02-17	914b76a	Labor
+2026-02-16	cb02c32	show gates on wood fences
+2026-02-16	f0f0669	viewable sections
+2026-02-16	118899b	Map line color
+2026-02-16	39fb54d	map line colors
+2026-02-16	b673efa	Quick Costs
+2026-02-16	49068c7	wood install logic
+2026-02-16	5da5631	Wood updates
+2026-02-16	5a40d7d	Wood post count
+2026-02-16	99e26f5	Wood Fence Updates
+2026-02-16	8c0b3cb	Updated the estimator to use your wood install production rates in
+2026-02-16	9f54e4d	Notes for crew
+2026-02-16	ca3c2d3	font changes
+2026-02-16	e561530	Crew Policy & Short Job End
+2026-02-16	d3cbdab	Scope process
+2026-02-16	7d40501	Sticky
+2026-02-16	fb06644	process
+2026-02-16	3b6858c	Process changes
+2026-02-16	34add66	Update index.html
+2026-02-15	55764df	Post realignment wording
+2026-02-15	70442ad	Merge pull request #200 from crwlyllc/codex/fix-initial-zoom-on-page-load
+2026-02-15	61f7d72	Prevent initial zoom when focusing estimate input
+2026-02-14	cf806da	Stages
+2026-02-14	999246d	Process concurrency update
+2026-02-14	4f76f44	Process location and gate wording
+2026-02-14	db0569d	Remove redundent stages
+2026-02-14	b44cc64	Process Concurrency
+2026-02-14	e4fc4fc	Process paint
+2026-02-14	cde33cc	Copy Quick Costs
+2026-02-14	f8e1fb5	Process Stage fix
+2026-02-14	65f01f4	PROCESS person availability by stage
+2026-02-14	b514f21	Stage Paint Progress & 7hr+ minimum
+2026-02-14	b0735f1	PROCESS post replacement text and labor
+2026-02-14	04b1c14	Full rail replacement is now 45 minutes each
+2026-02-14	752042d	Jesus
+2026-02-14	f8cdc3f	Iron Prep & Paint Labor
+2026-02-14	5894173	Copy Reload Key
+2026-02-14	1bcc9e1	Labor Diagonal Braces
+2026-02-14	45e930d	Named Crew in Process
+2026-02-14	befd131	Updated the PROCESS generator
+2026-02-14	0a1a568	Implemented. The PROCESS section is now generated as a job-specific execution plan tied to the same labor math used for pricing.
+2026-02-14	63ce109	Merge pull request #199 from crwlyllc/codex/specify-job-process-for-crew-delegation
+2026-02-14	abbc0df	Refine sub notes with crew-specific delegation plan
+2026-02-14	1bee08f	Merge pull request #198 from crwlyllc/codex/update-sub-notes-with-process-section
+2026-02-14	9624585	Add PROCESS section to subcontractor notes
+2026-02-14	ed7cc51	Merge pull request #197 from crwlyllc/codex/add-time-estimate-for-wrought-iron-post-replacement
+2026-02-14	1a5f8ae	Adjust wrought post replacement labor timing
+2026-02-14	3e1a89e	Merge pull request #196 from crwlyllc/codex/calculate-wrought-iron-post-replacement-time
+2026-02-14	daa81c5	Adjust wrought-iron post replacement labor timing
+2026-02-13	6c8db9d	Update .DS_Store
+2026-02-13	159e0c9	Wrought iron painting coats
+2026-02-13	c27bf51	Current Fence Color Options
+2026-02-13	97f3c14	Paint Colors
+2026-02-13	6fccf64	Update index.html
+2026-02-13	0cf326c	Update index.html
+2026-02-13	344910b	Wood
+2026-02-12	176c7b8	Overhead
+2026-02-12	8b420fc	Fix Get Estimate
+2026-02-12	423bc98	Update index.html
+2026-02-12	f10a445	Pricing
+2026-02-12	18631ab	Wood Fence Installation & Replacement
+2026-02-12	0176f42	Staining addons
+2026-02-12	3e776e1	add stain sqft for kick board and top cap
+2026-02-12	40f008e	Added a new Stain Brand selector
+2026-02-12	7ae9259	Revert "rail patch labor"
+2026-02-12	19d3a43	Revert "labor rates"
+2026-02-12	7f60691	labor rates
+2026-02-12	e7589f0	rail patch labor
+2026-02-11	56c29a6	Target gross & max daily hours
+2026-02-11	ae23c42	Section naming
+2026-02-11	fc5a88e	On load, the estimate number field now auto-focuses (and selects existing content) so you can type immediately.
+2026-02-11	a2ec913	moved segment-length labels to a custom OverlayView rendered in Google Maps floatPane (top pane), so edit dots/handles can’t cover them.
+2026-02-11	80b5b1b	Update index.html
+2026-02-11	61f5976	Map Section Length Updates
+2026-02-11	19e2b28	The map is now forced to stay in straight overhead view.
+2026-02-11	006e73c	Added a bulk-apply workflow for section basics so you can set one section and push those settings to every section.
+2026-02-11	35d5026	Updated the map segment length labels to use a high-contrast badge so they’re readable on any map background.
+2026-02-11	2fe45a9	Updated the reload-from-notes flow to repull the estimate address from Housecall Pro when an embedded estimate number exists.
+2026-02-11	cf7f405	Map linear ft
+2026-02-10	81178f3	Update index.html
+2026-02-10	9b66889	Update index.html
+2026-02-10	4863617	Update .DS_Store
+2026-02-09	6322b4c	Update index.html
+2026-02-09	975e672	Update index.html
+2026-02-09	4dd85c4	Update index.html
+2026-02-09	bbff88d	Update index.html
+2026-02-09	cb9e111	Update index.html
+2026-02-09	5cbc9be	Update index.html
+2026-02-09	e0d11c6	Update index.html
+2026-02-09	f4c0336	Update index.html
+2026-02-09	d2ec529	Update index.html
+2026-02-09	4b756f7	Update index.html
+2026-02-09	74269c0	Update index.html
+2026-02-09	2da6ce2	Update index.html
+2026-02-09	929faa5	Update index.html
+2026-02-09	8634809	Update index.html
+2026-02-09	2bfcbba	Update index.html
+2026-02-09	0cf9c1e	Wood post replacements scope
+2026-02-09	96860c8	Move reload from notes card
+2026-02-09	c3f015a	Undo wrought iron repairs before painting
+2026-02-09	128a0ab	Wrought Iron Repairs BEFORE Painting
+2026-02-09	84d166d	Update index.html
+2026-02-09	8e4cae2	Update index.html
+2026-02-09	1e43a4a	Logo & Favicon
+2026-02-09	f29e84a	Update index.html
+2026-02-09	e14c4ca	Update index.html
+2026-02-09	4d316fb	Update index.html
+2026-02-07	9b24395	Merge pull request #195 from crwlyllc/codex/update-manual-pop-up-input-fields
+2026-02-07	5596c15	Update manual quote outputs
+2026-02-07	6a4c4ac	Merge pull request #194 from crwlyllc/codex/remove-text-from-manual-quote-pop-up
+2026-02-07	bbe1376	Remove manual quote helper text
+2026-02-07	f636b1b	Merge pull request #193 from crwlyllc/codex/move-recommended-charge-below-total-hours
+2026-02-07	4b74e9d	Reorder manual quote fields
+2026-02-07	66121aa	Merge pull request #192 from crwlyllc/codex/update-minimum-revenue-for-jobs
+2026-02-07	c079527	Adjust minimums for gross and revenue
+2026-02-07	04c2aef	Merge pull request #191 from crwlyllc/codex/remove-schedule-button
+2026-02-07	6dda488	Remove schedule action button
+2026-02-07	a055fdc	Merge pull request #190 from crwlyllc/codex/center-text-alignment-on-schedule-button
+2026-02-07	2b8c1ef	Center schedule button text on mobile
+2026-02-07	7f7df57	Merge pull request #189 from crwlyllc/codex/remove-quick-guide-section
+2026-02-07	3687068	Remove quick guide panel
+2026-02-06	d7bac84	Undo navbar adjustment
+2026-02-06	8cde2ba	Navbar
+2026-02-06	c596392	Button adjustments V2
+2026-02-06	a021e89	Button Size Adjustments
+2026-02-06	531c810	Manual quote button
+2026-02-06	1e6910e	Redesign Update
+2026-02-06	ae24b2a	Brand update
+2026-02-06	d724431	Add logo
+2026-02-06	68c64e8	redesign 2
+2026-02-06	e7981cc	Redesign
+2026-02-06	0dd9200	wrought iron paint method
+2026-02-06	4e66474	Update iron repair disclaimer
+2026-02-06	4589565	Iron Repairs Disclaimer
+2026-02-06	78f8f73	post replacement min hours
+2026-02-06	a6ca29a	Labor rate
+2026-02-06	2a4c115	Wood staining minimum
+2026-02-06	5a2ad22	Adjustments
+2026-02-06	cd341ac	Gate chain replacement
+2026-02-05	a1b431e	Drive Gate Operator Names & Costs
+2026-02-05	3e142b7	Gate Operator
+2026-02-05	446d403	Labor Drive Gate Operator Replacement
+2026-02-05	b790de9	Drive Gate Operator Adjustments
+2026-02-05	c82c737	Drive gate operator replacement
+2026-02-05	8f09161	Customer Type
+2026-02-05	ffc7b84	Minimum Gross
+2026-02-05	f976445	Update index.html
+2026-02-05	5324a9f	Update index.html
+2026-02-05	2684bec	Manual quoting popup
+2026-02-05	bf6c83f	hide labor rate
+2026-02-05	480fb91	closing manual quote modal
+2026-02-04	18fe3c9	Update index.html
+2026-02-04	982771b	Post order 2
+2026-02-04	1f4680c	Post notes order
+2026-02-04	9c797b5	2 hour minimum with posts
+2026-02-04	177bd35	Crew notes
+2026-02-04	c924bbc	rail pricing
+2026-02-04	3696d7b	Wood rails
+2026-02-04	e2ebfec	wood updates
+2026-02-04	e730318	Update travel costs from Address
+2026-02-03	305e58a	Setup and takedown Labor
+2026-02-03	f75b0f6	Update index.html
+2026-02-03	e247fd9	Daily hours available
+2026-02-03	8d5cad7	Update index.html
+2026-02-03	ad2f3fd	Convert pricing to hours
+2026-02-03	80b3ef5	Change Labor to Hourly
+2026-02-03	c34eaf7	Update .DS_Store
+2026-01-29	9661e6b	Merge pull request #187 from crwlyllc/codex/add-post-installation-method-options
+2026-01-29	57396fd	Update wood repair post install methods
+2026-01-29	de7435f	Merge pull request #186 from crwlyllc/codex/remove-method-option-for-post-replacement
+2026-01-29	947808c	Remove post replacement method from wood repair
+2026-01-27	4faac70	Merge pull request #185 from crwlyllc/codex/schedule-repairs-and-washing-on-the-same-day
+2026-01-27	0a10696	Combine wash and repair scheduling when possible
+2026-01-27	165c913	Merge pull request #184 from crwlyllc/codex/add-washing-options-for-staining-job
+2026-01-27	cba1681	Add wash options for wood staining
+2026-01-27	50b4836	Merge pull request #183 from crwlyllc/codex/add-1-hour-labor-for-setup-and-takedown
+2026-01-27	f97010e	Add staining setup labor
+2026-01-27	e47e26e	Update from 7 hours to 8.5 per day
+2026-01-27	b590a1e	Merge pull request #182 from crwlyllc/codex/calculate-staining-crew-requirements
+2026-01-27	e50d1d7	Adjust wood stain man-hour calculation
+2026-01-27	e956ca0	Merge pull request #181 from crwlyllc/codex/estimate-time-to-stain-wood-fence
+2026-01-27	9b5f2c6	Adjust staining crew pairing assumptions
+2026-01-27	fa89b11	Merge pull request #180 from crwlyllc/codex/update-fence-post-specifications
+2026-01-27	9bc4847	Update round steel post replacement pricing
+2026-01-27	d26d129	Merge pull request #179 from crwlyllc/codex/add-material-costs-for-replaced-pickets
+2026-01-27	674d6ea	Add wood picket materials for repairs
+2026-01-26	cff4925	Merge pull request #178 from crwlyllc/codex/hide-style,-finish-patches-section-during-repair
+2026-01-26	2c180bb	Hide style details for wood repairs
+2026-01-24	ea67e94	Update post pricing
+2026-01-24	e54f39a	Merge pull request #177 from crwlyllc/codex/fix-pricing-calculation-for-post-replacements
+2026-01-24	2aefc6f	Include wood post materials in pricing
+2026-01-23	08e1b34	Remove word stock
+2026-01-22	fdd2913	Update index.html
+2026-01-22	176de6d	Merge pull request #176 from crwlyllc/codex/remove-in-house-crew-scenarios-from-notes
+2026-01-22	9cf8fe1	Update in-house crew pricing and notes
+2026-01-22	d7c17d8	Merge pull request #175 from crwlyllc/codex/remove-crew-options-and-set-default
+2026-01-22	fc47b91	Update crew defaults and in-house welders
+2026-01-22	29df72f	Merge pull request #174 from crwlyllc/codex/remove-specific-crew-options
+2026-01-22	cf1de41	Update crew options and retaining wall notes
+2026-01-10	bb763ef	Merge pull request #173 from crwlyllc/codex/fix-schedule-button-style-inconsistency
+2026-01-10	6db01c8	Match schedule button styling
+2026-01-09	2c2077b	Merge pull request #172 from crwlyllc/codex/fix-schedule-button-text-size-and-style
+2026-01-09	a30b8e5	Fix schedule button styling
+2026-01-09	945b1b6	Merge pull request #171 from crwlyllc/codex/remove-estimate-button-logic-and-update-design
+2026-01-09	ff308be	Update schedule button link
+2026-01-09	6784a75	Merge pull request #170 from crwlyllc/codex/fix-estimate-button-url-generation
+2026-01-09	6a44b5b	Fix estimate link building
+2026-01-09	d7c8311	Merge pull request #169 from crwlyllc/codex/update-housecallpro-estimate-button-behavior
+2026-01-09	233d30a	Adjust HCP link fallback and crew days input
+2026-01-09	e623e06	Merge pull request #168 from crwlyllc/codex/add-estimate-button-in-top-right
+2026-01-09	9aa734e	Add HCP estimate link button
+2026-01-09	070e852	Merge pull request #167 from crwlyllc/codex/update-quoting-options-calculations
+2026-01-09	bd5e1ab	Fix manual quote gross scenarios
+2026-01-09	a5422a3	Merge pull request #165 from crwlyllc/codex/add-quoting-options-to-manual-modal
+2026-01-09	5490874	Add manual quote breakdown and scenarios
+2026-01-08	f1fb9de	Merge pull request #164 from crwlyllc/codex/add-flat-top-with-puppy-picket-option
+2026-01-08	f3cf2ab	Add puppy picket insert option for panel replacements
+2026-01-08	e25a115	Merge pull request #163 from crwlyllc/codex/add-flat-top-with-puppy-pickets-option
+2026-01-08	87e3c6b	Add puppy picket panel style pricing
+2026-01-08	fb0abc1	Merge pull request #162 from crwlyllc/codex/add-additional-prep-time-option
+2026-01-08	b9b583f	Add extra prep option for paint section labor
+2026-01-08	910a499	Merge pull request #161 from crwlyllc/codex/add-puppy-picket-replacement-info
+2026-01-08	d5438a4	Update puppy picket repair labor and sub scope
+2026-01-08	a224dd7	Merge pull request #160 from crwlyllc/codex/add-puppy-picket-functionality-for-repairs
+2026-01-08	9a63208	Add puppy picket repair details for wrought iron
+2026-01-08	46703f8	Merge pull request #159 from crwlyllc/codex/add-1/2-inch-rail-size-option
+2026-01-08	d2d3ba9	Add 1/2-inch rail size option
+2026-01-02	9702238	Update index.html
+2026-01-02	6e91e7b	Merge pull request #158 from crwlyllc/codex/fix-field-visibility-conditions
+2026-01-02	d4f60a3	Show walk gate repair fields when count is set
+2026-01-02	1908559	Merge pull request #157 from crwlyllc/codex/hide-wrought-iron-repair-options
+2026-01-02	598853b	Hide wrought iron walk gate options until counted
+2026-01-02	2a90314	Merge pull request #156 from crwlyllc/codex/hide-specific-walk-gate-options-by-default
+2026-01-02	955f035	Hide walk gate repair options until gate count set
+2026-01-02	478bee1	Merge pull request #155 from crwlyllc/codex/hide-gate-options-by-default
+2026-01-02	5666ff0	Hide walk gate repair options until needed
+2026-01-02	7bebac3	Merge pull request #154 from crwlyllc/codex/hide-options-under-gate-repairs
+2026-01-02	e4458e5	Show walk gate repair details when walk gates present
+2026-01-02	f371238	Merge pull request #153 from crwlyllc/codex/remove-crew-in-house-3-4
+2026-01-02	107dd51	Update crew options
+2025-12-31	f787e17	Merge pull request #152 from crwlyllc/codex/add-time-estimates-for-crew-in-notes
+2025-12-31	463b897	Add crew time estimates to scope notes
+2025-12-31	2f6996b	Merge pull request #151 from crwlyllc/codex/add-20px-top-and-bottom-margin-to-repairs-section
+2025-12-31	5d98c53	Add margin to repairs section
+2025-12-31	8210f24	Update index.html
+2025-12-31	9a1b886	Merge pull request #150 from crwlyllc/codex/move-options-to-top-of-repairs-section
+2025-12-31	a83a511	Move rail repair options into repairs section
+2025-12-31	5351d31	Update index.html
+2025-12-31	4bacbc0	Update index.html
+2025-12-31	1ca24ee	Merge pull request #149 from crwlyllc/codex/remove-vertical-color-lines
+2025-12-31	67a9748	Remove vertical accent line from scope groups
+2025-12-31	51a67f5	Merge pull request #148 from crwlyllc/codex/add-visual-organization-to-scope-options
+2025-12-31	efe3561	Organize scope form into colored groups
+2025-12-30	d79f07b	Merge pull request #147 from crwlyllc/codex/fix-sticky-bar-overlap-issues
+2025-12-30	08724e6	Add spacing for floating action bar
+2025-12-30	e3a7812	Merge pull request #146 from crwlyllc/codex/update-section-totals-notes-format
+2025-12-30	307c6fb	Show only non-zero repair items in section notes
+2025-12-30	53f5e5d	Merge pull request #145 from crwlyllc/codex/exclude-zero-scope-from-totals-notes
+2025-12-30	2bf46b7	Filter zero-count totals scope
+2025-12-30	8e85a0a	Merge pull request #144 from crwlyllc/codex/add-net-profit-and-percentage-calculations
+2025-12-30	7bffe24	Add net profit details to pricing notes
+2025-12-30	acdf238	Move 20% to Overhead
+2025-12-30	3d350a0	Merge pull request #143 from crwlyllc/codex/update-notes-format-for-pricing-section
+2025-12-30	a639169	Add cost breakdown details to pricing notes
+2025-12-30	e3fd9ee	Merge pull request #142 from crwlyllc/codex/update-pricing-functionality-to-flat-20%
+2025-12-30	1b32496	Use flat 20 percent overhead mcor rate
+2025-12-29	648aa8b	Merge pull request #141 from crwlyllc/codex/change-manual-quoting-card-to-modal
+2025-12-29	97701f5	Move manual quote card into modal
+2025-12-29	ecaaab3	Merge pull request #140 from crwlyllc/codex/add-manual-quoting-option-to-scope-generator
+2025-12-29	ede6fcc	Add manual quoting helper
+2025-12-29	9f2b4c0	Merge pull request #139 from crwlyllc/codex/calculate-total-travel-cost-for-jobs
+2025-12-29	a1a0410	Add travel cost calculation for in-house crews
+2025-12-22	a3532d2	Merge pull request #138 from crwlyllc/codex/set-minimum-crew-size-to-2
+2025-12-22	fb70947	Set Mark crew minimum to two members
+2025-12-22	ebaf6ee	Revert "Merge pull request #137 from crwlyllc/codex/add-post-replacement-option"
+2025-12-21	37bf2b4	Merge pull request #137 from crwlyllc/codex/add-post-replacement-option
+2025-12-21	4cfab68	Add structured wood post replacement controls
+2025-12-21	8a35423	Revert "Merge pull request #136 from crwlyllc/codex/group-post-replacements-and-installations"
+2025-12-21	2d8d736	Merge pull request #136 from crwlyllc/codex/group-post-replacements-and-installations
+2025-12-21	b05ac3b	Add grouped wood post repair entries
+2025-12-20	d812add	Merge pull request #135 from crwlyllc/codex/specify-prefabricated-panel-type-in-notes
+2025-12-20	701244e	Specify prefab panel types in repair outputs
+2025-12-20	ed98b57	Merge pull request #134 from crwlyllc/codex/group-post-replacements-and-installation
+2025-12-20	d464b18	Group wood post repair counts by method
+2025-12-19	69960d5	Merge pull request #133 from crwlyllc/codex/update-post-replacements-and-installation-method
+2025-12-19	6881a1f	Align wood post repair methods
+2025-12-17	003038c	Merge pull request #132 from crwlyllc/codex/update-wood-post-realignment-setup
+2025-12-17	9742bcc	Add dynamic wood post realignments
+2025-12-15	082faa4	Merge pull request #131 from crwlyllc/codex/update-post-realignment-options
+2025-12-15	8261bb0	Allow multiple wood post realignment methods per section
+2025-12-15	c07f680	Update index.html
+2025-12-15	96d635d	Merge pull request #130 from crwlyllc/codex/ensure-unique-fields-for-fences
+2025-12-15	09a17cc	Isolate wood vs wrought fields
+2025-12-15	de646fa	Separate fence length fields by type
+2025-12-14	9cbcd94	Merge pull request #129 from crwlyllc/codex/specify-hinge-and-latch-in-replacement-notes
+2025-12-14	fd92727	Detail walk gate hardware replacements
+2025-12-12	17b701e	commit
+2025-12-12	424b63d	Merge pull request #128 from crwlyllc/codex/add-walk-gate-hardware-replacements-details
+2025-12-12	fe6f144	Ensure walk gate hardware details appear in summaries
+2025-12-12	852252e	Merge pull request #127 from crwlyllc/codex/update-walk-gate-replacement-documentation
+2025-12-12	ac33e02	Adjust walk gate totals handling
+2025-12-12	a9e45f7	Merge pull request #126 from crwlyllc/codex/specify-notes-for-gate-hardware-replacements
+2025-12-12	78afcb0	Clarify walk gate hardware details
+2025-12-11	3169e4c	Merge pull request #125 from crwlyllc/codex/fix-weld-redos-not-adding-labor-or-scope
+2025-12-11	3b6c65c	Fix weld redo counts
+2025-12-11	49c8a57	Merge pull request #124 from crwlyllc/codex/add-counter-for-weld-redos
+2025-12-11	4189c46	Add weld redo counter and labor estimate
+2025-12-11	3db1121	Merge pull request #123 from crwlyllc/codex/add-crew-option-mark-with-pricing
+2025-12-11	2751948	Add Mark crew option
+2025-12-08	8b753cd	Merge pull request #122 from crwlyllc/codex/add-in-house-crew-2
+2025-12-08	01049c0	Add In-House 2 crew option
+2025-12-08	e55c999	Update index.html
+2025-12-03	bfbfad3	Update index.html
+2025-12-03	82306b6	Merge pull request #121 from crwlyllc/codex/adjust-helper-time-for-inserts
+2025-12-03	d24158d	Adjust helper time for puppy picket inserts
+2025-12-03	365541c	Merge pull request #120 from crwlyllc/codex/update-floating-bar-icons
+2025-12-03	231d039	Add bottom scroll action to floating bar
+2025-12-03	860cf7b	Merge pull request #119 from crwlyllc/codex/update-notes-formatting-and-content
+2025-12-03	932bd83	Adjust notes content
+2025-12-03	4e4eda7	Merge pull request #118 from crwlyllc/codex/expand-map-section-on-address-fetch
+2025-12-03	aa6f8c3	Expand map when estimate address loads
+2025-12-03	456014c	Merge pull request #117 from crwlyllc/codex/collapse-map-section-by-default
+2025-12-03	4ced82a	Add toggle to collapse map section by default
+2025-12-03	83873b7	Merge pull request #116 from crwlyllc/codex/align-housecall-pro-estimate-and-reload-sections
+2025-12-03	d0fa5c9	Align estimate and reload sections horizontally
+2025-12-03	88f90dc	Merge pull request #115 from crwlyllc/codex/add-button-to-trigger-hcp-webhook
+2025-12-03	50b5cf6	Add manual materials refresh control
+2025-12-02	bcf0c5d	Merge pull request #114 from crwlyllc/codex/change-default-wrought-iron-rail-size-to-1
+2025-12-02	bbbce09	Set default wrought iron rail size to 1 inch
+2025-12-02	848cf4a	Merge pull request #113 from crwlyllc/codex/add-3/4-rails-option-to-wrought-iron-scope
+2025-12-02	ced9c13	Add 3/4 inch rail option
+2025-12-02	2b9ea5b	Merge pull request #112 from crwlyllc/codex/remove-password-protection-from-page
+2025-12-02	91e6195	Remove access gate from scope generator
+2025-12-02	2168bba	Update index.html
+2025-12-02	6599a73	Merge pull request #111 from crwlyllc/codex/add-access-protection-to-page
+2025-12-02	1789d47	Add client-side access gate for scope generator
+2025-12-02	38a5039	Merge pull request #110 from crwlyllc/codex/add-unfinished-option-for-wood-fences
+2025-12-02	d303c27	Add wood post materials and UI updates
+2025-12-02	5b74592	Merge pull request #109 from crwlyllc/codex/add-webhook-request-on-page-load
+2025-12-02	118f6e5	Trigger material refresh webhook on load
+2025-12-02	4f272b4	Merge pull request #108 from crwlyllc/codex/fix-no-embedded-scope-data-error
+2025-12-02	7f8253a	Add legacy scope notes import fallback
+2025-12-02	733f7d7	Merge pull request #107 from crwlyllc/codex/add-ability-to-reload-notes-data
+2025-12-02	88994b3	Add notes reload workflow
+2025-12-02	59e6a7b	Merge pull request #106 from crwlyllc/codex/move-section-length-field-for-wood
+2025-12-02	c0acbc5	Reorder wood section length field
+2025-12-02	2b8632d	Merge pull request #105 from crwlyllc/codex/rearrange-wood-fence-field-order
+2025-12-02	552e4fb	Reorder wood section length field
+2025-12-02	0cadc42	Merge pull request #104 from crwlyllc/codex/update-wood-staining-service-description
+2025-12-02	810498a	Make wood staining service descriptions specific
+2025-12-02	a0eb493	Merge pull request #103 from crwlyllc/codex/fix-crew-and-job-duration-calculation
+2025-12-02	0d1cf08	Include helper hours for wood staining
+2025-12-01	382e6b8	Merge pull request #102 from crwlyllc/codex/fix-square-footage-calculation-for-fence-staining
+2025-12-01	1b1c3df	Fix wood stain area calculation
+2025-12-01	7f767a7	Merge pull request #101 from crwlyllc/codex/fix-square-footage-calculation-for-wood-fence-staining
+2025-12-01	cae45cf	Fix wood stain calculations and materials
+2025-12-01	6d6ae62	Merge pull request #100 from crwlyllc/codex/update-wood-staining-options-and-notes
+2025-12-01	de2241a	Update wood staining options and notes
+2025-12-01	9609c8b	Merge pull request #99 from crwlyllc/codex/add-wood-staining-to-scope-for-subs
+2025-12-01	4187055	Ensure wood staining appears in sub scope
+2025-12-01	02baff6	Merge pull request #98 from crwlyllc/codex/remove-general-style-notes-from-scope
+2025-12-01	54be826	Stop including wood style details from sub scope
+2025-12-01	1f9996f	Merge pull request #97 from crwlyllc/codex/fix-service-line-item-overlap
+2025-12-01	5ca703a	Prevent wrought iron picket totals for wood repairs
+2025-11-30	abf2f82	Merge pull request #96 from crwlyllc/codex/clarify-scope-details-for-wood-options
+2025-11-30	2cc1803	Improve wood scope details in notes
+2025-11-30	0b182c3	Merge pull request #95 from crwlyllc/codex/ensure-wood-options-in-job-scope
+2025-11-30	cdb0dbe	Include wood options in scope notes
+2025-11-30	46dba2d	Merge pull request #94 from crwlyllc/codex/fix-notes-visibility-issue
+2025-11-30	68a52c7	Fix note generation totals scope variables
+2025-11-30	68c54bc	Merge pull request #93 from crwlyllc/codex/fix-wrought-iron-notes-inclusion
+2025-11-30	eef9c91	Fix wood section notes
+2025-11-30	e47dda6	Merge pull request #92 from crwlyllc/codex/remove-wrought-iron-from-notes-scope
+2025-11-30	49b30e8	Reset painting to current fence type
+2025-11-30	4c9f010	Handle wood fences without painting notes
+2025-11-30	20f5ae3	Merge pull request #91 from crwlyllc/codex/update-section-to-use-wood-scope-only
+2025-11-30	4aac52e	Fix install scope text for wood sections
+2025-11-30	23db00e	Merge pull request #90 from crwlyllc/codex/refactor-section-to-remove-wrought-iron-references
+2025-11-30	af25987	Reset section data when changing fence type
+2025-11-30	bf3dbd7	Merge pull request #89 from crwlyllc/codex/find-reason-for-dual-staffing-on-job
+2025-11-30	f113739	Let welders absorb helper hours when capacity allows
+2025-11-30	6221b1d	Merge pull request #88 from crwlyllc/codex/fix-inconsistent-increment-values
+2025-11-30	0083513	Prevent duplicate number control handlers
+2025-11-30	9c9982e	Merge pull request #87 from crwlyllc/codex/make-icon-bar-100%-width
+2025-11-30	11d7c07	Make floating action bar full width
+2025-11-30	e55ab4b	Merge pull request #86 from crwlyllc/codex/remove-corner-radius-and-margin-from-icon-bar
+2025-11-30	b60d99e	Adjust floating action bar positioning
+2025-11-30	4e76bd6	Merge pull request #85 from crwlyllc/codex/remove-reset-text-from-floating-bar
+2025-11-30	408aaa4	Remove reset label from floating action button
+2025-11-30	e13799c	Merge pull request #84 from crwlyllc/codex/remove-buttons-and-adjust-reset-button
+2025-11-30	061c6c3	Move reset control into quick actions and simplify header
+2025-11-30	420a115	Merge pull request #83 from crwlyllc/codex/consolidate-floating-bar-icon-text
+2025-11-30	63a3a37	Simplify floating quick action labels
+2025-11-30	74b6a93	Merge pull request #82 from crwlyllc/codex/add-top-button-to-floating-bar
+2025-11-30	9f0c348	Integrate top control into floating actions
+2025-11-30	7ec29df	Merge pull request #81 from crwlyllc/codex/align-pinned-icons-horizontally
+2025-11-30	5b0ab74	Make floating quick actions horizontal
+2025-11-30	9480801	Merge pull request #80 from crwlyllc/codex/fix-pinned-icons-width-and-layout
+2025-11-30	65c7978	Adjust quick action pinned icons layout
+2025-11-30	12406f9	Merge pull request #79 from crwlyllc/codex/pin-icons-to-bottom-of-screen
+2025-11-30	7649e3c	Add floating quick actions for section styles
+2025-11-30	28c0114	Merge pull request #78 from crwlyllc/codex/calculate-cost-for-retaining-wall-installation
+2025-11-30	83a647b	Update retaining wall guidance and costing
+2025-11-28	18d7d85	Merge pull request #74 from crwlyllc/codex/add-retaining-wall-installation-option
+2025-11-28	f1a6787	Add retaining wall option for fence installations
+2025-11-26	52f84ed	Merge pull request #73 from crwlyllc/codex/summarize-wood-fence-labor-rates
+2025-11-26	bc914e3	Add wood fence labor rules
+2025-11-26	421bc68	Merge pull request #72 from crwlyllc/codex/add-trim-and-repair-options-for-wood-fences
+2025-11-26	b9d3ef4	Add wood fence repair options and trim/rail selections
+2025-11-26	5ebb57f	Merge pull request #71 from crwlyllc/codex/remove-go-bag-from-notes
+2025-11-26	e4a9455	Remove go bag items from generated notes
+2025-11-26	02cd492	Create .DS_Store
+2025-11-26	9bb9fb2	Merge pull request #70 from crwlyllc/codex/add-consumables-cost-to-job
+2025-11-26	35d47bf	Add consumables cost to daily job totals
+2025-11-25	6d46015	Merge pull request #69 from crwlyllc/codex/add-size-options-for-wood-selection
+2025-11-25	971d5d9	Add wood top cap and trim size selectors
+2025-11-25	53a3c39	Merge pull request #68 from crwlyllc/codex/add-size-and-height-selection-for-kick-board
+2025-11-25	2c8e856	Add kick board sizing options for wood sections
+2025-11-25	159a99c	Merge pull request #67 from crwlyllc/codex/add-picket-width-options-to-wood
+2025-11-25	6699938	Add picket width selection for wood sections
+2025-11-25	5873d65	Merge pull request #66 from crwlyllc/codex/default-wood-height-to-6ft
+2025-11-25	0b22289	Update wood default selections
+2025-11-25	7cbb541	Merge pull request #65 from crwlyllc/codex/add-specific-options-for-wood-fence-type
+2025-11-25	b7e96dd	Add wood fence specific options and toggle UI by type
+2025-11-21	e0e6671	Merge pull request #64 from crwlyllc/codex/add-dropdown-for-fence-type
+2025-11-21	20a8808	Add fence type selection to section details
+2025-11-21	69b3d9b	Merge pull request #63 from crwlyllc/codex/default-sections-to-repair-instead-of-installation
+2025-11-21	54479ed	Default map-generated sections to repair
+2025-11-20	14e8630	Merge pull request #62 from crwlyllc/codex/add-cost-and-revenue-to-notes
+2025-11-20	dde121c	Add in-house crew scenario costs and revenue
+2025-11-20	9146bca	Merge pull request #61 from crwlyllc/codex/add-combined-crew-option-for-in-house-3-4
+2025-11-20	d8b2164	Add combined in-house crew option and update compositions
+2025-11-20	188cf58	Merge pull request #60 from crwlyllc/codex/update-in-house-labor-rates
+2025-11-20	08ee667	Update in-house crew daily rates
+2025-11-20	1701ff5	Merge pull request #59 from crwlyllc/codex/add-crew-options-for-in-house-3-and-4
+2025-11-20	604ecaa	Add in-house crew options and adjust Rodney crew size
+2025-11-20	b457703	Merge pull request #58 from crwlyllc/codex/adjust-commission-calculation-by-excluding-mcor
+2025-11-20	7367e22	Exclude MCOR from commission basis
+2025-11-20	61fbe1f	Update index.html
+2025-11-20	7011554	Update index.html
+2025-11-20	ef8e809	Update index.html
+2025-11-07	cd5857e	Merge pull request #57 from crwlyllc/codex/remove-crew-pricing-information-from-notes
+2025-11-07	e739fd3	Remove crew pricing details from generated notes
+2025-11-07	fd0085e	Merge pull request #56 from crwlyllc/codex/add-paint-application-method-options
+2025-11-07	b863569	Add spray painting method option and crew logic
+2025-11-07	ffd5924	Merge pull request #55 from crwlyllc/codex/fix-paint-change-not-triggering
+2025-11-07	f4b5bb4	Fix painting default for bracket panel attachment
+2025-11-07	61c0263	Merge pull request #54 from crwlyllc/codex/change-painting-to-none-for-panel-attachment
+2025-11-07	ca91826	Set painting to none for bracket installs
+2025-11-07	b31bb3d	Revert "Merge pull request #53 from crwlyllc/codex/fix-notes-to-exclude-welders-for-brackets"
+2025-11-07	26683a9	Merge pull request #53 from crwlyllc/codex/fix-notes-to-exclude-welders-for-brackets
+2025-11-07	48872cc	Adjust welder hour calc for install posts
+2025-11-07	b0ebb9e	Merge pull request #52 from crwlyllc/codex/update-materials-and-pricing-for-panel-brackets
+2025-11-07	44dac08	Add bracket materials and labor handling
+2025-11-07	3982100	Merge pull request #51 from crwlyllc/codex/add-post-caps-and-default-painting-for-fence
+2025-11-07	1cc29c1	Default install painting and include post caps
+2025-11-07	ebf5a6d	Merge pull request #50 from crwlyllc/codex/move-crew-section-above-notes
+2025-11-07	0f6fdb1	Reposition crew card above notes
+2025-11-07	b2c731b	Merge pull request #49 from crwlyllc/codex/add-crew-selection-feature
+2025-11-07	237e40c	Add crew selection and crew-based pricing
+2025-11-06	16a82de	Update index.html
+2025-11-06	dddc637	Merge pull request #48 from crwlyllc/codex/add-margin-between-map-and-sections
+2025-11-06	c5d4e47	Adjust map layout spacing and stage background
+2025-11-06	1924e07	Merge pull request #47 from crwlyllc/codex/zoom-in-on-selected-address
+2025-11-06	01e11b2	Zoom map to maximum when selecting address
+2025-11-06	0228afa	Map Size
+2025-11-06	e03703a	Merge pull request #46 from crwlyllc/codex/fix-map-pin-placement-for-addresses
+2025-11-06	ef578cb	Add address marker to map
+2025-11-06	5d99b91	Merge pull request #45 from crwlyllc/codex/investigate-cors-error-on-api-fetch
+2025-11-06	5ea8fbe	Use StrongClicks webhook for estimate lookup
+2025-11-06	fe4ad83	Merge pull request #44 from crwlyllc/codex/add-address-from-estimate-to-map
+2025-11-06	d37217d	Auto-fill map address from HCP estimate
+2025-11-06	bf9f353	Merge pull request #43 from crwlyllc/codex/set-default-map-zoom-to-show-garland-and-rockwall
+2025-11-06	65b4624	Adjust default map view to show Garland and Rockwall
+2025-11-06	ae6ac9f	Merge pull request #42 from crwlyllc/codex/add-automatic-change-note-generation
+2025-11-06	aabaa11	Enable automatic live note generation
+2025-11-06	fd23c8e	Merge pull request #41 from crwlyllc/codex/add-map-drawing-functionality-for-fence-sections
+2025-11-06	0742be9	Integrate Google Maps measurements into scope generator
+2025-11-06	00ca27b	Merge pull request #40 from crwlyllc/codex/update-max-guys-per-day-to-7
+2025-11-06	65a9fb8	Increase max crew size
+2025-11-06	1f11986	Merge pull request #39 from crwlyllc/codex/change-labor-hours-per-day-to-7
+2025-11-06	ce22f17	Adjust labor day hours to seven
+2025-11-06	b561a95	Merge pull request #38 from crwlyllc/codex/determine-labor-requirements-for-post-realignment
+2025-11-06	1a993bc	Ensure two-person crew for cut and weld realignment
+2025-11-06	41cd1db	Merge pull request #37 from crwlyllc/codex/add-post-realignment-method-selection
+2025-11-06	c0f1a74	Add cut-and-weld option for post realignment
+2025-11-05	1913f32	Merge pull request #36 from crwlyllc/codex/add-finial-style-and-quantity-notes
+2025-11-05	fd5fc3a	Update finial details for panel replacements
+2025-11-05	9576691	Merge pull request #35 from crwlyllc/codex/fix-finial-addition-in-notes
+2025-11-05	0ca5fe5	Fix finial defaults for extended picket panels
+2025-11-05	5656d20	Merge pull request #33 from crwlyllc/codex/fix-panel-replacement-notes-for-flat-top
+2025-11-05	674105d	Prevent finial label on flat top panels
+2025-11-03	364a332	Merge pull request #32 from crwlyllc/codex/move-puppy-picket-inserts-below-panel-replacements
+2025-11-03	b5a1d7e	Reorder puppy picket insert controls
+2025-11-03	80229f7	Merge pull request #31 from crwlyllc/codex/add-option-to-install-puppy-picket-inserts
+2025-11-03	c6d573c	Add puppy picket insert option with costing and labor
+2025-11-03	02bab47	Merge pull request #30 from crwlyllc/codex/rearrange-and-rename-components
+2025-11-03	70c7f6d	Reorder repair controls and rename gap filler option
+2025-11-03	b11fad6	Merge pull request #29 from crwlyllc/codex/group-gap-addition-rail-and-diagonal-brace
+2025-11-03	fe5897a	Group gap additions and diagonal braces into dynamic blocks
+2025-11-03	338a099	remove 4 ft each description
+2025-11-03	ca8a442	Merge pull request #28 from crwlyllc/codex/add-diagonal-brace-additions-feature
+2025-11-03	c6595dd	Add diagonal brace additions controls and outputs
+2025-11-03	9f08aa5	Merge pull request #27 from crwlyllc/codex/add-full-rail-gap-addition-option
+2025-11-03	0bb3366	Add rail gap addition option with material and labor tracking
+2025-11-03	38bb448	webhook change
+2025-10-24	b2ab987	Merge pull request #26 from crwlyllc/codex/set-minimum-daily-install-team-to-2
+2025-10-24	3d6004c	Enforce install/replacement crew minimum
+2025-10-24	7cf5292	Merge pull request #25 from crwlyllc/codex/update-payment-calculation-for-multi-day-jobs
+2025-10-24	d5d488e	Adjust labor cost aggregation for multi-day crews
+2025-10-24	6eccee9	Merge pull request #24 from crwlyllc/codex/calculate-workdays-based-on-team-size
+2025-10-24	63c4d4b	Limit crew scheduling to four per day
+2025-10-24	1de2e7e	Merge pull request #23 from crwlyllc/codex/fix-static-steel-sizes-in-repair-line
+2025-10-24	eaa783f	Fix repair service line steel size descriptions
+2025-10-24	5e68933	Merge pull request #22 from crwlyllc/codex/rewrite-welding-instructions-for-clarity
+2025-10-24	3914a81	Update rail patch repair description
+2025-10-24	f41478f	Merge pull request #21 from crwlyllc/codex/update-instructions-for-welding-pickets
+2025-10-24	ee90da1	Update picket replacement description
+2025-10-24	7a92950	Merge pull request #20 from crwlyllc/codex/fix-steel-sticks-cost-inclusion
+2025-10-24	8940385	Track stick materials for cost calculations
+2025-10-24	7ba3b57	Merge pull request #19 from crwlyllc/codex/fix-estimated-cost-calculation-for-materials
+2025-10-24	52e3952	Fix normalizeSize quote replacement
+2025-10-23	e5fb5d6	Merge pull request #18 from crwlyllc/codex/add-steel-sticks-and-finial-sizes-to-estimates
+2025-10-23	463130a	Normalize materials labels and include steel stick costs
+2025-10-23	3d2ecde	Merge pull request #17 from crwlyllc/codex/update-rail-replacement-instructions
+2025-10-23	64d9848	Update rail replacement service line phrasing
+2025-10-23	77b78be	Merge pull request #16 from crwlyllc/codex/specify-fence-component-sizes-in-service-line-items
+2025-10-23	3d87e34	Include material sizes in install service details
+2025-10-23	b1edc59	Merge pull request #15 from crwlyllc/codex/specify-installation-details-in-service-line-item
+2025-10-23	8d9d1d7	Detail service lines and sub materials
+2025-10-23	520e385	Merge pull request #14 from crwlyllc/codex/update-painting-line-item-description
+2025-10-23	1ef0c47	Update wrought iron painting scope detail
+2025-10-23	a4cd354	Merge pull request #13 from crwlyllc/codex/fix-service-line-items-for-repairs
+2025-10-23	110ab71	Adjust panel service lines for installs
+2025-10-23	c99b8c8	Merge pull request #12 from crwlyllc/codex/fix-service-line-item-merging-issue
+2025-10-23	2f0c9d2	Aggregate wrought iron service lines
+2025-10-23	fabcf70	Merge pull request #11 from crwlyllc/codex/include-rail-and-post-sizes-in-fence-service
+2025-10-23	1a45e40	Include material sizes in install service lines
+2025-10-23	dc80491	Merge pull request #10 from crwlyllc/codex/generate-single-service-line-item-for-installation
+2025-10-23	873680b	Summarize installation service lines
+2025-10-23	f6214c4	Merge pull request #9 from crwlyllc/codex/fix-post-costs-in-estimated-costs
+2025-10-23	b072bde	Fix post material regex so costs include posts
+2025-10-23	e9d34c4	Merge pull request #8 from crwlyllc/codex/fix-materials-mismatch-in-fence-notes
+2025-10-23	cbb31e3	Add materials list to generated notes
+2025-10-23	00e21d5	Merge pull request #7 from crwlyllc/codex/update-section-replacement-fields-and-labor-rules
+2025-10-23	ee56806	Refine gate additions for install sections
+2025-10-23	fe0c5dc	Merge pull request #6 from crwlyllc/codex/add-fence-section-replacement-and-installation-options
+2025-10-23	fe5ff83	Add install and replacement options for fence sections
+2025-10-23	2487d19	Merge pull request #5 from crwlyllc/codex/add-confirmation-step-for-delete-action
+2025-10-23	fb2af87	Add confirmation step for deleting sections
+2025-10-23	31db9a2	Update webhook url
+2025-10-23	ddda7cd	Merge pull request #4 from crwlyllc/codex/update-push-notes-to-hcp-button
+2025-10-23	1888444	Include sub and service line data in HCP push
+2025-10-23	2562c86	Merge pull request #3 from crwlyllc/codex/add-estimate-number-to-webhook
+2025-10-23	5eafc91	Capture estimate number for HCP webhook
+2025-10-23	cc4d72c	Merge pull request #2 from crwlyllc/codex/add-url-input-and-push-notes-button
+2025-10-23	5cc1e12	Add Housecall Pro estimate push integration
+2025-10-23	8fd0730	Merge pull request #1 from crwlyllc/codex/set-background-color-to-muted-yellow
+2025-10-23	a25a4c1	feat: highlight staging background
+2025-10-23	779c4d8	Merge branch 'main' of https://github.com/crwlyllc/staging-fence-scope-generator
+2025-10-23	decb0fa	Update
+2025-10-23	0a1b4db	Create CNAME
+2025-10-23	eeb4419	Update
