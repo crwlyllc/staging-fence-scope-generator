@@ -1374,7 +1374,13 @@ document.addEventListener('DOMContentLoaded', function(){
   ];
   const POST_ANCHOR_PLATE_LABEL = '4x4 anchor plate';
   const POST_ANCHOR_HARDWARE_LABEL = 'concrete anchor';
-  const WROUGHT_PANEL_FABRICATION_OPTIONS = ['On Site','Shop'];
+  const WROUGHT_PANEL_FABRICATION_ON_SITE = 'On Site';
+  const WROUGHT_PANEL_FABRICATION_ORDER_TMI = 'Order Custom Panels (TMI)';
+  const WROUGHT_PANEL_FABRICATION_OPTIONS = [
+    WROUGHT_PANEL_FABRICATION_ON_SITE,
+    WROUGHT_PANEL_FABRICATION_ORDER_TMI
+  ];
+  const WROUGHT_TMI_CUSTOM_PANEL_COST = 300;
   const WOOD_STAIN_BRANDS = ['HueMiller','Ready Seal','Wood Defender'];
   const DEFAULT_WOOD_STAIN_BRAND = WOOD_STAIN_BRANDS[0];
   const WOOD_STAIN_BUCKET_COSTS = {
@@ -2451,7 +2457,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postSpacing: '8',
       panelAttachment: 'Welding',
       wroughtCustomStickLength: '12',
-      wroughtPanelFabrication: 'On Site',
+      wroughtPanelFabrication: WROUGHT_PANEL_FABRICATION_ON_SITE,
       wroughtPowderCoatPanels: false,
       wroughtPowderCoatPosts: false,
       installFinialStyle: SEED.finialStyles[0],
@@ -2531,13 +2537,8 @@ document.addEventListener('DOMContentLoaded', function(){
     merged.woodReplacementPostSpacing = normalizeWoodReplacementPostSpacing(merged.woodReplacementPostSpacing);
     merged.wroughtCustomStickLength = normalizeWroughtCustomStickLength(merged.wroughtCustomStickLength);
     merged.wroughtPanelFabrication = normalizeWroughtPanelFabrication(merged.wroughtPanelFabrication);
-    if(merged.wroughtPanelFabrication === 'Shop'){
-      merged.wroughtPowderCoatPanels = !!merged.wroughtPowderCoatPanels;
-      merged.wroughtPowderCoatPosts = !!merged.wroughtPowderCoatPosts;
-    } else {
-      merged.wroughtPowderCoatPanels = false;
-      merged.wroughtPowderCoatPosts = false;
-    }
+    merged.wroughtPowderCoatPanels = false;
+    merged.wroughtPowderCoatPosts = false;
     merged.woodRepairStainBrand = normalizeWoodStainBrand(merged.woodRepairStainBrand);
     return merged;
   }
@@ -3615,6 +3616,7 @@ document.addEventListener('DOMContentLoaded', function(){
               <option value="6">6 ft</option>
               <option value="8">8 ft</option>
               <option value="10">10 ft</option>
+              <option value="12">12 ft</option>
             </select>
           </div>
           <div class="sp-field col-2" data-install-only>
@@ -3630,11 +3632,12 @@ document.addEventListener('DOMContentLoaded', function(){
               <option value="12">12 ft</option>
               <option value="24">24 ft</option>
             </select>
-            <div class="sp-hint">Used only when panels are custom-built (not prefab).</div>
+            <div class="sp-hint">Used only for on-site custom panel builds (not prefab or TMI-ordered panels).</div>
           </div>
           <div class="sp-field col-2" data-install-only>
             <label class="sp-label">Panel Fabrication</label>
             <select class="sp-select" data-field="wroughtPanelFabrication">${createSelect(WROUGHT_PANEL_FABRICATION_OPTIONS)}</select>
+            <div class="sp-hint">TMI custom panels include powder coating and use $${WROUGHT_TMI_CUSTOM_PANEL_COST} each.</div>
           </div>
           <div class="sp-field col-2" data-install-only data-shop-fabrication-only style="display:none">
             <label class="sp-label">Powder Coat Panels</label>
@@ -4449,9 +4452,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const panelAttachmentValue = val('panelAttachment');
     const rawPaintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
     const wroughtPanelFabrication = normalizeWroughtPanelFabrication(val('wroughtPanelFabrication'));
-    const isShopFabrication = wroughtPanelFabrication === 'Shop';
-    const powderCoatPanelsValue = isShopFabrication ? val('wroughtPowderCoatPanels') : false;
-    const powderCoatPostsValue = isShopFabrication ? val('wroughtPowderCoatPosts') : false;
+    const powderCoatPanelsValue = false;
+    const powderCoatPostsValue = false;
     const paintingSelection = normalizedFence === 'wood'
       ? 'None'
       : effectiveWroughtPaintingSelection({
@@ -4682,8 +4684,8 @@ document.addEventListener('DOMContentLoaded', function(){
     set('wroughtCustomStickLength', normalizeWroughtCustomStickLength(data.wroughtCustomStickLength));
     const panelFabrication = normalizeWroughtPanelFabrication(data.wroughtPanelFabrication);
     set('wroughtPanelFabrication', panelFabrication);
-    set('wroughtPowderCoatPanels', panelFabrication === 'Shop' && Boolean(data.wroughtPowderCoatPanels));
-    set('wroughtPowderCoatPosts', panelFabrication === 'Shop' && Boolean(data.wroughtPowderCoatPosts));
+    set('wroughtPowderCoatPanels', false);
+    set('wroughtPowderCoatPosts', false);
     set('installFinialStyle', data.installFinialStyle||SEED.finialStyles[0]);
 
     set('railsCount', data.railsCount || 2);
@@ -6276,7 +6278,7 @@ document.addEventListener('DOMContentLoaded', function(){
       fabricationSel.value = WROUGHT_PANEL_FABRICATION_OPTIONS[0];
     }
     const panelFabrication = normalizeWroughtPanelFabrication(fabricationSel ? fabricationSel.value : '');
-    const showShopFabricationFields = isInstall && isWrought && panelFabrication === 'Shop';
+    const showShopFabricationFields = false;
     card.querySelectorAll('[data-shop-fabrication-only]').forEach(el=>{
       el.style.display = showShopFabricationFields ? '' : 'none';
     });
@@ -6301,8 +6303,8 @@ document.addEventListener('DOMContentLoaded', function(){
       } else if(isInstall && isWrought){
         const attachmentSel = card.querySelector('[data-field="panelAttachment"]');
         const usesBrackets = attachmentSel ? attachmentSel.value === 'Brackets' : false;
-        const powderPanelsChecked = !!card.querySelector('[data-field="wroughtPowderCoatPanels"]')?.checked;
-        const powderCoatForcesSpot = panelFabrication === 'Shop' && powderPanelsChecked && !usesBrackets;
+        const orderedTmiPanels = isOrderedTmiPanelFabrication(panelFabrication);
+        const powderCoatForcesSpot = orderedTmiPanels && !usesBrackets;
         if(powderCoatForcesSpot){
           if(currentVal !== 'Spot Paint Welds'){
             paintingSel.value = 'Spot Paint Welds';
@@ -6807,8 +6809,32 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   function normalizeWroughtPanelFabrication(value){
     const raw = String(value || '').trim().toLowerCase();
+    if(!raw){
+      return WROUGHT_PANEL_FABRICATION_ON_SITE;
+    }
+    if(
+      raw === 'shop' ||
+      raw === 'tmi' ||
+      raw === 'order custom panels (tmi)' ||
+      raw === 'order custom panels' ||
+      raw === 'order from tmi' ||
+      raw === 'ordered from tmi'
+    ){
+      return WROUGHT_PANEL_FABRICATION_ORDER_TMI;
+    }
+    if(
+      raw === 'on site' ||
+      raw === 'onsite' ||
+      raw === 'build on site' ||
+      raw === 'field build'
+    ){
+      return WROUGHT_PANEL_FABRICATION_ON_SITE;
+    }
     const match = WROUGHT_PANEL_FABRICATION_OPTIONS.find(option=> option.toLowerCase() === raw);
-    return match || WROUGHT_PANEL_FABRICATION_OPTIONS[0];
+    return match || WROUGHT_PANEL_FABRICATION_ON_SITE;
+  }
+  function isOrderedTmiPanelFabrication(value){
+    return normalizeWroughtPanelFabrication(value) === WROUGHT_PANEL_FABRICATION_ORDER_TMI;
   }
   function wroughtCustomStickLengthFt(value){
     return parseInt(normalizeWroughtCustomStickLength(value), 10) || 12;
@@ -6848,8 +6874,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return 'None';
     }
     const panelFabrication = normalizeWroughtPanelFabrication(section?.wroughtPanelFabrication);
-    const powderCoatPanels = !!section?.wroughtPowderCoatPanels;
-    if(isInstallScope && panelFabrication === 'Shop' && powderCoatPanels){
+    if(isInstallScope && isOrderedTmiPanelFabrication(panelFabrication)){
       return 'Spot Paint Welds';
     }
     const raw = String(section?.painting || '').trim();
@@ -7327,8 +7352,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'Drive gate power run (new wiring)': 2000,
     'Solar gate power kit': 500,
     'Sliding drive gate chain': 150,
-    [POST_ANCHOR_PLATE_LABEL]: 0,
-    [POST_ANCHOR_HARDWARE_LABEL]: 0,
+    [POST_ANCHOR_PLATE_LABEL]: 3.24,
+    [POST_ANCHOR_HARDWARE_LABEL]: 2,
     'panel mount bracket': 1.27,
     'powder coat panel': 40,
     'powder coat post': 10,
@@ -8482,7 +8507,7 @@ document.addEventListener('DOMContentLoaded', function(){
       retainingWallCost:0,
       panelsPrefab:0, panelsCustom:0,
       panelsInstallPrefab:0, panelsInstallCustom:0,
-      panelsInstallCustomShop:0, panelsInstallCustomOnSite:0,
+      panelsInstallCustomShop:0, panelsInstallCustomOnSite:0, panelsInstallCustomTmi:0,
       powderCoatPanels:0, powderCoatPosts:0,
       prefabPanelTypesRepair: new Map(),
       installSections:0, replaceSections:0,
@@ -9149,6 +9174,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const { qty, widthIn, railSize, picketSize, height, style, finialStyle } = entry;
           const feet = feetFromHeightStr(height);
           const eligible = isPrefabEligible(widthIn, railSize, picketSize);
+          const orderedFromTmi = source === 'install' && !eligible && isOrderedTmiPanelFabrication(installFabricationMode);
           const stickLengthFt = source === 'install'
             ? wroughtCustomStickLengthFt(s.wroughtCustomStickLength)
             : 12;
@@ -9157,27 +9183,24 @@ document.addEventListener('DOMContentLoaded', function(){
           const finialNote = hasFinials && finStyleLabel ? ` (finials: ${finStyleLabel})` : '';
           const locationLabel = eligible
             ? 'prefab eligible'
-            : (source === 'install' && installFabricationMode === 'Shop')
-              ? 'shop fabricated'
+            : orderedFromTmi
+              ? 'ordered custom (TMI, powder coated)'
               : 'build on site';
           const desc = `${height}, ${style}${finialNote}, rails ${railSize}, pickets ${picketSize} (${locationLabel})`;
           lines.push(`  - ${qty} × ${widthIn}" wide panel — ${desc}`);
           const attachment = (source === 'install') ? (extra.attachment || 'Welding') : 'Welding';
           const usesBrackets = attachment === 'Brackets';
           let onsitePanelHours = 0;
-          let shopPanelHours = 0;
           const panelLinearFt = (qty * widthIn) / 12;
           const panelInstallLfPerCrewDay = Math.max(1, Number(WROUGHT_INSTALL_PRODUCTION.panelInstallLfPerCrewDay || 250) || 250);
           const crewDayHours = Math.max(0.25, Number(CREW_SETTINGS.maxDayHours || 13) || 13);
-          const isCrewPacedInstallPanel = source === 'install' && (eligible || installFabricationMode === 'Shop');
+          const isCrewPacedInstallPanel = source === 'install' && (eligible || orderedFromTmi);
           if(eligible){
             onsitePanelHours = source === 'install'
               ? (panelLinearFt * (crewDayHours / panelInstallLfPerCrewDay))
               : (qty * 0.5);
-          } else if(source === 'install' && installFabricationMode === 'Shop'){
+          } else if(orderedFromTmi){
             onsitePanelHours = panelLinearFt * (crewDayHours / panelInstallLfPerCrewDay);
-            const shopCrewHoursPerPanel = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.shopFabricationCrewHoursPerPanel || 1) || 1);
-            shopPanelHours = qty * shopCrewHoursPerPanel;
           } else {
             onsitePanelHours = qty * 1.5;
           }
@@ -9196,9 +9219,6 @@ document.addEventListener('DOMContentLoaded', function(){
               helperHours += onsitePanelHours;
               bracketPanelHours += onsitePanelHours;
             }
-          }
-          if(shopPanelHours > 0){
-            shopFabricationLaborHours += shopPanelHours;
           }
           if(eligible){
             totals.panelsPrefab += qty;
@@ -9224,8 +9244,8 @@ document.addEventListener('DOMContentLoaded', function(){
             if(source === 'install'){
               totals.panelsInstallCustom += qty;
               installCustomCount += qty;
-              if(installFabricationMode === 'Shop'){
-                totals.panelsInstallCustomShop += qty;
+              if(orderedFromTmi){
+                totals.panelsInstallCustomTmi += qty;
               } else {
                 totals.panelsInstallCustomOnSite += qty;
               }
@@ -9245,7 +9265,7 @@ document.addEventListener('DOMContentLoaded', function(){
             finialStyle,
             source,
             attachment,
-            panelFabrication: !eligible && source === 'install' ? installFabricationMode : 'On Site'
+            panelFabrication: !eligible && source === 'install' ? installFabricationMode : WROUGHT_PANEL_FABRICATION_ON_SITE
           });
           if(source === 'install' && extra.installInfo){
             if(!extra.installInfo.panels) extra.installInfo.panels = [];
@@ -9302,32 +9322,8 @@ document.addEventListener('DOMContentLoaded', function(){
           installInfo
         });
         if(installInfo.customPanels > 0){
-          if(installInfo.panelFabrication === 'Shop'){
-            lines.push(`- Custom panels fabricated in shop: ${installInfo.customPanels}`);
-            if(installInfo.powderCoatPanels){
-              addMat(materials, 'powder coat panel', installInfo.customPanels);
-              totals.powderCoatPanels += installInfo.customPanels;
-            }
-            if(installInfo.powderCoatPosts){
-              const postPowderQty = Math.max(0, parseInt(installInfo.postsTotal || 0, 10) || 0);
-              if(postPowderQty > 0){
-                addMat(materials, 'powder coat post', postPowderQty);
-                totals.powderCoatPosts += postPowderQty;
-              }
-            }
-            const powderParts = [];
-            if(installInfo.powderCoatPanels){
-              powderParts.push(`${installInfo.customPanels} panel${installInfo.customPanels === 1 ? '' : 's'}`);
-            }
-            if(installInfo.powderCoatPosts){
-              const postQty = Math.max(0, parseInt(installInfo.postsTotal || 0, 10) || 0);
-              if(postQty > 0){
-                powderParts.push(`${postQty} post${postQty === 1 ? '' : 's'}`);
-              }
-            }
-            if(powderParts.length){
-              lines.push(`- Powder coating: ${powderParts.join('; ')}`);
-            }
+          if(isOrderedTmiPanelFabrication(installInfo.panelFabrication)){
+            lines.push(`- Custom panels ordered from TMI (powder coated, $${money(WROUGHT_TMI_CUSTOM_PANEL_COST)} each): ${installInfo.customPanels}`);
           } else {
             lines.push(`- Custom panels fabricated on site: ${installInfo.customPanels}`);
           }
@@ -9703,11 +9699,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
         lines.push(`- Prefab panel replacements: ${prefabReplacementCount}${detailSuffix}`);
       }
-      if (t.panelsCustom) lines.push(`- Panels to custom-build: ${t.panelsCustom}`);
+      if (t.panelsCustom) lines.push(`- Panels requiring custom fabrication: ${t.panelsCustom}`);
       if (t.panelsInstallPrefab) lines.push(`- New prefab panels: ${t.panelsInstallPrefab}`);
       if (t.panelsInstallCustomShop) lines.push(`- New custom panels (shop fabricated): ${t.panelsInstallCustomShop}`);
       if (t.panelsInstallCustomOnSite) lines.push(`- New custom panels (fabricated on site): ${t.panelsInstallCustomOnSite}`);
-      if (t.panelsInstallCustom && !t.panelsInstallCustomShop && !t.panelsInstallCustomOnSite){
+      if (t.panelsInstallCustomTmi) lines.push(`- New custom panels (ordered from TMI): ${t.panelsInstallCustomTmi}`);
+      if (t.panelsInstallCustom && !t.panelsInstallCustomShop && !t.panelsInstallCustomOnSite && !t.panelsInstallCustomTmi){
         lines.push(`- New custom panels: ${t.panelsInstallCustom}`);
       }
       if (t.powderCoatPanels) lines.push(`- Panels to powder coat: ${t.powderCoatPanels}`);
@@ -10409,6 +10406,9 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (totals.panelsInstallCustomOnSite > 0){
       addServiceLine('Build Custom Panels', `Fabricate and install ${describeCount(totals.panelsInstallCustomOnSite, 'new custom panel', 'new custom panels')} on site to match the wrought iron design.`);
+    }
+    if (totals.panelsInstallCustomTmi > 0){
+      addServiceLine('Install Ordered Custom Panels', `Order ${describeCount(totals.panelsInstallCustomTmi, 'custom powder-coated panel', 'custom powder-coated panels')} from TMI ($${money(WROUGHT_TMI_CUSTOM_PANEL_COST)} each) and install them on site like prefab panels.`);
     }
     if (totals.panelsInstallCustomShop > 0){
       addServiceLine('Shop Fabrication', `Fabricate ${describeCount(totals.panelsInstallCustomShop, 'new custom panel', 'new custom panels')} in the shop with a 4-person crew (1 hour per panel, cutting and welding included) and install on site.`);
@@ -11366,14 +11366,23 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     // ===== Panel purchase vs build materials & direct costs =====
-    let costPanels = 0;
+    let costPrefabPanels = 0;
+    let costTmiCustomPanels = 0;
     state.sections.forEach(s=>{
       const lst = s._panelCalc || [];
       lst.forEach(p=>{
-        if(p.eligible){
-          const price = PANEL_PRICE[pkey(p.feet, p.picketSize, p.style)];
-          const unit = (typeof price==='number') ? price : 0;
-          costPanels += p.qty * unit;
+        const panelFabricationMode = normalizeWroughtPanelFabrication(p.panelFabrication);
+        const orderedFromTmi = !p.eligible && isOrderedTmiPanelFabrication(panelFabricationMode);
+        if(p.eligible || orderedFromTmi){
+          let unit = 0;
+          if(p.eligible){
+            const price = PANEL_PRICE[pkey(p.feet, p.picketSize, p.style)];
+            unit = (typeof price === 'number') ? price : 0;
+            costPrefabPanels += p.qty * unit;
+          } else {
+            unit = WROUGHT_TMI_CUSTOM_PANEL_COST;
+            costTmiCustomPanels += p.qty * unit;
+          }
           const panelDescParts = [];
           if(p.height) panelDescParts.push(p.height);
           if(p.style) panelDescParts.push(p.style);
@@ -11385,10 +11394,10 @@ document.addEventListener('DOMContentLoaded', function(){
           }
           const picketLabel = p.picketSize ? `${p.picketSize} pickets` : '';
           const panelDesc = panelDescParts.length ? panelDescParts.join(' ') : 'wrought iron';
-          const labelParts = [`prefab fence panel ${panelDesc}`];
+          const labelParts = [orderedFromTmi ? `TMI custom powder-coated fence panel ${panelDesc}` : `prefab fence panel ${panelDesc}`];
           if(picketLabel) labelParts.push(`(${picketLabel})`);
           addMat(materials, labelParts.join(' '), p.qty);
-          // No extra raw steel for prefab
+          // No extra raw steel for prefab-style install panels.
         } else {
           // Build on site: rails (2 per panel) and pickets per width
           const stickLengthFt = wroughtCustomStickLengthFt(p.stickLengthFt);
@@ -11489,9 +11498,18 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
 
-    if(costPanels>0){
-      costMaterials += costPanels;
-      matBreak.push('  - Prefab fence panels: $'+money(costPanels));
+    if(costPrefabPanels > 0){
+      costMaterials += costPrefabPanels;
+      matBreak.push('  - Prefab fence panels: $'+money(costPrefabPanels));
+    }
+    if(costTmiCustomPanels > 0){
+      const tmiQty = Math.max(0, parseInt(totals.panelsInstallCustomTmi || 0, 10) || 0);
+      costMaterials += costTmiCustomPanels;
+      if(tmiQty > 0){
+        matBreak.push(`  - TMI custom powder-coated panels: ${tmiQty} x $${money(WROUGHT_TMI_CUSTOM_PANEL_COST)} = $${money(costTmiCustomPanels)}`);
+      } else {
+        matBreak.push('  - TMI custom powder-coated panels: $'+money(costTmiCustomPanels));
+      }
     }
 
     if(paintGallons>0){
@@ -12684,6 +12702,9 @@ document.addEventListener('DOMContentLoaded', function(){
       if(totals.panelsInstallCustomShop > 0){
         panelTypeParts.push(`${totals.panelsInstallCustomShop} shop-fabricated custom ${plural(totals.panelsInstallCustomShop, 'panel')}`);
       }
+      if(totals.panelsInstallCustomTmi > 0){
+        panelTypeParts.push(`${totals.panelsInstallCustomTmi} TMI custom ${plural(totals.panelsInstallCustomTmi, 'panel')}`);
+      }
       if(totals.panelsInstallPrefab > 0){
         panelTypeParts.push(`${totals.panelsInstallPrefab} prefab ${plural(totals.panelsInstallPrefab, 'panel')}`);
       }
@@ -13201,11 +13222,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
       sub.push(`- Prefab panel replacements: ${prefabReplacementCount}${detailSuffix}`);
     }
-    if (totals.panelsCustom > 0)    sub.push('- Panels to custom-build: '+totals.panelsCustom);
+    if (totals.panelsCustom > 0)    sub.push('- Panels requiring custom fabrication: '+totals.panelsCustom);
     if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
     if (totals.panelsInstallCustomShop > 0) sub.push('- New custom panels (shop fabricated): '+totals.panelsInstallCustomShop);
     if (totals.panelsInstallCustomOnSite > 0) sub.push('- New custom panels (fabricated on site): '+totals.panelsInstallCustomOnSite);
-    if (totals.panelsInstallCustom > 0 && totals.panelsInstallCustomShop <= 0 && totals.panelsInstallCustomOnSite <= 0){
+    if (totals.panelsInstallCustomTmi > 0) sub.push('- New custom panels (ordered from TMI): '+totals.panelsInstallCustomTmi);
+    if (totals.panelsInstallCustom > 0 && totals.panelsInstallCustomShop <= 0 && totals.panelsInstallCustomOnSite <= 0 && totals.panelsInstallCustomTmi <= 0){
       sub.push('- New custom panels: '+totals.panelsInstallCustom);
     }
     if (totals.powderCoatPanels > 0) sub.push('- Panels to powder coat: '+totals.powderCoatPanels);
