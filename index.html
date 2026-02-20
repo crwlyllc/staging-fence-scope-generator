@@ -107,6 +107,7 @@
   #sp-estimate-number{font-size:16px}
   .sp-textarea{min-height:68px;resize:vertical}
   .sp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .sp-service-option-input{max-width:140px}
 
   /* Rail row (Rails count + all rail blocks on one row, top-aligned) */
   .sp-rail-row{
@@ -1234,6 +1235,16 @@
             <button class="sp-btn" id="sp-copy-service" type="button" disabled>Copy All</button>
           </div>
         </div>
+        <div class="sp-grid">
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-service-option-number">Estimate Option Number</label>
+            <div class="sp-row">
+              <input class="sp-input sp-service-option-input" id="sp-service-option-number" type="number" inputmode="numeric" min="1" step="1" value="1" placeholder="1" />
+              <button class="sp-btn primary" id="sp-push-service-hcp" type="button" disabled>Push Line Items to HCP</button>
+            </div>
+            <div class="sp-hint">Choose which estimate option should receive these line items (Option 1, 2, 3...).</div>
+          </div>
+        </div>
         <div class="sp-service-list" id="sp-service-lines"></div>
         <div class="sp-hint">Use the copy buttons to grab titles or descriptions individually.</div>
       </div>
@@ -1596,6 +1607,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const serviceCardEl = $('#sp-service-card');
   const serviceListEl = $('#sp-service-lines');
   const serviceCopyAllBtn = $('#sp-copy-service');
+  const serviceOptionInput = document.getElementById('sp-service-option-number');
+  const pushServiceHcpBtn = document.getElementById('sp-push-service-hcp');
   const quickCostsCardEl = document.getElementById('sp-quick-costs-card');
   const quickCostsCopyAllBtn = document.getElementById('sp-copy-costs-all');
   const quickCostChargeInput = document.getElementById('sp-cost-charge');
@@ -1617,6 +1630,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const scopeEl = document.getElementById('sp-scope');
   let gateUnlocked = false;
   let lastServiceLines = [];
+  let isPushingServiceLineItems = false;
   let lastQuickCosts = null;
   let autoGenerateTimer = null;
   let isGeneratingNotes = false;
@@ -13531,8 +13545,44 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function buildServiceLinesPayload(){
+    if(!Array.isArray(lastServiceLines)){
+      return [];
+    }
+    return lastServiceLines
+      .map(item=>{
+        const name = item && item.name ? String(item.name).trim() : '';
+        const description = item && item.desc ? String(item.desc).trim() : '';
+        if(!name && !description){
+          return null;
+        }
+        return {
+          name: name || 'Service Line Item',
+          description
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function updateServiceLinePushControls(hasItems){
+    const hasServiceItems = !!hasItems;
+    if(serviceOptionInput){
+      if(!parsePositiveInt(serviceOptionInput.value || '')){
+        serviceOptionInput.value = '1';
+      }
+      serviceOptionInput.disabled = !hasServiceItems || isPushingServiceLineItems;
+    }
+    if(pushServiceHcpBtn){
+      pushServiceHcpBtn.disabled = !hasServiceItems || isPushingServiceLineItems;
+      if(!isPushingServiceLineItems){
+        pushServiceHcpBtn.textContent = 'Push Line Items to HCP';
+      }
+    }
+  }
+
   function renderServiceLineNotes(items){
     lastServiceLines = Array.isArray(items) ? items.map(item=>({ ...item })) : [];
+    updateServiceLinePushControls(lastServiceLines.length);
 
     if(!serviceListEl || !serviceCardEl){
       return;
@@ -13884,6 +13934,113 @@ document.addEventListener('DOMContentLoaded', function(){
       .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
   }
 
+  function getPriceToChargeValue(){
+    const quickCharge = Number(lastQuickCosts && lastQuickCosts.charge);
+    if(isFinite(quickCharge) && quickCharge >= 0){
+      return quickCharge;
+    }
+    const raw = quickCostChargeInput && typeof quickCostChargeInput.value === 'string'
+      ? quickCostChargeInput.value
+      : '';
+    if(!raw || raw === '—'){
+      return null;
+    }
+    const parsed = Number(String(raw).replace(/[^0-9.-]/g, ''));
+    return isFinite(parsed) ? parsed : null;
+  }
+
+  async function pushServiceLineItemsToHcp(){
+    if(!pushServiceHcpBtn || !estimateNumberInput || !serviceOptionInput){
+      return;
+    }
+
+    const rawNumber = (estimateNumberInput.value || '').trim();
+    if(!rawNumber){
+      alert('Please enter the Housecall Pro estimate number.');
+      estimateNumberInput.focus();
+      return;
+    }
+
+    const estimateNumber = rawNumber.replace(/[^0-9]/g, '');
+    if(!estimateNumber){
+      alert('The estimate number must contain at least one digit.');
+      estimateNumberInput.focus();
+      return;
+    }
+
+    const optionNumber = parsePositiveInt(serviceOptionInput.value || '');
+    if(!optionNumber){
+      alert('Please enter a valid estimate option number (Option 1, 2, 3, etc).');
+      serviceOptionInput.focus();
+      return;
+    }
+
+    const serviceLines = buildServiceLinesPayload();
+    if(!serviceLines.length){
+      alert('There are no service line items to send yet. Generate notes first.');
+      return;
+    }
+
+    if(typeof fetch !== 'function'){
+      alert('This browser does not support automatic line item sending. Please copy the service line items manually.');
+      return;
+    }
+
+    if(isPushingServiceLineItems){
+      return;
+    }
+
+    const lineItemsPayload = serviceLines.map(item=>({
+      name: item.name,
+      description: item.description,
+      quantity: 1,
+      kind: 'labor',
+      taxable: true,
+    }));
+    const priceToCharge = getPriceToChargeValue();
+
+    isPushingServiceLineItems = true;
+    updateServiceLinePushControls(serviceLines.length);
+    const originalText = pushServiceHcpBtn.textContent;
+    pushServiceHcpBtn.textContent = 'Pushing...';
+
+    try{
+      const payload = {
+        estimateNumber,
+        optionNumber,
+        optionId: String(optionNumber),
+        optionLabel: `Option ${optionNumber}`,
+        serviceLines,
+        lineItems: lineItemsPayload,
+        line_items: lineItemsPayload,
+        priceToCharge,
+        price_to_charge: priceToCharge,
+      };
+
+      const response = await fetch('https://api.strongclicks.io/webhook/service-line-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if(!response.ok){
+        const text = await response.text();
+        throw new Error(text || `Request failed with status ${response.status}`);
+      }
+
+      alert(`Service line items sent to Housecall Pro option ${optionNumber}.`);
+    }catch(err){
+      console.error('Failed to push service line items to HCP', err);
+      alert('Failed to push service line items to Housecall Pro. Please try again.');
+    }finally{
+      isPushingServiceLineItems = false;
+      updateServiceLinePushControls(lastServiceLines.length);
+      if(pushServiceHcpBtn){
+        pushServiceHcpBtn.textContent = originalText;
+      }
+    }
+  }
+
   async function pushNotesToHcp(){
     if(!pushHcpBtn || !estimateNumberInput){ return; }
 
@@ -13903,14 +14060,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const notes = (notesEl && notesEl.value || '').trim();
     const notesSub = (notesSubEl && notesSubEl.value || '').trim();
-    const serviceLinesPayload = Array.isArray(lastServiceLines)
-      ? lastServiceLines
-          .map(item=>({
-            title: (item && item.name ? String(item.name).trim() : ''),
-            description: (item && item.desc ? String(item.desc).trim() : ''),
-          }))
-          .filter(item=>item.title || item.description)
-      : [];
+    const serviceLinesPayload = buildServiceLinesPayload()
+      .map(item=>({
+        title: item.name,
+        description: item.description,
+      }));
     if(!notes){
       alert('There are no notes to send yet. Generate notes first.');
       return;
@@ -14183,6 +14337,25 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   if(pushHcpBtn){
     pushHcpBtn.addEventListener('click', pushNotesToHcp);
+  }
+  if(pushServiceHcpBtn){
+    pushServiceHcpBtn.addEventListener('click', pushServiceLineItemsToHcp);
+  }
+  if(serviceOptionInput){
+    serviceOptionInput.addEventListener('input', ()=>{
+      const value = serviceOptionInput.value || '';
+      if(!value){
+        return;
+      }
+      const normalized = parsePositiveInt(value);
+      serviceOptionInput.value = normalized > 0 ? String(normalized) : '';
+    });
+    serviceOptionInput.addEventListener('keydown', evt=>{
+      if(evt.key === 'Enter'){
+        evt.preventDefault();
+        pushServiceLineItemsToHcp();
+      }
+    });
   }
   if(serviceCopyAllBtn){ serviceCopyAllBtn.addEventListener('click', copyAllServiceLines); }
   if(importBtn){
