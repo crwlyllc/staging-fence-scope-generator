@@ -1638,6 +1638,7 @@ document.addEventListener('DOMContentLoaded', function(){
   let estimateLookupController = null;
   let lastEstimateLookupNumber = '';
   let lastEstimateAddress = '';
+  let lastEstimateId = '';
   let lastEstimateExists = false;
   let customerTypeConfirmed = false;
 
@@ -1873,7 +1874,7 @@ document.addEventListener('DOMContentLoaded', function(){
       generatedAt: new Date().toISOString(),
       state: { sections, customerType: getCustomerType() },
       map: { address: '', polylines: [], nextPolylineId: 1 },
-      estimate: { number: '', address: '' }
+      estimate: { number: '', address: '', id: '' }
     };
   }
 
@@ -2022,11 +2023,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(value == null){
       return '';
     }
-    const text = String(value).trim();
-    if(!text){
+    if(typeof value !== 'string' && typeof value !== 'number'){
       return '';
     }
-    if(/^\d+$/.test(text)){
+    const text = String(value).trim();
+    if(!text){
       return '';
     }
     return text;
@@ -2069,9 +2070,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const idCandidate = candidate.id
         || candidate.estimateId
         || candidate.estimate_id
-        || candidate.estimateID
-        || candidate.estimateNumber
-        || candidate.estimate_number;
+        || candidate.estimateID;
       const normalized = normalizeEstimateId(idCandidate);
       if(normalized){
         return normalized;
@@ -2335,11 +2334,13 @@ document.addEventListener('DOMContentLoaded', function(){
       if(controller && controller.signal && controller.signal.aborted){
         return;
       }
+      const estimateId = extractEstimateId(estimate);
       const addressResult = extractEstimateAddressPayload(estimate);
       if(addressResult.hasAddress){
         const formatted = addressResult.formatted;
         lastEstimateLookupNumber = estimateNumber;
         lastEstimateAddress = formatted;
+        lastEstimateId = estimateId;
         lastEstimateExists = true;
         if(formatted){
           setMapAddressFromEstimate(formatted);
@@ -2352,17 +2353,20 @@ document.addEventListener('DOMContentLoaded', function(){
         if(notFound){
           lastEstimateLookupNumber = estimateNumber;
           lastEstimateAddress = '';
+          lastEstimateId = '';
           lastEstimateExists = false;
           updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
         }else{
           lastEstimateLookupNumber = estimateNumber;
           lastEstimateAddress = '';
+          lastEstimateId = estimateId;
           lastEstimateExists = true;
           updateEstimateStatus('Estimate found but no address was provided.', 'warn');
         }
       }else{
         lastEstimateLookupNumber = estimateNumber;
         lastEstimateAddress = '';
+        lastEstimateId = '';
         lastEstimateExists = false;
         updateEstimateStatus('No matching estimate found in Housecall Pro.', 'warn');
       }
@@ -2374,6 +2378,7 @@ document.addEventListener('DOMContentLoaded', function(){
       console.error('Estimate lookup failed', err);
       lastEstimateLookupNumber = '';
       lastEstimateAddress = '';
+      lastEstimateId = '';
       lastEstimateExists = false;
       updateEstimateStatus('Unable to load estimate address. Please try again.', 'error');
     }finally{
@@ -2395,6 +2400,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!digits){
       lastEstimateLookupNumber = '';
       lastEstimateAddress = '';
+      lastEstimateId = '';
       lastEstimateExists = false;
       updateEstimateStatus('', '');
       return;
@@ -7252,6 +7258,7 @@ document.addEventListener('DOMContentLoaded', function(){
       estimate: {
         number: lastEstimateLookupNumber || '',
         address: mapAddressInput ? (mapAddressInput.value || '').trim() : '',
+        id: lastEstimateId || '',
       }
     };
   }
@@ -7282,6 +7289,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const snapshotEstimateNumber = sanitizeEstimateNumber(payload.estimate && payload.estimate.number ? payload.estimate.number : '');
     const snapshotEstimateAddress = (payload.estimate && payload.estimate.address ? payload.estimate.address : '').trim();
+    const snapshotEstimateId = normalizeEstimateId(payload.estimate && (payload.estimate.id || payload.estimate.estimateId || payload.estimate.estimate_id));
     const importAddress = (payload.map && payload.map.address) || snapshotEstimateAddress || '';
 
     if(estimateNumberInput){
@@ -7289,6 +7297,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     lastEstimateLookupNumber = snapshotEstimateNumber;
     lastEstimateAddress = snapshotEstimateAddress || importAddress;
+    lastEstimateId = snapshotEstimateId;
     lastEstimateExists = !!snapshotEstimateNumber;
 
     if(mapAddressInput){
@@ -13949,6 +13958,14 @@ document.addEventListener('DOMContentLoaded', function(){
     return isFinite(parsed) ? parsed : null;
   }
 
+  function getEstimateIdForPayload(estimateNumber){
+    const normalizedEstimateNumber = sanitizeEstimateNumber(estimateNumber || '');
+    if(!normalizedEstimateNumber || normalizedEstimateNumber !== lastEstimateLookupNumber){
+      return '';
+    }
+    return normalizeEstimateId(lastEstimateId);
+  }
+
   async function pushServiceLineItemsToHcp(){
     if(!pushServiceHcpBtn || !estimateNumberInput || !serviceOptionInput){
       return;
@@ -14005,6 +14022,7 @@ document.addEventListener('DOMContentLoaded', function(){
     pushServiceHcpBtn.textContent = 'Pushing...';
 
     try{
+      const estimateId = getEstimateIdForPayload(estimateNumber);
       const payload = {
         estimateNumber,
         optionNumber,
@@ -14016,6 +14034,11 @@ document.addEventListener('DOMContentLoaded', function(){
         priceToCharge,
         price_to_charge: priceToCharge,
       };
+      if(estimateId){
+        payload.id = estimateId;
+        payload.estimateId = estimateId;
+        payload.estimate_id = estimateId;
+      }
 
       const response = await fetch('https://api.strongclicks.io/webhook/service-line-items', {
         method: 'POST',
@@ -14084,12 +14107,18 @@ document.addEventListener('DOMContentLoaded', function(){
       const reloadKey = encodedReloadKey
         ? `${NOTES_DATA_START}${encodedReloadKey}${NOTES_DATA_END}`
         : '';
+      const estimateId = getEstimateIdForPayload(estimateNumber);
       const payload = {
         estimateNumber,
         notes,
         notesSub,
         reloadKey,
       };
+      if(estimateId){
+        payload.id = estimateId;
+        payload.estimateId = estimateId;
+        payload.estimate_id = estimateId;
+      }
 
       if(serviceLinesPayload.length){
         payload.serviceLines = serviceLinesPayload;
@@ -14315,8 +14344,11 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         lastEstimateLookupNumber = '';
         lastEstimateAddress = '';
+        lastEstimateId = '';
         lastEstimateExists = false;
         updateEstimateStatus('', '');
+      }else if(digits !== lastEstimateLookupNumber){
+        lastEstimateId = '';
       }
     });
     estimateNumberInput.addEventListener('keydown', evt=>{
