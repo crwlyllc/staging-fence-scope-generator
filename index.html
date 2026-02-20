@@ -13778,6 +13778,14 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function copyServiceLineButton(event){
+    if(event){
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if(autoGenerateTimer){
+      clearTimeout(autoGenerateTimer);
+      autoGenerateTimer = null;
+    }
     const btn = event?.currentTarget;
     if(!btn || btn.disabled){
       return;
@@ -13789,6 +13797,48 @@ document.addEventListener('DOMContentLoaded', function(){
       flashButton(btn, 'Nothing to copy', { revertMs: 1200, disable: false });
       return;
     }
+
+    // Prefer synchronous copy from the visible field for maximum reliability.
+    const copiedFromField = (()=>{
+      if(!sourceField) return false;
+      const previousActive = document.activeElement;
+      const prevStart = typeof sourceField.selectionStart === 'number' ? sourceField.selectionStart : null;
+      const prevEnd = typeof sourceField.selectionEnd === 'number' ? sourceField.selectionEnd : null;
+      try{
+        if(typeof sourceField.focus === 'function'){
+          try{
+            sourceField.focus({ preventScroll: true });
+          }catch(_err){
+            sourceField.focus();
+          }
+        }
+        if(typeof sourceField.select === 'function'){
+          sourceField.select();
+        }
+        if(typeof sourceField.setSelectionRange === 'function'){
+          sourceField.setSelectionRange(0, sourceField.value.length);
+        }
+        const ok = document.execCommand('copy');
+        if(prevStart !== null && prevEnd !== null && typeof sourceField.setSelectionRange === 'function'){
+          sourceField.setSelectionRange(prevStart, prevEnd);
+        }
+        if(previousActive && previousActive !== sourceField && typeof previousActive.focus === 'function'){
+          try{
+            previousActive.focus({ preventScroll: true });
+          }catch(_err){
+            previousActive.focus();
+          }
+        }
+        return !!ok;
+      }catch(_err){
+        return false;
+      }
+    })();
+    if(copiedFromField){
+      flashButton(btn);
+      return;
+    }
+
     copyTextToClipboard(text)
       .then(()=>flashButton(btn))
       .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
