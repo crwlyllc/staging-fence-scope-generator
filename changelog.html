@@ -3,254 +3,187 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Changelog | Strong Perimeter</title>
+  <title>Sales Changelog | Strong Perimeter</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="assets/strong-perimeter-favicon.svg" />
   <style>
-    :root{
-      --sp-green:#004B3D;
-      --sp-green-dark:#003428;
-      --sp-ink:#1f2937;
-      --sp-muted:#4b5563;
-      --sp-border:#d1d5db;
-      --sp-stage:#ebebeb;
-      --sp-card:#ffffff;
-      --sp-shadow:0 14px 28px rgba(15,23,42,0.08);
-      --sp-radius:16px;
+    :root {
+      --sp-green: #004b3d;
+      --sp-green-dark: #003428;
+      --sp-stage: #ececec;
+      --sp-card: #ffffff;
+      --sp-border: #d1d5db;
+      --sp-ink: #111827;
+      --sp-muted: #4b5563;
+      --sp-radius: 16px;
+      --sp-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
     }
 
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:"Open Sans","Segoe UI",Arial,sans-serif;
-      background:var(--sp-stage);
-      color:var(--sp-ink);
-    }
-    .wrap{
-      max-width:1100px;
-      margin:0 auto;
-      padding:24px 20px 48px;
-      display:grid;
-      gap:16px;
-    }
-    .hero{
-      background:linear-gradient(165deg,var(--sp-green) 0%,var(--sp-green-dark) 100%);
-      border:1px solid #47655b;
-      border-radius:var(--sp-radius);
-      box-shadow:var(--sp-shadow);
-      padding:18px 20px;
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:14px;
-      flex-wrap:wrap;
-      color:#f8fafc;
-    }
-    .brand{display:grid;gap:8px;max-width:760px}
-    .brand img{height:36px;width:auto;display:block}
-    .hero h1{
-      margin:0;
-      font-size:30px;
-      line-height:1.2;
-      letter-spacing:0.2px;
-    }
-    .hero p{
-      margin:0;
-      color:#dbe8e2;
-      font-size:14px;
-      line-height:1.55;
-      max-width:760px;
-    }
-    .hero-actions{display:flex;gap:8px;flex-wrap:wrap}
-    .btn{
-      text-decoration:none;
-      border:1px solid #8aa99e;
-      background:#f8fafc;
-      color:#0f172a;
-      border-radius:12px;
-      padding:10px 14px;
-      font-weight:700;
-      font-size:14px;
-      min-height:44px;
-      display:inline-flex;
-      align-items:center;
-      white-space:nowrap;
-      cursor:pointer;
-    }
-    .btn.secondary{
-      background:transparent;
-      color:#e2ece7;
-      border-color:#90ad9f;
+    * {
+      box-sizing: border-box;
     }
 
-    .card{
-      background:var(--sp-card);
-      border:1px solid var(--sp-border);
-      border-radius:var(--sp-radius);
-      box-shadow:var(--sp-shadow);
-      padding:18px;
-      display:grid;
-      gap:14px;
-    }
-    .summary-grid{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
-      gap:10px;
-    }
-    .metric{
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      padding:10px 12px;
-      background:#fafafa;
-      display:grid;
-      gap:4px;
-    }
-    .metric-label{
-      font-size:12px;
-      letter-spacing:0.04em;
-      text-transform:uppercase;
-      color:#6b7280;
-      font-weight:700;
-    }
-    .metric-value{
-      font-size:20px;
-      font-weight:700;
-      color:#111827;
-    }
-    .metric-sub{
-      font-size:12px;
-      color:#6b7280;
+    body {
+      margin: 0;
+      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+      background: var(--sp-stage);
+      color: var(--sp-ink);
     }
 
-    .filters{
-      display:grid;
-      grid-template-columns:2fr 1fr 1fr auto;
-      gap:10px;
-      align-items:end;
-    }
-    .field{display:grid;gap:6px}
-    .label{font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em}
-    .input,
-    .select{
-      width:100%;
-      border:1px solid #cfd6de;
-      border-radius:12px;
-      min-height:42px;
-      padding:10px 12px;
-      font:inherit;
-      color:#0f172a;
-      background:#fff;
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+      display: grid;
+      gap: 16px;
     }
 
-    .timeline-wrap{
-      position:relative;
-      padding-left:28px;
-      display:grid;
-      gap:16px;
+    .hero {
+      background: linear-gradient(165deg, var(--sp-green) 0%, var(--sp-green-dark) 100%);
+      border: 1px solid #48655c;
+      border-radius: var(--sp-radius);
+      box-shadow: var(--sp-shadow);
+      padding: 18px 20px;
+      color: #f8fafc;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
     }
-    .timeline-wrap::before{
-      content:"";
-      position:absolute;
-      left:8px;
-      top:2px;
-      bottom:2px;
-      width:2px;
-      background:#cedad3;
-    }
-    .month-group{
-      display:grid;
-      gap:10px;
-    }
-    .month-head{
-      margin:0;
-      font-size:13px;
-      letter-spacing:0.06em;
-      text-transform:uppercase;
-      color:#6b7280;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:8px;
-    }
-    .month-count{
-      font-size:12px;
-      color:#6b7280;
-      font-weight:600;
-      letter-spacing:normal;
-      text-transform:none;
-    }
-    .entry{
-      position:relative;
-      background:#fff;
-      border:1px solid #dfe4ea;
-      border-radius:12px;
-      padding:12px;
-      box-shadow:0 4px 10px rgba(15,23,42,0.03);
-      display:grid;
-      gap:6px;
-    }
-    .entry::before{
-      content:"";
-      position:absolute;
-      left:-24px;
-      top:16px;
-      width:10px;
-      height:10px;
-      border-radius:999px;
-      background:#0f766e;
-      border:2px solid #e7f0eb;
-    }
-    .entry-meta{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-      flex-wrap:wrap;
-      font-size:13px;
-      color:#4b5563;
-    }
-    .hash{
-      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-      font-size:12px;
-      font-weight:700;
-      letter-spacing:0.03em;
-      background:#eef4f2;
-      color:#0f5132;
-      border:1px solid #d8e4df;
-      border-radius:999px;
-      padding:3px 8px;
-    }
-    .entry-message{
-      margin:0;
-      font-size:14px;
-      line-height:1.5;
-      color:#111827;
-      word-break:break-word;
-    }
-    .status{
-      margin:0;
-      color:#6b7280;
-      font-size:13px;
-    }
-    .status.error{color:#b91c1c}
 
-    @media(max-width:900px){
-      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .filters{grid-template-columns:1fr 1fr;}
-      .filters .field:first-child{grid-column:1 / -1}
-      .filters .btn{width:100%;justify-content:center}
+    .brand {
+      display: grid;
+      gap: 8px;
+      max-width: 700px;
     }
-    @media(max-width:719px){
-      .wrap{padding:16px 14px 32px}
-      .hero h1{font-size:24px}
-      .card{padding:14px}
-      .summary-grid{grid-template-columns:1fr}
-      .filters{grid-template-columns:1fr}
-      .timeline-wrap{padding-left:22px}
-      .timeline-wrap::before{left:6px}
-      .entry::before{left:-18px}
+
+    .brand img {
+      height: 36px;
+      width: auto;
+      display: block;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      margin: 0;
+      color: #dbe8e2;
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 700px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      text-decoration: none;
+      border: 1px solid #8aa99e;
+      background: #f8fafc;
+      color: #0f172a;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      font-size: 14px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    .btn.secondary {
+      background: transparent;
+      color: #e2ece7;
+      border-color: #90ad9f;
+    }
+
+    .panel {
+      background: var(--sp-card);
+      border: 1px solid var(--sp-border);
+      border-radius: var(--sp-radius);
+      box-shadow: var(--sp-shadow);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .status {
+      margin: 0;
+      color: var(--sp-muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .status.error {
+      color: #b91c1c;
+    }
+
+    .updates {
+      display: grid;
+      gap: 12px;
+    }
+
+    .update {
+      border: 1px solid #dfe4ea;
+      border-left: 6px solid var(--sp-green);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+      display: grid;
+      gap: 8px;
+    }
+
+    .update time {
+      color: #4b5563;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .update h2 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.25;
+      color: #111827;
+    }
+
+    .update p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #374151;
+    }
+
+    .update .repeat {
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    @media (max-width: 719px) {
+      .wrap {
+        padding: 16px 14px 32px;
+      }
+
+      .hero h1 {
+        font-size: 24px;
+      }
+
+      .panel {
+        padding: 14px;
+      }
     }
   </style>
 </head>
@@ -259,279 +192,232 @@
     <header class="hero">
       <div class="brand">
         <img src="assets/strong-perimeter-logo-white.svg" alt="Strong Perimeter" />
-        <h1>Software Changelog Timeline</h1>
+        <h1>Sales Changelog</h1>
         <p>
-          Full change history pulled from repository commits. Use filters to review what changed,
-          when it changed, and how quickly updates are shipping.
+          Simple release notes for the sales team. Each update shows what was added or improved and how it
+          helps with quoting.
         </p>
       </div>
-      <div class="hero-actions">
+      <div class="actions">
         <a class="btn secondary" href="crew-policies.html">Crew Policies</a>
         <a class="btn" href="index.html">Back to Scope Generator</a>
       </div>
     </header>
 
-    <section class="card" aria-label="Changelog metrics">
-      <div class="summary-grid">
-        <article class="metric">
-          <div class="metric-label">Total Changes</div>
-          <div class="metric-value" id="metric-total">0</div>
-          <div class="metric-sub">All commits in history</div>
-        </article>
-        <article class="metric">
-          <div class="metric-label">Showing</div>
-          <div class="metric-value" id="metric-visible">0</div>
-          <div class="metric-sub">Filtered timeline entries</div>
-        </article>
-        <article class="metric">
-          <div class="metric-label">First Change</div>
-          <div class="metric-value" id="metric-first">-</div>
-          <div class="metric-sub">Earliest timeline point</div>
-        </article>
-        <article class="metric">
-          <div class="metric-label">Latest Change</div>
-          <div class="metric-value" id="metric-latest">-</div>
-          <div class="metric-sub">Most recent timeline point</div>
-        </article>
-      </div>
-    </section>
-
-    <section class="card" aria-label="Changelog filters">
-      <div class="filters">
-        <label class="field" for="search-input">
-          <span class="label">Search</span>
-          <input id="search-input" class="input" type="search" placeholder="Find changes by keyword..." />
-        </label>
-        <label class="field" for="month-filter">
-          <span class="label">Month</span>
-          <select id="month-filter" class="select">
-            <option value="">All months</option>
-          </select>
-        </label>
-        <label class="field" for="sort-order">
-          <span class="label">Order</span>
-          <select id="sort-order" class="select">
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-          </select>
-        </label>
-        <button class="btn" id="reset-filters" type="button">Reset Filters</button>
-      </div>
-      <p class="status" id="timeline-status">Loading timeline...</p>
-    </section>
-
-    <section class="card" aria-label="Changelog timeline">
-      <div class="timeline-wrap" id="timeline"></div>
+    <section class="panel" aria-label="Sales changelog timeline">
+      <p class="status" id="status">Loading latest updates...</p>
+      <div class="updates" id="updates"></div>
     </section>
   </div>
 
   <script>
-    (function(){
-      const HISTORY_FILE = 'changelog-history.tsv';
-      const searchInput = document.getElementById('search-input');
-      const monthFilter = document.getElementById('month-filter');
-      const sortOrder = document.getElementById('sort-order');
-      const resetFiltersBtn = document.getElementById('reset-filters');
-      const timelineEl = document.getElementById('timeline');
-      const statusEl = document.getElementById('timeline-status');
+    (function () {
+      const HISTORY_FILE = "changelog-history.tsv";
+      const statusEl = document.getElementById("status");
+      const updatesEl = document.getElementById("updates");
 
-      const totalEl = document.getElementById('metric-total');
-      const visibleEl = document.getElementById('metric-visible');
-      const firstEl = document.getElementById('metric-first');
-      const latestEl = document.getElementById('metric-latest');
+      const NOISE_PATTERNS = [
+        /^update$/i,
+        /^update index\.html$/i,
+        /^update \.ds_store$/i,
+        /^merge pull request/i,
+        /^merge branch/i,
+        /^undo\b/i
+      ];
 
-      let allEntries = [];
+      const RULES = [
+        {
+          id: "post-setting-method",
+          re: /post set|post setting|anchored|anchor plate|anchors/i,
+          title: "Choose How Posts Are Set",
+          description:
+            "On installs and replacements, sales can now choose dug-and-set in concrete or anchored to concrete. Anchored posts include one 4x4 anchor plate and four anchors per post."
+        },
+        {
+          id: "post-spacing-12",
+          re: /post spacing|12ft|12 ft/i,
+          title: "12 ft Post Spacing Added",
+          description: "Post spacing now includes a 12 ft option for section planning."
+        },
+        {
+          id: "wrought-custom-panels",
+          re: /custom panel|tmi|powder coat|custom build/i,
+          title: "Wrought Iron Custom Panel Workflow Added",
+          description:
+            "For wrought iron installs and replacements, sales can choose on-site custom build or order custom panels from TMI. Ordered panels assume $300 each and install like prefab panels."
+        },
+        {
+          id: "service-line-copy",
+          re: /copy button|copy buttons|button clicking/i,
+          title: "Service Line Copy Buttons Fixed",
+          description:
+            "Service line copy buttons now complete the copy action and show clear copied feedback."
+        },
+        {
+          id: "wood-no-wrought-gate",
+          re: /hide wrought iron gate|wrought iron gates on wood/i,
+          title: "Wood Sections No Longer Show Wrought-Iron Gate Fields",
+          description:
+            "Wood sections now hide wrought-iron-only gate details, so section setup stays clean and relevant."
+        },
+        {
+          id: "wood-rail-length",
+          re: /rail length|wood install\/replace/i,
+          title: "Wood Install and Replace Rail Length Added",
+          description:
+            "Wood install and replacement workflows now explicitly include rail length to improve material and labor clarity."
+        },
+        {
+          id: "existing-post-fasteners",
+          re: /use existing posts|include fasteners/i,
+          title: "Existing Post Scopes Include Fasteners",
+          description:
+            "Scopes that use existing posts now include required fasteners in materials."
+        },
+        {
+          id: "crew-notes",
+          re: /crew notes/i,
+          title: "Crew Notes Improved",
+          description:
+            "Crew notes were updated for clearer handoff from sales scope to field execution."
+        },
+        {
+          id: "sales-changelog",
+          re: /\bchangelog\b/i,
+          title: "New Sales Changelog Page",
+          description:
+            "Added this page so sales can quickly see new features in plain language."
+        }
+      ];
 
-      function parseHistory(raw){
-        return String(raw || '')
+      function parseHistory(raw) {
+        return String(raw || "")
           .split(/\r?\n/)
-          .map(line=>line.trim())
+          .map(function (line) { return line.trim(); })
           .filter(Boolean)
-          .map(line=>{
-            const [date, hash, ...parts] = line.split('\t');
+          .map(function (line) {
+            const parts = line.split("\t");
             return {
-              date: (date || '').trim(),
-              hash: (hash || '').trim(),
-              message: parts.join('\t').trim()
+              date: (parts[0] || "").trim(),
+              message: parts.slice(2).join("\t").trim()
             };
           })
-          .filter(item=>/^\d{4}-\d{2}-\d{2}$/.test(item.date) && item.hash && item.message);
+          .filter(function (item) {
+            return /^\d{4}-\d{2}-\d{2}$/.test(item.date) && item.message;
+          });
       }
 
-      function formatDate(value){
-        const dt = new Date(`${value}T00:00:00`);
-        if(Number.isNaN(dt.getTime())) return value;
-        return dt.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+      function cleanMessage(message) {
+        return String(message || "")
+          .replace(/^(feat|fix|chore|refactor|docs|style|perf|test)\s*:\s*/i, "")
+          .replace(/\s+/g, " ")
+          .trim();
       }
 
-      function formatMonth(value){
-        const dt = new Date(`${value}-01T00:00:00`);
-        if(Number.isNaN(dt.getTime())) return value;
-        return dt.toLocaleDateString(undefined, { month:'long', year:'numeric' });
+      function isNoise(message) {
+        return NOISE_PATTERNS.some(function (pattern) { return pattern.test(message); });
       }
 
-      function monthKey(date){
-        return String(date || '').slice(0,7);
+      function findRule(message) {
+        return RULES.find(function (rule) { return rule.re.test(message); }) || null;
       }
 
-      function updateMetrics(filtered){
-        totalEl.textContent = String(allEntries.length);
-        visibleEl.textContent = String(filtered.length);
+      function buildEntries(history) {
+        const grouped = new Map();
 
-        if(allEntries.length){
-          const newest = allEntries[0];
-          const oldest = allEntries[allEntries.length - 1];
-          latestEl.textContent = formatDate(newest.date);
-          firstEl.textContent = formatDate(oldest.date);
-        } else {
-          latestEl.textContent = '-';
-          firstEl.textContent = '-';
-        }
-      }
+        history.forEach(function (item) {
+          const cleaned = cleanMessage(item.message);
+          if (!cleaned || isNoise(cleaned)) return;
 
-      function applyFilters(){
-        const query = (searchInput.value || '').trim().toLowerCase();
-        const month = monthFilter.value || '';
-        const sort = sortOrder.value || 'newest';
+          const rule = findRule(cleaned);
+          if (!rule) return;
 
-        let next = allEntries.filter(item=>{
-          if(month && monthKey(item.date) !== month) return false;
-          if(!query) return true;
-          const haystack = `${item.hash} ${item.message} ${item.date}`.toLowerCase();
-          return haystack.includes(query);
+          const existing = grouped.get(rule.id);
+          if (!existing) {
+            grouped.set(rule.id, {
+              title: rule.title,
+              description: rule.description,
+              date: item.date,
+              hits: 1
+            });
+            return;
+          }
+
+          existing.hits += 1;
+          if (item.date > existing.date) existing.date = item.date;
         });
 
-        if(sort === 'oldest'){
-          next = next.slice().reverse();
-        }
-
-        return next;
-      }
-
-      function populateMonthFilter(entries){
-        const seen = new Set();
-        entries.forEach(item=>{
-          const key = monthKey(item.date);
-          if(key) seen.add(key);
-        });
-        const months = Array.from(seen).sort().reverse();
-
-        monthFilter.innerHTML = '';
-        const allOpt = document.createElement('option');
-        allOpt.value = '';
-        allOpt.textContent = 'All months';
-        monthFilter.appendChild(allOpt);
-
-        months.forEach(key=>{
-          const opt = document.createElement('option');
-          opt.value = key;
-          opt.textContent = formatMonth(key);
-          monthFilter.appendChild(opt);
+        return Array.from(grouped.values()).sort(function (a, b) {
+          return b.date.localeCompare(a.date);
         });
       }
 
-      function render(){
-        const filtered = applyFilters();
-        updateMetrics(filtered);
+      function formatDate(dateValue) {
+        const dt = new Date(dateValue + "T00:00:00");
+        if (Number.isNaN(dt.getTime())) return dateValue;
+        return dt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      }
 
-        if(!filtered.length){
-          timelineEl.innerHTML = '';
-          statusEl.textContent = 'No timeline entries match the current filters.';
-          statusEl.classList.remove('error');
+      function render(entries) {
+        updatesEl.innerHTML = "";
+
+        if (!entries.length) {
+          statusEl.classList.add("error");
+          statusEl.textContent = "No sales-facing updates were found in changelog-history.tsv.";
           return;
         }
 
-        statusEl.textContent = `${filtered.length} timeline entr${filtered.length === 1 ? 'y' : 'ies'} shown.`;
-        statusEl.classList.remove('error');
-
-        const grouped = new Map();
-        filtered.forEach(item=>{
-          const key = monthKey(item.date);
-          if(!grouped.has(key)) grouped.set(key, []);
-          grouped.get(key).push(item);
-        });
+        statusEl.classList.remove("error");
+        statusEl.textContent = entries.length + " update" + (entries.length === 1 ? "" : "s") + " available.";
 
         const frag = document.createDocumentFragment();
-        grouped.forEach((items, key)=>{
-          const groupEl = document.createElement('section');
-          groupEl.className = 'month-group';
+        entries.forEach(function (entry) {
+          const card = document.createElement("article");
+          card.className = "update";
 
-          const head = document.createElement('h2');
-          head.className = 'month-head';
-          const title = document.createElement('span');
-          title.textContent = formatMonth(key);
-          const count = document.createElement('span');
-          count.className = 'month-count';
-          count.textContent = `${items.length} change${items.length === 1 ? '' : 's'}`;
-          head.appendChild(title);
-          head.appendChild(count);
-          groupEl.appendChild(head);
+          const date = document.createElement("time");
+          date.dateTime = entry.date;
+          date.textContent = formatDate(entry.date);
 
-          items.forEach(item=>{
-            const entry = document.createElement('article');
-            entry.className = 'entry';
+          const title = document.createElement("h2");
+          title.textContent = entry.title;
 
-            const meta = document.createElement('div');
-            meta.className = 'entry-meta';
+          const description = document.createElement("p");
+          description.textContent = entry.description;
 
-            const time = document.createElement('time');
-            time.dateTime = item.date;
-            time.textContent = formatDate(item.date);
+          card.appendChild(date);
+          card.appendChild(title);
+          card.appendChild(description);
 
-            const hash = document.createElement('span');
-            hash.className = 'hash';
-            hash.textContent = `#${item.hash}`;
+          if (entry.hits > 1) {
+            const repeat = document.createElement("p");
+            repeat.className = "repeat";
+            repeat.textContent = "Refined " + entry.hits + " times.";
+            card.appendChild(repeat);
+          }
 
-            meta.appendChild(time);
-            meta.appendChild(hash);
-
-            const msg = document.createElement('p');
-            msg.className = 'entry-message';
-            msg.textContent = item.message;
-
-            entry.appendChild(meta);
-            entry.appendChild(msg);
-            groupEl.appendChild(entry);
-          });
-
-          frag.appendChild(groupEl);
+          frag.appendChild(card);
         });
 
-        timelineEl.innerHTML = '';
-        timelineEl.appendChild(frag);
+        updatesEl.appendChild(frag);
       }
 
-      async function load(){
-        try{
-          const response = await fetch(`${HISTORY_FILE}?v=${Date.now()}`, { cache: 'no-store' });
-          if(!response.ok){
-            throw new Error(`HTTP ${response.status}`);
-          }
+      async function load() {
+        try {
+          const response = await fetch(HISTORY_FILE + "?v=" + Date.now(), { cache: "no-store" });
+          if (!response.ok) throw new Error("HTTP " + response.status);
+
           const raw = await response.text();
-          allEntries = parseHistory(raw);
-          if(!allEntries.length){
-            statusEl.textContent = 'No changelog history entries were found in changelog-history.tsv.';
-            statusEl.classList.add('error');
-            return;
-          }
-          populateMonthFilter(allEntries);
-          render();
-        }catch(err){
-          console.error('Failed to load changelog history', err);
-          statusEl.textContent = 'Unable to load changelog-history.tsv. Regenerate it with: git log --date=short --pretty=format:"%ad\t%h\t%s" > changelog-history.tsv';
-          statusEl.classList.add('error');
+          const history = parseHistory(raw);
+          const entries = buildEntries(history);
+          render(entries);
+        } catch (err) {
+          console.error("Failed to load changelog", err);
+          statusEl.classList.add("error");
+          statusEl.textContent =
+            "Unable to load changelog-history.tsv. Regenerate it with: git log --date=short --pretty=format:\"%ad\\t%h\\t%s\" > changelog-history.tsv";
         }
       }
-
-      searchInput.addEventListener('input', render);
-      monthFilter.addEventListener('change', render);
-      sortOrder.addEventListener('change', render);
-      resetFiltersBtn.addEventListener('click', ()=>{
-        searchInput.value = '';
-        monthFilter.value = '';
-        sortOrder.value = 'newest';
-        render();
-      });
 
       load();
     })();
