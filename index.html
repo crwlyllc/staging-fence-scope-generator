@@ -13754,11 +13754,21 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function handleServiceListClick(event){
-    const btn = event.target.closest('.sp-copy-service');
-    if(!btn){
+    const rawTarget = event ? event.target : null;
+    const targetEl = rawTarget && rawTarget.nodeType === 1
+      ? rawTarget
+      : (rawTarget && rawTarget.parentElement ? rawTarget.parentElement : null);
+    const btn = targetEl ? targetEl.closest('.sp-copy-service') : null;
+    if(!btn || btn.disabled){
       return;
     }
-    const text = btn.dataset && typeof btn.dataset.text !== 'undefined' ? btn.dataset.text : '';
+    const sourceField = btn.closest('.sp-copy-row')?.querySelector('.sp-input, .sp-textarea');
+    const fieldText = sourceField && typeof sourceField.value === 'string' ? sourceField.value : '';
+    const text = fieldText || (btn.dataset && typeof btn.dataset.text !== 'undefined' ? btn.dataset.text : '');
+    if(!text){
+      flashButton(btn, 'Nothing to copy', { revertMs: 1200, disable: false });
+      return;
+    }
     copyTextToClipboard(text)
       .then(()=>flashButton(btn))
       .catch(()=>flashButton(btn, 'Copy failed', { revertMs: 1600, disable: false }));
