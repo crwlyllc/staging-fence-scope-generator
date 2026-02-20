@@ -227,6 +227,20 @@
 
       const RULES = [
         {
+          id: "hcp-estimate-id-payload",
+          re: /estimate id when pushing notes & line items|estimate id/i,
+          title: "Estimate ID Sent in HCP Payloads",
+          description:
+            "Estimate lookup now stores the Housecall Pro estimate id and includes it when sending both notes and service line items."
+        },
+        {
+          id: "service-line-push-confirmation",
+          re: /confirm service line item push|push service line items/i,
+          title: "Service Line Push Requires Confirmation",
+          description:
+            "Before sending service line items to Housecall Pro, the app now asks for confirmation with estimate, option, and item count."
+        },
+        {
           id: "post-setting-method",
           re: /post set|post setting|anchored|anchor plate|anchors/i,
           title: "Choose How Posts Are Set",
