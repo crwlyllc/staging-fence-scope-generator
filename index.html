@@ -1540,6 +1540,11 @@ document.addEventListener('DOMContentLoaded', function(){
     minutesPerMile: 1,
   };
   const ROUTE_CACHE_TTL_MS = 5 * 60 * 1000;
+  const ROUTE_DEPARTURE_LEAD_MS = 10 * 60 * 1000;
+  const ROUTE_TARGET_TIME_ZONE = 'America/Chicago';
+  const ROUTE_TARGET_ARRIVAL_HOUR = 8;
+  const ROUTE_TARGET_ARRIVAL_MINUTE = 0;
+  const ROUTE_REFINE_MAX_PASSES = 1;
 
   const state = { sections: [], customerType: 'Residential' };
   const mapState = {
@@ -2304,6 +2309,108 @@ document.addEventListener('DOMContentLoaded', function(){
     return mapState.routesClassPromise;
   }
 
+  const WEEKDAY_BY_SHORT_NAME = {
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6,
+  };
+
+  function getZonedDateParts(date, timeZone){
+    try{
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+      const bag = {};
+      formatter.formatToParts(date).forEach(part=>{
+        if(part.type !== 'literal'){
+          bag[part.type] = part.value;
+        }
+      });
+      const weekdayShort = String(bag.weekday || '').slice(0, 3).toLowerCase();
+      return {
+        year: Number(bag.year),
+        month: Number(bag.month),
+        day: Number(bag.day),
+        hour: Number(bag.hour),
+        minute: Number(bag.minute),
+        second: Number(bag.second),
+        weekday: WEEKDAY_BY_SHORT_NAME[weekdayShort],
+      };
+    }catch(_err){
+      return null;
+    }
+  }
+
+  function zonedLocalToUtcDate(parts, timeZone){
+    let guess = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour || 0, parts.minute || 0, parts.second || 0));
+    for(let i = 0; i < 4; i += 1){
+      const observed = getZonedDateParts(guess, timeZone);
+      if(!observed){
+        break;
+      }
+      const desiredAsUtcMs = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour || 0, parts.minute || 0, parts.second || 0);
+      const observedAsUtcMs = Date.UTC(observed.year, observed.month - 1, observed.day, observed.hour || 0, observed.minute || 0, observed.second || 0);
+      const diff = desiredAsUtcMs - observedAsUtcMs;
+      if(Math.abs(diff) < 1000){
+        break;
+      }
+      guess = new Date(guess.getTime() + diff);
+    }
+    return guess;
+  }
+
+  function getNextTexasWeekdayArrivalDate(){
+    const now = new Date();
+    const nowParts = getZonedDateParts(now, ROUTE_TARGET_TIME_ZONE);
+    if(!nowParts || !isFinite(nowParts.year) || !isFinite(nowParts.month) || !isFinite(nowParts.day)){
+      return new Date(Date.now() + ROUTE_DEPARTURE_LEAD_MS);
+    }
+
+    // "Next weekday" means the next Mon-Fri after today in Texas time.
+    const startUtcNoon = Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day, 12, 0, 0);
+    for(let offset = 1; offset <= 14; offset += 1){
+      const probe = new Date(startUtcNoon + (offset * 24 * 60 * 60 * 1000));
+      const probeParts = getZonedDateParts(probe, ROUTE_TARGET_TIME_ZONE);
+      if(!probeParts) continue;
+      if(probeParts.weekday < 1 || probeParts.weekday > 5) continue;
+      return zonedLocalToUtcDate({
+        year: probeParts.year,
+        month: probeParts.month,
+        day: probeParts.day,
+        hour: ROUTE_TARGET_ARRIVAL_HOUR,
+        minute: ROUTE_TARGET_ARRIVAL_MINUTE,
+        second: 0,
+      }, ROUTE_TARGET_TIME_ZONE);
+    }
+
+    return new Date(Date.now() + ROUTE_DEPARTURE_LEAD_MS);
+  }
+
+  function getFirstRouteMetrics(response){
+    const route = response && Array.isArray(response.routes) ? response.routes[0] : null;
+    if(!route){
+      return null;
+    }
+    const distanceMeters = Number(route.distanceMeters);
+    const durationMillis = Number(route.durationMillis);
+    if(!isFinite(distanceMeters) || !isFinite(durationMillis) || distanceMeters < 0 || durationMillis < 0){
+      return null;
+    }
+    return { distanceMeters, durationMillis };
+  }
+
   function isRoutesPermissionError(message){
     const text = String(message || '').toLowerCase();
     if(!text){
@@ -2332,41 +2439,83 @@ document.addEventListener('DOMContentLoaded', function(){
       destination: destinationAddress,
       travelMode: 'DRIVING',
       routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
-      departureTime: new Date(),
       fields: ['distanceMeters', 'durationMillis'],
     };
 
+    let response = null;
+    const targetArrival = getNextTexasWeekdayArrivalDate();
+    let departureTime = new Date(targetArrival.getTime() - (60 * 60 * 1000));
+    if(!isFinite(departureTime.getTime()) || departureTime.getTime() <= Date.now()){
+      departureTime = new Date(Date.now() + ROUTE_DEPARTURE_LEAD_MS);
+    }
+
     try{
-      const response = await Route.computeRoutes(request);
-      const route = response && Array.isArray(response.routes) ? response.routes[0] : null;
-      if(!route){
+      const firstRequest = { ...request, departureTime };
+      response = await Route.computeRoutes(firstRequest);
+
+      let metrics = getFirstRouteMetrics(response);
+      if(metrics){
+        for(let pass = 0; pass < ROUTE_REFINE_MAX_PASSES; pass += 1){
+          const refinedDeparture = new Date(targetArrival.getTime() - metrics.durationMillis);
+          if(!isFinite(refinedDeparture.getTime()) || refinedDeparture.getTime() <= Date.now()){
+            break;
+          }
+          if(Math.abs(refinedDeparture.getTime() - departureTime.getTime()) < (5 * 60 * 1000)){
+            break;
+          }
+          departureTime = refinedDeparture;
+          const refineRequest = { ...request, departureTime };
+          const refinedResponse = await Route.computeRoutes(refineRequest);
+          const refinedMetrics = getFirstRouteMetrics(refinedResponse);
+          if(!refinedMetrics){
+            break;
+          }
+          response = refinedResponse;
+          metrics = refinedMetrics;
+        }
+      }
+    }catch(err){
+      const message = err && err.message ? err.message : String(err || '');
+      const lowerMessage = message.toLowerCase();
+
+      // Some environments reject timestamps; retry without explicit departureTime.
+      if(lowerMessage.includes('timestamp must be set to a future time')){
+        try{
+          const retryRequest = {
+            ...request,
+            routingPreference: 'TRAFFIC_AWARE',
+          };
+          response = await Route.computeRoutes(retryRequest);
+        }catch(retryErr){
+          const retryMessage = retryErr && retryErr.message ? retryErr.message : String(retryErr || '');
+          console.warn('Routes library computeRoutes failed', retryMessage);
+          if(isRoutesPermissionError(retryMessage)){
+            mapState.routesApiUnsupported = true;
+            return { included: false, reason: 'route_unavailable' };
+          }
+          return { included: false, reason: 'route' };
+        }
+      }else{
+        console.warn('Routes library computeRoutes failed', message);
+        if(isRoutesPermissionError(message)){
+          mapState.routesApiUnsupported = true;
+          return { included: false, reason: 'route_unavailable' };
+        }
         return { included: false, reason: 'route' };
       }
-      const distanceMeters = Number(
-        route && isFinite(route.distanceMeters)
-          ? route.distanceMeters
-          : 0
-      );
-      const durationMillis = Number(
-        route && isFinite(route.durationMillis)
-          ? route.durationMillis
-          : 0
-      );
-      if(!isFinite(distanceMeters) || !isFinite(durationMillis) || distanceMeters < 0 || durationMillis < 0){
+    }
+
+    try{
+      const metrics = getFirstRouteMetrics(response);
+      if(!metrics){
         return { included: false, reason: 'route' };
       }
       return {
         included: true,
-        milesOneWay: distanceMeters / 1609.34,
-        hoursOneWay: durationMillis / 3600000,
+        milesOneWay: metrics.distanceMeters / 1609.34,
+        hoursOneWay: metrics.durationMillis / 3600000,
       };
-    }catch(err){
-      const message = err && err.message ? err.message : String(err || '');
-      console.warn('Routes library computeRoutes failed', message);
-      if(isRoutesPermissionError(message)){
-        mapState.routesApiUnsupported = true;
-        return { included: false, reason: 'route_unavailable' };
-      }
+    }catch(_err){
       return { included: false, reason: 'route' };
     }
   }
@@ -12314,9 +12463,9 @@ document.addEventListener('DOMContentLoaded', function(){
       const roundedOneWayTravelMinutes = Math.max(0, Math.round(oneWayTravelMinutes / 5) * 5);
       const departAtMinutes = arrivalAtEightMinutes - roundedOneWayTravelMinutes;
       const departAtLabel = formatClockMinutes(departAtMinutes);
-      sub.push(`Depart at ${departAtLabel} from storage unit to arrive by 8:00 AM.`);
+      sub.push(`Depart at ${departAtLabel} from storage unit to arrive by 8:00 AM CST.`);
     }else{
-      sub.push('Depart at: set manually to arrive by 8:00 AM.');
+      sub.push('Depart at: set manually to arrive by 8:00 AM CST.');
     }
     sub.push('');
     sub.push('PROCESS');
