@@ -11740,8 +11740,10 @@ document.addEventListener('DOMContentLoaded', function(){
     helperHours += paintingHours + primePaintReturnHours;
     welderHours += sprayBaseHours + sprayFinishHours;
 
+    let setupTeardownHoursPerPerson = 0;
     if(JOB_SETUP_TEARDOWN_HOURS > 0){
       const setupTeardownManHours = JOB_SETUP_TEARDOWN_HOURS * ONSITE_CREW_SIZE;
+      setupTeardownHoursPerPerson = JOB_SETUP_TEARDOWN_HOURS;
       manHours += setupTeardownManHours;
       helperHours += setupTeardownManHours;
     }
@@ -13122,7 +13124,8 @@ document.addEventListener('DOMContentLoaded', function(){
       return Math.max(max, getPersonAvailableAt(name));
     }, 0);
     if(isFinite(scheduledOnsiteHours) && scheduledOnsiteHours > 0){
-      estimatedOnsiteHours = scheduledOnsiteHours;
+      // Setup/teardown is static time and should never be overlapped with scoped work.
+      estimatedOnsiteHours = scheduledOnsiteHours + setupTeardownHoursPerPerson;
       estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
     }
     if(crewOnsiteLineIndex >= 0){
