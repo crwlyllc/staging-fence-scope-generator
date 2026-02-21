@@ -1537,7 +1537,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const TRAVEL_SETTINGS = {
     dieselPrice: 3,
     mpg: 13,
-    minutesPerMile: 1,
   };
 
   const state = { sections: [], customerType: 'Residential' };
@@ -1546,11 +1545,10 @@ document.addEventListener('DOMContentLoaded', function(){
     drawingManager: null,
     polylines: [],
     geocoder: null,
+    directionsService: null,
     autocomplete: null,
     marker: null,
     addressLocation: null,
-    baseLocation: null,
-    baseLocationPromise: null,
     maxZoomService: null,
     nextPolylineId: 1,
     pendingAddress: '',
@@ -2177,43 +2175,65 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
-  async function getBaseLocation(){
-    if(mapState.baseLocation){
-      return mapState.baseLocation;
-    }
-    if(mapState.baseLocationPromise){
-      return mapState.baseLocationPromise;
-    }
-    mapState.baseLocationPromise = geocodeAddress(HQ_ADDRESS).then(loc=>{
-      mapState.baseLocation = loc;
-      mapState.baseLocationPromise = null;
-      return loc;
-    });
-    return mapState.baseLocationPromise;
-  }
-
   function addressesMatch(a, b){
     return normalizeAddressText(a).toLowerCase() === normalizeAddressText(b).toLowerCase();
   }
 
-  async function resolveJobLocation(jobAddress){
-    const normalized = normalizeAddressText(jobAddress);
-    if(!normalized){
+  function getDirectionsService(){
+    if(mapState.directionsService){
+      return mapState.directionsService;
+    }
+    if(typeof google === 'undefined' || !google.maps || typeof google.maps.DirectionsService !== 'function'){
       return null;
     }
-    if(mapState.addressLocation && addressesMatch(mapState.pendingAddress, normalized)){
-      return mapState.addressLocation;
-    }
-    return geocodeAddress(normalized);
+    mapState.directionsService = new google.maps.DirectionsService();
+    return mapState.directionsService;
   }
 
-  function milesBetween(locA, locB){
-    if(typeof google === 'undefined' || !google.maps || !google.maps.geometry || !google.maps.geometry.spherical){
-      return 0;
-    }
-    if(!locA || !locB) return 0;
-    const meters = google.maps.geometry.spherical.computeDistanceBetween(locA, locB);
-    return meters / 1609.34;
+  async function getDrivingRouteInfo(originAddress, destinationAddress){
+    return new Promise(resolve => {
+      const service = getDirectionsService();
+      if(!service){
+        resolve({ included: false, reason: 'route' });
+        return;
+      }
+      const request = {
+        origin: originAddress,
+        destination: destinationAddress,
+        travelMode: (google.maps && google.maps.TravelMode && google.maps.TravelMode.DRIVING) || 'DRIVING',
+        drivingOptions: {
+          departureTime: new Date(),
+        }
+      };
+      try{
+        service.route(request, (response, status)=>{
+          const statusOk = status === 'OK'
+            || (google.maps && google.maps.DirectionsStatus && status === google.maps.DirectionsStatus.OK);
+          if(!statusOk || !response || !response.routes || !response.routes[0] || !response.routes[0].legs || !response.routes[0].legs[0]){
+            resolve({ included: false, reason: 'route' });
+            return;
+          }
+          const leg = response.routes[0].legs[0];
+          const distanceMeters = leg.distance && isFinite(leg.distance.value) ? Number(leg.distance.value) : 0;
+          const durationSeconds = leg.duration_in_traffic && isFinite(leg.duration_in_traffic.value)
+            ? Number(leg.duration_in_traffic.value)
+            : (leg.duration && isFinite(leg.duration.value) ? Number(leg.duration.value) : 0);
+          if(distanceMeters <= 0 || durationSeconds <= 0){
+            resolve({ included: false, reason: 'route' });
+            return;
+          }
+          const milesOneWay = distanceMeters / 1609.34;
+          const hoursOneWay = durationSeconds / 3600;
+          resolve({
+            included: true,
+            milesOneWay,
+            hoursOneWay,
+          });
+        });
+      }catch(err){
+        resolve({ included: false, reason: 'route' });
+      }
+    });
   }
 
   async function computeTravelDayInfo(jobAddress){
@@ -2225,26 +2245,17 @@ document.addEventListener('DOMContentLoaded', function(){
       return result;
     }
 
-    const [baseLoc, jobLoc] = await Promise.all([
-      getBaseLocation(),
-      resolveJobLocation(normalizedAddress)
-    ]);
-
-    if(!baseLoc || !jobLoc){
-      result.reason = 'geocode';
+    const routeInfo = await getDrivingRouteInfo(HQ_ADDRESS, normalizedAddress);
+    if(!routeInfo.included){
+      result.reason = routeInfo.reason || 'route';
       return result;
     }
 
-    const milesOneWay = milesBetween(baseLoc, jobLoc);
-    if(!milesOneWay || !isFinite(milesOneWay)){
-      result.reason = 'distance';
-      return result;
-    }
-
+    const milesOneWay = routeInfo.milesOneWay;
     const roundTripMiles = milesOneWay * 2;
-    const travelMinutesPerDay = roundTripMiles * TRAVEL_SETTINGS.minutesPerMile;
+    const travelHoursPerDay = routeInfo.hoursOneWay * 2;
     result.roundTripMiles = roundTripMiles;
-    result.hoursPerDay = travelMinutesPerDay / 60;
+    result.hoursPerDay = travelHoursPerDay;
     result.included = true;
     return result;
   }
@@ -2256,6 +2267,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!travelInfo.included){
       if(travelInfo.reason === 'address'){
         result.breakdown.push('- Travel: Address required to calculate fuel and drive time.');
+      }else if(travelInfo.reason === 'route'){
+        result.breakdown.push('- Travel: Unable to calculate Google route ETA; travel cost not included.');
       }else if(travelInfo.reason === 'geocode'){
         result.breakdown.push('- Travel: Unable to locate job address; travel cost not included.');
       }else if(travelInfo.reason === 'distance'){
