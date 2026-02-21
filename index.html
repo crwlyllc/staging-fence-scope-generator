@@ -12463,9 +12463,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const roundedOneWayTravelMinutes = Math.max(0, Math.round(oneWayTravelMinutes / 5) * 5);
       const departAtMinutes = arrivalAtEightMinutes - roundedOneWayTravelMinutes;
       const departAtLabel = formatClockMinutes(departAtMinutes);
-      sub.push(`Depart at ${departAtLabel} from storage unit to arrive by 8:00 AM CST.`);
+      const compactDepartLabel = departAtLabel
+        .replace(' AM', 'am')
+        .replace(' PM', 'pm');
+      sub.push(`Depart at ${compactDepartLabel}`);
     }else{
-      sub.push('Depart at: set manually to arrive by 8:00 AM CST.');
+      sub.push('Depart at: set manually');
     }
     sub.push('');
     sub.push('PROCESS');
