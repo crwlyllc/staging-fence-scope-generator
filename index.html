@@ -1539,6 +1539,7 @@ document.addEventListener('DOMContentLoaded', function(){
     mpg: 13,
     minutesPerMile: 1,
   };
+  const ROUTE_CACHE_TTL_MS = 5 * 60 * 1000;
 
   const state = { sections: [], customerType: 'Residential' };
   const mapState = {
@@ -1546,8 +1547,10 @@ document.addEventListener('DOMContentLoaded', function(){
     drawingManager: null,
     polylines: [],
     geocoder: null,
-    directionsService: null,
-    directionsLegacyUnsupported: false,
+    routesApiUnsupported: false,
+    routeInfoCache: null,
+    routeInfoPromise: null,
+    mapsApiKey: '',
     autocomplete: null,
     marker: null,
     addressLocation: null,
@@ -2282,75 +2285,155 @@ document.addEventListener('DOMContentLoaded', function(){
     };
   }
 
-  function getDirectionsService(){
-    if(mapState.directionsLegacyUnsupported){
-      return null;
+  function getMapsApiKey(){
+    if(mapState.mapsApiKey){
+      return mapState.mapsApiKey;
     }
-    if(mapState.directionsService){
-      return mapState.directionsService;
+    const script = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+    if(!script || !script.src){
+      return '';
     }
-    if(typeof google === 'undefined' || !google.maps || typeof google.maps.DirectionsService !== 'function'){
-      return null;
+    try{
+      const url = new URL(script.src, window.location.href);
+      mapState.mapsApiKey = (url.searchParams.get('key') || '').trim();
+      return mapState.mapsApiKey;
+    }catch(_err){
+      return '';
     }
-    mapState.directionsService = new google.maps.DirectionsService();
-    return mapState.directionsService;
+  }
+
+  function parseRouteDurationSeconds(value){
+    if(typeof value === 'number' && isFinite(value)){
+      return value;
+    }
+    const text = String(value || '').trim();
+    if(!text){
+      return 0;
+    }
+    const match = text.match(/^(-?\d+(?:\.\d+)?)s$/i);
+    if(!match){
+      return 0;
+    }
+    return Number(match[1]);
+  }
+
+  function isRoutesPermissionError(statusCode, bodyText){
+    if(statusCode === 401 || statusCode === 403){
+      return true;
+    }
+    const text = String(bodyText || '').toLowerCase();
+    if(!text){
+      return false;
+    }
+    return text.includes('permission_denied')
+      || text.includes('api has not been used')
+      || text.includes('api not enabled')
+      || text.includes('request denied')
+      || text.includes('method doesn\'t allow unregistered callers');
+  }
+
+  async function requestDrivingRouteInfo(originAddress, destinationAddress){
+    if(mapState.routesApiUnsupported){
+      return { included: false, reason: 'route_unavailable' };
+    }
+    const apiKey = getMapsApiKey();
+    if(!apiKey){
+      return { included: false, reason: 'route_unavailable' };
+    }
+
+    const payload = {
+      origin: { address: originAddress },
+      destination: { address: destinationAddress },
+      travelMode: 'DRIVE',
+      routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
+      computeAlternativeRoutes: false,
+      languageCode: 'en-US',
+      units: 'IMPERIAL',
+    };
+
+    try{
+      const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.legs.distanceMeters,routes.legs.duration'
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if(!response.ok){
+        const text = await response.text();
+        if(isRoutesPermissionError(response.status, text)){
+          mapState.routesApiUnsupported = true;
+          return { included: false, reason: 'route_unavailable' };
+        }
+        return { included: false, reason: 'route' };
+      }
+
+      const data = await response.json();
+      const route = data && Array.isArray(data.routes) ? data.routes[0] : null;
+      const leg = route && Array.isArray(route.legs) ? route.legs[0] : null;
+      const distanceMeters = Number(
+        route && isFinite(route.distanceMeters)
+          ? route.distanceMeters
+          : (leg && isFinite(leg.distanceMeters) ? leg.distanceMeters : 0)
+      );
+      const durationSeconds = parseRouteDurationSeconds(
+        (route && route.duration)
+          || (leg && leg.duration)
+          || ''
+      );
+      if(distanceMeters < 0 || durationSeconds < 0){
+        return { included: false, reason: 'route' };
+      }
+      return {
+        included: true,
+        milesOneWay: distanceMeters / 1609.34,
+        hoursOneWay: durationSeconds / 3600,
+      };
+    }catch(_err){
+      return { included: false, reason: 'route_unavailable' };
+    }
   }
 
   async function getDrivingRouteInfo(originAddress, destinationAddress){
-    return new Promise(resolve => {
-      if(mapState.directionsLegacyUnsupported){
-        resolve({ included: false, reason: 'route_unavailable' });
-        return;
-      }
-      const service = getDirectionsService();
-      if(!service){
-        resolve({ included: false, reason: 'route_unavailable' });
-        return;
-      }
-      const request = {
-        origin: originAddress,
-        destination: destinationAddress,
-        travelMode: (google.maps && google.maps.TravelMode && google.maps.TravelMode.DRIVING) || 'DRIVING',
-        drivingOptions: {
-          departureTime: new Date(),
+    const origin = normalizeAddressText(originAddress).toLowerCase();
+    const destination = normalizeAddressText(destinationAddress).toLowerCase();
+    const cacheKey = `${origin}=>${destination}`;
+    const now = Date.now();
+
+    if(mapState.routeInfoCache
+      && mapState.routeInfoCache.key === cacheKey
+      && (now - mapState.routeInfoCache.timestamp) <= ROUTE_CACHE_TTL_MS){
+      return mapState.routeInfoCache.value;
+    }
+
+    if(mapState.routeInfoPromise && mapState.routeInfoPromise.key === cacheKey){
+      return mapState.routeInfoPromise.promise;
+    }
+
+    const promise = requestDrivingRouteInfo(originAddress, destinationAddress)
+      .then(result => {
+        if(result && (result.included || result.reason === 'route_unavailable')){
+          mapState.routeInfoCache = {
+            key: cacheKey,
+            timestamp: Date.now(),
+            value: result,
+          };
+        }else{
+          mapState.routeInfoCache = null;
         }
-      };
-      try{
-        service.route(request, (response, status)=>{
-          const statusText = String(status || '');
-          if(statusText.includes('REQUEST_DENIED')){
-            mapState.directionsLegacyUnsupported = true;
-            mapState.directionsService = null;
-            resolve({ included: false, reason: 'route_unavailable' });
-            return;
-          }
-          const statusOk = status === 'OK'
-            || (google.maps && google.maps.DirectionsStatus && status === google.maps.DirectionsStatus.OK);
-          if(!statusOk || !response || !response.routes || !response.routes[0] || !response.routes[0].legs || !response.routes[0].legs[0]){
-            resolve({ included: false, reason: 'route' });
-            return;
-          }
-          const leg = response.routes[0].legs[0];
-          const distanceMeters = leg.distance && isFinite(leg.distance.value) ? Number(leg.distance.value) : 0;
-          const durationSeconds = leg.duration_in_traffic && isFinite(leg.duration_in_traffic.value)
-            ? Number(leg.duration_in_traffic.value)
-            : (leg.duration && isFinite(leg.duration.value) ? Number(leg.duration.value) : 0);
-          if(distanceMeters < 0 || durationSeconds < 0){
-            resolve({ included: false, reason: 'route' });
-            return;
-          }
-          const milesOneWay = distanceMeters / 1609.34;
-          const hoursOneWay = durationSeconds / 3600;
-          resolve({
-            included: true,
-            milesOneWay,
-            hoursOneWay,
-          });
-        });
-      }catch(err){
-        resolve({ included: false, reason: 'route_unavailable' });
-      }
-    });
+        return result;
+      })
+      .finally(()=>{
+        if(mapState.routeInfoPromise && mapState.routeInfoPromise.key === cacheKey){
+          mapState.routeInfoPromise = null;
+        }
+      });
+
+    mapState.routeInfoPromise = { key: cacheKey, promise };
+    return promise;
   }
 
   async function computeTravelDayInfo(jobAddress){
@@ -2389,9 +2472,9 @@ document.addEventListener('DOMContentLoaded', function(){
       if(travelInfo.reason === 'address'){
         result.breakdown.push('- Travel: Address required to calculate fuel and drive time.');
       }else if(travelInfo.reason === 'route_unavailable'){
-        result.breakdown.push('- Travel: Google route ETA is unavailable for this API key/project; travel cost not included.');
+        result.breakdown.push('- Travel: Routes API ETA is unavailable for this API key/project; travel cost not included.');
       }else if(travelInfo.reason === 'route'){
-        result.breakdown.push('- Travel: Unable to calculate Google route ETA; travel cost not included.');
+        result.breakdown.push('- Travel: Unable to calculate route ETA; travel cost not included.');
       }else if(travelInfo.reason === 'geocode'){
         result.breakdown.push('- Travel: Unable to locate job address; travel cost not included.');
       }else if(travelInfo.reason === 'distance'){
