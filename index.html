@@ -1550,7 +1550,7 @@ document.addEventListener('DOMContentLoaded', function(){
     routesApiUnsupported: false,
     routeInfoCache: null,
     routeInfoPromise: null,
-    mapsApiKey: '',
+    routesClassPromise: null,
     autocomplete: null,
     marker: null,
     addressLocation: null,
@@ -2285,115 +2285,89 @@ document.addEventListener('DOMContentLoaded', function(){
     };
   }
 
-  function getMapsApiKey(){
-    if(mapState.mapsApiKey){
-      return mapState.mapsApiKey;
+  async function getRoutesClass(){
+    if(mapState.routesClassPromise){
+      return mapState.routesClassPromise;
     }
-    const script = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
-    if(!script || !script.src){
-      return '';
+    if(typeof google === 'undefined' || !google.maps || typeof google.maps.importLibrary !== 'function'){
+      return null;
     }
-    try{
-      const url = new URL(script.src, window.location.href);
-      mapState.mapsApiKey = (url.searchParams.get('key') || '').trim();
-      return mapState.mapsApiKey;
-    }catch(_err){
-      return '';
-    }
+    mapState.routesClassPromise = google.maps.importLibrary('routes')
+      .then(library => {
+        const Route = library && library.Route ? library.Route : null;
+        return Route && typeof Route.computeRoutes === 'function' ? Route : null;
+      })
+      .catch(()=>{
+        mapState.routesClassPromise = null;
+        return null;
+      });
+    return mapState.routesClassPromise;
   }
 
-  function parseRouteDurationSeconds(value){
-    if(typeof value === 'number' && isFinite(value)){
-      return value;
-    }
-    const text = String(value || '').trim();
-    if(!text){
-      return 0;
-    }
-    const match = text.match(/^(-?\d+(?:\.\d+)?)s$/i);
-    if(!match){
-      return 0;
-    }
-    return Number(match[1]);
-  }
-
-  function isRoutesPermissionError(statusCode, bodyText){
-    if(statusCode === 401 || statusCode === 403){
-      return true;
-    }
-    const text = String(bodyText || '').toLowerCase();
+  function isRoutesPermissionError(message){
+    const text = String(message || '').toLowerCase();
     if(!text){
       return false;
     }
     return text.includes('permission_denied')
-      || text.includes('api has not been used')
-      || text.includes('api not enabled')
+      || text.includes('not enabled')
       || text.includes('request denied')
-      || text.includes('method doesn\'t allow unregistered callers');
+      || text.includes('not authorized')
+      || text.includes('apiprojectmaperror')
+      || text.includes('apinotactivatedmaperror')
+      || text.includes('legacyapinotactivatedmaperror');
   }
 
   async function requestDrivingRouteInfo(originAddress, destinationAddress){
     if(mapState.routesApiUnsupported){
       return { included: false, reason: 'route_unavailable' };
     }
-    const apiKey = getMapsApiKey();
-    if(!apiKey){
+    const Route = await getRoutesClass();
+    if(!Route){
       return { included: false, reason: 'route_unavailable' };
     }
 
-    const payload = {
-      origin: { address: originAddress },
-      destination: { address: destinationAddress },
-      travelMode: 'DRIVE',
+    const request = {
+      origin: originAddress,
+      destination: destinationAddress,
+      travelMode: 'DRIVING',
       routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
-      computeAlternativeRoutes: false,
-      languageCode: 'en-US',
-      units: 'IMPERIAL',
+      departureTime: new Date(),
+      fields: ['distanceMeters', 'durationMillis'],
     };
 
     try{
-      const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.legs.distanceMeters,routes.legs.duration'
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if(!response.ok){
-        const text = await response.text();
-        if(isRoutesPermissionError(response.status, text)){
-          mapState.routesApiUnsupported = true;
-          return { included: false, reason: 'route_unavailable' };
-        }
+      const response = await Route.computeRoutes(request);
+      const route = response && Array.isArray(response.routes) ? response.routes[0] : null;
+      if(!route){
         return { included: false, reason: 'route' };
       }
-
-      const data = await response.json();
-      const route = data && Array.isArray(data.routes) ? data.routes[0] : null;
-      const leg = route && Array.isArray(route.legs) ? route.legs[0] : null;
       const distanceMeters = Number(
         route && isFinite(route.distanceMeters)
           ? route.distanceMeters
-          : (leg && isFinite(leg.distanceMeters) ? leg.distanceMeters : 0)
+          : 0
       );
-      const durationSeconds = parseRouteDurationSeconds(
-        (route && route.duration)
-          || (leg && leg.duration)
-          || ''
+      const durationMillis = Number(
+        route && isFinite(route.durationMillis)
+          ? route.durationMillis
+          : 0
       );
-      if(distanceMeters < 0 || durationSeconds < 0){
+      if(!isFinite(distanceMeters) || !isFinite(durationMillis) || distanceMeters < 0 || durationMillis < 0){
         return { included: false, reason: 'route' };
       }
       return {
         included: true,
         milesOneWay: distanceMeters / 1609.34,
-        hoursOneWay: durationSeconds / 3600,
+        hoursOneWay: durationMillis / 3600000,
       };
-    }catch(_err){
-      return { included: false, reason: 'route_unavailable' };
+    }catch(err){
+      const message = err && err.message ? err.message : String(err || '');
+      console.warn('Routes library computeRoutes failed', message);
+      if(isRoutesPermissionError(message)){
+        mapState.routesApiUnsupported = true;
+        return { included: false, reason: 'route_unavailable' };
+      }
+      return { included: false, reason: 'route' };
     }
   }
 
