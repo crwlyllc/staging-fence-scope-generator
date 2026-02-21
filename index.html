@@ -12096,6 +12096,33 @@ document.addEventListener('DOMContentLoaded', function(){
     sub.push("CREW");
     const crewOnsiteLineIndex = sub.length;
     sub.push(estimatedOnsiteLabel ? `${estimatedOnsiteLabel} onsite` : '');
+    const formatClockMinutes = (totalMinutes)=>{
+      const minutesPerDay = 24 * 60;
+      let normalized = Math.round(totalMinutes) % minutesPerDay;
+      if(normalized < 0){
+        normalized += minutesPerDay;
+      }
+      const hours24 = Math.floor(normalized / 60);
+      const mins = normalized % 60;
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      let hours12 = hours24 % 12;
+      if(hours12 === 0){
+        hours12 = 12;
+      }
+      return `${hours12}:${String(mins).padStart(2, '0')} ${period}`;
+    };
+    const oneWayTravelMinutes = travelDayInfo.included && isFinite(travelDayInfo.hoursPerDay)
+      ? Math.max(0, (travelDayInfo.hoursPerDay * 60) / 2)
+      : NaN;
+    if(isFinite(oneWayTravelMinutes)){
+      const arrivalAtEightMinutes = 8 * 60;
+      const roundedOneWayTravelMinutes = Math.max(0, Math.round(oneWayTravelMinutes / 5) * 5);
+      const departAtMinutes = arrivalAtEightMinutes - roundedOneWayTravelMinutes;
+      const departAtLabel = formatClockMinutes(departAtMinutes);
+      sub.push(`Depart at ${departAtLabel} from storage unit to arrive by 8:00 AM.`);
+    }else{
+      sub.push('Depart at: set manually to arrive by 8:00 AM.');
+    }
     sub.push('');
     sub.push('PROCESS');
     const formatTaskHours = (hours)=>{
