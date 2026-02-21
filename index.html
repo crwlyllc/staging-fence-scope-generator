@@ -12438,8 +12438,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const sub = [];
     sub.push("CREW");
-    const crewOnsiteLineIndex = sub.length;
-    sub.push(estimatedOnsiteLabel ? `${estimatedOnsiteLabel} onsite` : '');
     const formatClockMinutes = (totalMinutes)=>{
       const minutesPerDay = 24 * 60;
       let normalized = Math.round(totalMinutes) % minutesPerDay;
@@ -12470,6 +12468,8 @@ document.addEventListener('DOMContentLoaded', function(){
     }else{
       sub.push('Depart at: set manually');
     }
+    const crewOnsiteLineIndex = sub.length;
+    sub.push(estimatedOnsiteLabel ? `${estimatedOnsiteLabel} onsite` : '');
     sub.push('');
     sub.push('PROCESS');
     const formatTaskHours = (hours)=>{
