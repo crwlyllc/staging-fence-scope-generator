@@ -1537,6 +1537,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const TRAVEL_SETTINGS = {
     dieselPrice: 3,
     mpg: 13,
+    minutesPerMile: 1,
   };
 
   const state = { sections: [], customerType: 'Residential' };
@@ -1546,9 +1547,12 @@ document.addEventListener('DOMContentLoaded', function(){
     polylines: [],
     geocoder: null,
     directionsService: null,
+    directionsLegacyUnsupported: false,
     autocomplete: null,
     marker: null,
     addressLocation: null,
+    baseLocation: null,
+    baseLocationPromise: null,
     maxZoomService: null,
     nextPolylineId: 1,
     pendingAddress: '',
@@ -2161,7 +2165,14 @@ document.addEventListener('DOMContentLoaded', function(){
   function geocodeAddress(address){
     return new Promise(resolve => {
       const value = normalizeAddressText(address);
-      if(!value || !mapState.geocoder){
+      if(!value){
+        resolve(null);
+        return;
+      }
+      if(!mapState.geocoder && typeof google !== 'undefined' && google.maps && typeof google.maps.Geocoder === 'function'){
+        mapState.geocoder = new google.maps.Geocoder();
+      }
+      if(!mapState.geocoder){
         resolve(null);
         return;
       }
@@ -2179,7 +2190,102 @@ document.addEventListener('DOMContentLoaded', function(){
     return normalizeAddressText(a).toLowerCase() === normalizeAddressText(b).toLowerCase();
   }
 
+  async function getBaseLocation(){
+    if(mapState.baseLocation){
+      return mapState.baseLocation;
+    }
+    if(mapState.baseLocationPromise){
+      return mapState.baseLocationPromise;
+    }
+    mapState.baseLocationPromise = geocodeAddress(HQ_ADDRESS)
+      .then(location => {
+        mapState.baseLocation = location || null;
+        return mapState.baseLocation;
+      })
+      .catch(() => null)
+      .finally(()=>{
+        mapState.baseLocationPromise = null;
+      });
+    return mapState.baseLocationPromise;
+  }
+
+  async function resolveJobLocation(jobAddress){
+    const normalized = normalizeAddressText(jobAddress);
+    if(!normalized){
+      return null;
+    }
+    if(mapState.addressLocation && addressesMatch(mapState.pendingAddress, normalized)){
+      return mapState.addressLocation;
+    }
+    const location = await geocodeAddress(normalized);
+    if(location && mapAddressInput && addressesMatch(mapAddressInput.value, normalized)){
+      mapState.pendingAddress = normalized;
+      mapState.addressLocation = location;
+    }
+    return location;
+  }
+
+  function readLatLngValue(point, key){
+    if(!point){
+      return NaN;
+    }
+    const raw = point[key];
+    if(typeof raw === 'function'){
+      return Number(raw.call(point));
+    }
+    return Number(raw);
+  }
+
+  function milesBetween(a, b){
+    const latA = readLatLngValue(a, 'lat');
+    const lngA = readLatLngValue(a, 'lng');
+    const latB = readLatLngValue(b, 'lat');
+    const lngB = readLatLngValue(b, 'lng');
+    if(!isFinite(latA) || !isFinite(lngA) || !isFinite(latB) || !isFinite(lngB)){
+      return 0;
+    }
+    const toRadians = value => (value * Math.PI) / 180;
+    const dLat = toRadians(latB - latA);
+    const dLng = toRadians(lngB - lngA);
+    const lat1 = toRadians(latA);
+    const lat2 = toRadians(latB);
+    const sinDLat = Math.sin(dLat / 2);
+    const sinDLng = Math.sin(dLng / 2);
+    const h = (sinDLat * sinDLat) + Math.cos(lat1) * Math.cos(lat2) * (sinDLng * sinDLng);
+    const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    const earthRadiusMiles = 3958.7613;
+    return earthRadiusMiles * c;
+  }
+
+  async function computeFallbackTravelInfo(jobAddress){
+    const baseLocation = await getBaseLocation();
+    if(!baseLocation){
+      return { included: false, reason: 'geocode' };
+    }
+    const jobLocation = await resolveJobLocation(jobAddress);
+    if(!jobLocation){
+      return { included: false, reason: 'geocode' };
+    }
+    const milesOneWay = milesBetween(baseLocation, jobLocation);
+    if(!isFinite(milesOneWay) || milesOneWay < 0){
+      return { included: false, reason: 'distance' };
+    }
+    const minutesPerMile = Number(TRAVEL_SETTINGS.minutesPerMile);
+    const hoursOneWay = (milesOneWay * minutesPerMile) / 60;
+    if(!isFinite(hoursOneWay) || hoursOneWay < 0){
+      return { included: false, reason: 'distance' };
+    }
+    return {
+      included: true,
+      milesOneWay,
+      hoursOneWay,
+    };
+  }
+
   function getDirectionsService(){
+    if(mapState.directionsLegacyUnsupported){
+      return null;
+    }
     if(mapState.directionsService){
       return mapState.directionsService;
     }
@@ -2192,9 +2298,13 @@ document.addEventListener('DOMContentLoaded', function(){
 
   async function getDrivingRouteInfo(originAddress, destinationAddress){
     return new Promise(resolve => {
+      if(mapState.directionsLegacyUnsupported){
+        resolve({ included: false, reason: 'route_unavailable' });
+        return;
+      }
       const service = getDirectionsService();
       if(!service){
-        resolve({ included: false, reason: 'route' });
+        resolve({ included: false, reason: 'route_unavailable' });
         return;
       }
       const request = {
@@ -2207,6 +2317,13 @@ document.addEventListener('DOMContentLoaded', function(){
       };
       try{
         service.route(request, (response, status)=>{
+          const statusText = String(status || '');
+          if(statusText.includes('REQUEST_DENIED')){
+            mapState.directionsLegacyUnsupported = true;
+            mapState.directionsService = null;
+            resolve({ included: false, reason: 'route_unavailable' });
+            return;
+          }
           const statusOk = status === 'OK'
             || (google.maps && google.maps.DirectionsStatus && status === google.maps.DirectionsStatus.OK);
           if(!statusOk || !response || !response.routes || !response.routes[0] || !response.routes[0].legs || !response.routes[0].legs[0]){
@@ -2218,7 +2335,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const durationSeconds = leg.duration_in_traffic && isFinite(leg.duration_in_traffic.value)
             ? Number(leg.duration_in_traffic.value)
             : (leg.duration && isFinite(leg.duration.value) ? Number(leg.duration.value) : 0);
-          if(distanceMeters <= 0 || durationSeconds <= 0){
+          if(distanceMeters < 0 || durationSeconds < 0){
             resolve({ included: false, reason: 'route' });
             return;
           }
@@ -2231,7 +2348,7 @@ document.addEventListener('DOMContentLoaded', function(){
           });
         });
       }catch(err){
-        resolve({ included: false, reason: 'route' });
+        resolve({ included: false, reason: 'route_unavailable' });
       }
     });
   }
@@ -2245,15 +2362,19 @@ document.addEventListener('DOMContentLoaded', function(){
       return result;
     }
 
-    const routeInfo = await getDrivingRouteInfo(HQ_ADDRESS, normalizedAddress);
-    if(!routeInfo.included){
-      result.reason = routeInfo.reason || 'route';
-      return result;
+    let drivingInfo = await getDrivingRouteInfo(HQ_ADDRESS, normalizedAddress);
+    if(!drivingInfo.included){
+      const fallbackInfo = await computeFallbackTravelInfo(normalizedAddress);
+      if(!fallbackInfo.included){
+        result.reason = fallbackInfo.reason || drivingInfo.reason || 'route';
+        return result;
+      }
+      drivingInfo = fallbackInfo;
     }
 
-    const milesOneWay = routeInfo.milesOneWay;
+    const milesOneWay = drivingInfo.milesOneWay;
     const roundTripMiles = milesOneWay * 2;
-    const travelHoursPerDay = routeInfo.hoursOneWay * 2;
+    const travelHoursPerDay = drivingInfo.hoursOneWay * 2;
     result.roundTripMiles = roundTripMiles;
     result.hoursPerDay = travelHoursPerDay;
     result.included = true;
@@ -2267,6 +2388,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!travelInfo.included){
       if(travelInfo.reason === 'address'){
         result.breakdown.push('- Travel: Address required to calculate fuel and drive time.');
+      }else if(travelInfo.reason === 'route_unavailable'){
+        result.breakdown.push('- Travel: Google route ETA is unavailable for this API key/project; travel cost not included.');
       }else if(travelInfo.reason === 'route'){
         result.breakdown.push('- Travel: Unable to calculate Google route ETA; travel cost not included.');
       }else if(travelInfo.reason === 'geocode'){
