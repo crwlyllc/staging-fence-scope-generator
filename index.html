@@ -10627,6 +10627,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const otherSideLengths = new Map();
       const heightValues = new Set();
       const brandSet = new Set();
+      const oversprayDisclaimer = 'We will use commercially reasonable efforts to minimize overspray onto adjacent structures, landscaping, and surrounding areas; however, we do not warrant or guarantee that overspray, drips, or incidental transfer will be fully avoided. Customer acknowledges and agrees that stain on ground surfaces within approximately two (2) feet on either side of the fence is reasonably expected as part of the work.';
       let totalSqft = 0;
       let hasWash = false;
       let hasStainOnly = false;
@@ -10706,7 +10707,11 @@ document.addEventListener('DOMContentLoaded', function(){
       } else if(brandPhrase){
         sentences.push(`Using ${brandPhrase}.`);
       }
-      return sentences.join(' ');
+      const summary = sentences.join(' ').trim();
+      if(!summary){
+        return oversprayDisclaimer;
+      }
+      return `${summary}\n\n${oversprayDisclaimer}`;
     };
     const woodStainServiceSummary = buildWoodStainServiceSummary(woodStainServiceDetails);
     if(woodStainServiceSummary){
