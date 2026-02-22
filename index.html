@@ -140,6 +140,7 @@
   .sp-copy-row .sp-input,
   .sp-copy-row .sp-textarea{flex:1}
   .sp-copy-row .sp-textarea{min-height:80px}
+  .sp-service-line .sp-textarea{resize:none;overflow:hidden}
   .sp-copy-row .sp-btn{white-space:nowrap}
   .sp-hint{font-size:12px;color:var(--sp-muted);margin-top:6px}
   .sp-hint[data-state="loading"]{color:#2563eb}
@@ -14122,6 +14123,27 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function autoSizeTextarea(textarea){
+    if(!textarea || textarea.tagName !== 'TEXTAREA'){
+      return;
+    }
+    textarea.style.height = 'auto';
+    const minHeight = parseFloat(window.getComputedStyle(textarea).minHeight) || 0;
+    const nextHeight = Math.max(minHeight, textarea.scrollHeight || 0);
+    textarea.style.height = `${nextHeight}px`;
+  }
+
+  function autoSizeServiceLineDescriptions(){
+    if(!serviceListEl){
+      return;
+    }
+    const textareas = serviceListEl.querySelectorAll('.sp-service-line .sp-textarea');
+    textareas.forEach(autoSizeTextarea);
+    if (window.parentIFrame && typeof window.parentIFrame.size === 'function') {
+      try { window.parentIFrame.size(); } catch(e){}
+    }
+  }
+
   function renderServiceLineNotes(items){
     lastServiceLines = Array.isArray(items) ? items.map(item=>({ ...item })) : [];
     updateServiceLinePushControls(lastServiceLines.length);
@@ -14203,6 +14225,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       serviceListEl.appendChild(lineEl);
     });
+    window.requestAnimationFrame(autoSizeServiceLineDescriptions);
   }
 
   function quickCostRows(){
@@ -14928,6 +14951,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
   if(serviceCopyAllBtn){ serviceCopyAllBtn.addEventListener('click', copyAllServiceLines); }
+  window.addEventListener('resize', autoSizeServiceLineDescriptions);
   if(importBtn){
     importBtn.addEventListener('click', handleNotesImport);
   }
