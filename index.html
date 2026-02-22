@@ -1787,7 +1787,6 @@ document.addEventListener('DOMContentLoaded', function(){
     CREW_ROSTER.crew = appliedMembers.slice();
     ONSITE_CREW_SIZE = Math.max(1, appliedMembers.length);
     updateLaborRateDisplay();
-    updateManualQuote();
 
     if(crewMembersHint){
       const peopleLabel = ONSITE_CREW_SIZE === 1 ? 'person' : 'people';
@@ -14996,6 +14995,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }else{
           applyCrewMembersSelection(selectedMembers, { skipDomSync: true });
         }
+        updateManualQuote();
         persist();
       });
     });
