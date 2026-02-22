@@ -48,7 +48,7 @@
   }
   .sp-card{background:var(--sp-card);border:1px solid var(--sp-border);border-radius:var(--sp-radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
   #sp-map-card{margin-bottom:16px}
-  #sp-crew-card{margin-top:18px;display:none}
+  #sp-crew-card{margin-top:18px}
   .sp-inline-cards{display:grid;gap:16px;margin-bottom:16px}
   .sp-scope-group{border:1px solid var(--sp-border);background:#f8fafc;border-radius:12px;padding:14px;position:relative;overflow:hidden;gap:10px}
   .sp-scope-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
@@ -108,6 +108,23 @@
   .sp-textarea{min-height:68px;resize:vertical}
   .sp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .sp-service-option-input{max-width:140px}
+  .sp-crew-picker{
+    display:grid;
+    gap:8px;
+    grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  }
+  .sp-crew-option{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border:1px solid var(--sp-border);
+    border-radius:10px;
+    background:#fff;
+    font-size:14px;
+    font-weight:600;
+  }
+  .sp-crew-option input{margin:0}
 
   /* Rail row (Rails count + all rail blocks on one row, top-aligned) */
   .sp-rail-row{
@@ -1138,6 +1155,16 @@
           <input class="sp-input" id="sp-labor-rate" type="text" readonly />
           <div class="sp-hint">Applies to total time on site and travel time.</div>
         </div>
+        <div class="sp-field col-12">
+          <label class="sp-label">Assigned Crew Members</label>
+          <div class="sp-crew-picker" id="sp-crew-members">
+            <label class="sp-crew-option"><input type="checkbox" data-crew-member="Jesus" checked /> Jesus</label>
+            <label class="sp-crew-option"><input type="checkbox" data-crew-member="JR" checked /> JR</label>
+            <label class="sp-crew-option"><input type="checkbox" data-crew-member="Clay" checked /> Clay</label>
+            <label class="sp-crew-option"><input type="checkbox" data-crew-member="Joel" checked /> Joel</label>
+          </div>
+          <div class="sp-hint" id="sp-crew-members-hint">Select who is assigned to this job. Labor time and schedule update automatically.</div>
+        </div>
       </div>
     </div>
 
@@ -1493,11 +1520,13 @@ document.addEventListener('DOMContentLoaded', function(){
     maxWelders: 2,
     maxDayHours: 13,
   };
-  const ONSITE_CREW_SIZE = 4;
+  const DEFAULT_CREW_MEMBERS = ['Jesus', 'JR', 'Clay', 'Joel'];
+  const ONSITE_CREW_SIZE_DEFAULT = DEFAULT_CREW_MEMBERS.length;
+  let ONSITE_CREW_SIZE = ONSITE_CREW_SIZE_DEFAULT;
   const CREW_ROSTER = {
     lead: 'Jesus',
     welders: ['Jesus', 'JR'],
-    crew: ['Jesus', 'JR', 'Clay', 'Joel'],
+    crew: DEFAULT_CREW_MEMBERS.slice(),
   };
   const JOB_SETUP_HOURS = 20 / 60;
   const JOB_TEARDOWN_HOURS = 20 / 60;
@@ -1553,7 +1582,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const ROUTE_TARGET_ARRIVAL_MINUTE = 0;
   const ROUTE_REFINE_MAX_PASSES = 1;
 
-  const state = { sections: [], customerType: 'Residential' };
+  const state = { sections: [], customerType: 'Residential', crewMembers: DEFAULT_CREW_MEMBERS.slice() };
   const mapState = {
     map: null,
     drawingManager: null,
@@ -1643,6 +1672,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const quickCostOverheadBtn = document.getElementById('sp-copy-cost-overhead');
   const quickCostCommissionBtn = document.getElementById('sp-copy-cost-commission');
   const laborRateInput = document.getElementById('sp-labor-rate');
+  const crewMemberInputs = Array.from(document.querySelectorAll('input[data-crew-member]'));
+  const crewMembersHint = document.getElementById('sp-crew-members-hint');
   const estimateLookupBtnLabel = estimateLookupBtn ? estimateLookupBtn.textContent : '';
   const scopeEl = document.getElementById('sp-scope');
   let gateUnlocked = false;
@@ -1679,12 +1710,49 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function normalizeCrewMembers(list){
+    const selected = Array.isArray(list)
+      ? list.map(name=> String(name || '').trim()).filter(Boolean)
+      : [];
+    const selectedSet = new Set(selected);
+    return DEFAULT_CREW_MEMBERS.filter(name=> selectedSet.has(name));
+  }
+
+  function getActiveCrewMembers(){
+    const selected = normalizeCrewMembers(state.crewMembers);
+    return selected.length ? selected : DEFAULT_CREW_MEMBERS.slice();
+  }
+
+  function applyCrewMembersSelection(nextMembers, options = {}){
+    const selected = normalizeCrewMembers(nextMembers);
+    const fallback = getActiveCrewMembers();
+    const appliedMembers = selected.length ? selected : fallback;
+    const memberSet = new Set(appliedMembers);
+
+    if(!options.skipDomSync && crewMemberInputs.length){
+      crewMemberInputs.forEach(input=>{
+        const name = String(input.dataset.crewMember || '').trim();
+        input.checked = memberSet.has(name);
+      });
+    }
+
+    state.crewMembers = appliedMembers.slice();
+    CREW_ROSTER.crew = appliedMembers.slice();
+    ONSITE_CREW_SIZE = Math.max(1, appliedMembers.length);
+
+    if(crewMembersHint){
+      const peopleLabel = ONSITE_CREW_SIZE === 1 ? 'person' : 'people';
+      crewMembersHint.textContent = `${ONSITE_CREW_SIZE} ${peopleLabel} assigned: ${appliedMembers.join(', ')}.`;
+    }
+  }
+
   setGateUnlocked(false);
   setCustomerTypeConfirmed(false);
 
   if(laborRateInput){
     laborRateInput.value = `$${money(LABOR_RATE)}/hr (crew rate)`;
   }
+  applyCrewMembersSelection(state.crewMembers);
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
 
@@ -7599,10 +7667,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function snapshotForNotes(){
     const sections = JSON.parse(JSON.stringify(state.sections || []));
+    const crewMembers = getActiveCrewMembers();
     return {
       version: NOTES_DATA_VERSION,
       generatedAt: new Date().toISOString(),
-      state: { sections },
+      state: {
+        sections,
+        customerType: getCustomerType(),
+        crewMembers
+      },
       map: serializeMapDrawing(),
       estimate: {
         number: lastEstimateLookupNumber || '',
@@ -7633,6 +7706,8 @@ document.addEventListener('DOMContentLoaded', function(){
     }else if(customerTypeSelect){
       state.customerType = normalizeCustomerType(customerTypeSelect.value);
     }
+    const snapshotCrewMembers = normalizeCrewMembers(payload.state && payload.state.crewMembers);
+    applyCrewMembersSelection(snapshotCrewMembers.length ? snapshotCrewMembers : DEFAULT_CREW_MEMBERS.slice());
     updatePricingMinimumUI();
     setCustomerTypeConfirmed(false);
 
@@ -10893,7 +10968,7 @@ document.addEventListener('DOMContentLoaded', function(){
       addServiceLine('Install Ordered Custom Panels', `Order ${describeCount(totals.panelsInstallCustomTmi, 'custom powder-coated panel', 'custom powder-coated panels')} from TMI ($${money(WROUGHT_TMI_CUSTOM_PANEL_COST)} each) and install them on site like prefab panels.`);
     }
     if (totals.panelsInstallCustomShop > 0){
-      addServiceLine('Shop Fabrication', `Fabricate ${describeCount(totals.panelsInstallCustomShop, 'new custom panel', 'new custom panels')} in the shop with a 4-person crew (1 hour per panel, cutting and welding included) and install on site.`);
+      addServiceLine('Shop Fabrication', `Fabricate ${describeCount(totals.panelsInstallCustomShop, 'new custom panel', 'new custom panels')} in the shop with a ${ONSITE_CREW_SIZE}-person crew (1 hour per panel, cutting and welding included) and install on site.`);
     }
     if (totals.powderCoatPanels > 0 || totals.powderCoatPosts > 0){
       const powderParts = [];
@@ -11341,7 +11416,7 @@ document.addEventListener('DOMContentLoaded', function(){
       // Helpers handle pull/clean/set plus panel cut-off and loading
       // removed post/concrete into the truck bed.
       // Welder time is only for welding panels back to the new post.
-      // Up to four posts can run in parallel with a four-man crew, so elapsed
+      // Multiple posts can run in parallel with a full crew, so elapsed
       // time scales in scheduling while total man-hours remain additive.
       const crewManHoursPerPost = 85/60;
       const welderHoursPerPost = 20/60;
@@ -12244,9 +12319,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
     const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0) || woodRequiresTwoPerson || stainHours > 0 || woodInstallPlan.sections > 0;
     const minCrewBase = requiresTwoPersonCrew ? 2 : 1;
-    const MIN_CREW_PER_DAY = Math.max(minCrewBase, CREW_SETTINGS.minCrew);
-    const MAX_CREW_PER_DAY = CREW_SETTINGS.maxCrew;
-    const MAX_WELDERS = Math.max(0, CREW_SETTINGS.maxWelders || MAX_CREW_PER_DAY);
+    const MAX_CREW_PER_DAY = Math.max(1, Math.min(CREW_SETTINGS.maxCrew, ONSITE_CREW_SIZE));
+    const MIN_CREW_PER_DAY = Math.min(MAX_CREW_PER_DAY, Math.max(minCrewBase, CREW_SETTINGS.minCrew));
+    const MAX_WELDERS = Math.max(0, Math.min(CREW_SETTINGS.maxWelders || MAX_CREW_PER_DAY, MAX_CREW_PER_DAY));
     // Wrought-iron repair work is capped at 2 concurrent welders.
     const MAX_BASE_WELDERS = hasWroughtRepair ? Math.min(MAX_WELDERS, 2) : MAX_WELDERS;
     const woodInstallDays = [];
@@ -12646,12 +12721,12 @@ document.addEventListener('DOMContentLoaded', function(){
       return crewSchedule.reduce((max, day)=> Math.max(max, parseInt(day?.[field] || 0, 10) || 0), 0);
     };
     const peakStainers = rolePeakCount('stainerCount');
-    const maxWeldersConfigured = Math.max(1, Math.min(2, CREW_SETTINGS.maxWelders || 2, ONSITE_CREW_SIZE));
+    const activeCrewMembers = getActiveCrewMembers();
     const helperLaneFullCrew = Math.max(1, ONSITE_CREW_SIZE);
-    const rosterFromConfig = Array.isArray(CREW_ROSTER?.crew) ? CREW_ROSTER.crew.filter(Boolean) : [];
-    const defaultRoster = ['Jesus', 'JR', 'Clay', 'Joel'];
-    const crewNames = (rosterFromConfig.length ? rosterFromConfig : defaultRoster).slice(0, helperLaneFullCrew);
-    const leadName = (CREW_ROSTER && CREW_ROSTER.lead) ? CREW_ROSTER.lead : (crewNames[0] || 'Crew Lead');
+    const crewNames = activeCrewMembers.slice(0, helperLaneFullCrew);
+    const maxWeldersConfigured = Math.max(1, Math.min(2, CREW_SETTINGS.maxWelders || 2, crewNames.length || 1));
+    const configuredLeadName = String((CREW_ROSTER && CREW_ROSTER.lead) || '').trim();
+    const leadName = crewNames.includes(configuredLeadName) ? configuredLeadName : (crewNames[0] || 'Crew Lead');
     const configuredWelderNames = Array.isArray(CREW_ROSTER?.welders) ? CREW_ROSTER.welders.filter(Boolean) : [];
     const welderNames = (configuredWelderNames.length ? configuredWelderNames : crewNames.slice(0, 2))
       .filter(name=> crewNames.includes(name));
@@ -14857,6 +14932,24 @@ document.addEventListener('DOMContentLoaded', function(){
         manualHoursInput.value = normalized;
       }
       updateManualQuote();
+    });
+  }
+  if(crewMemberInputs.length){
+    crewMemberInputs.forEach(input=>{
+      input.addEventListener('change', ()=>{
+        const selectedMembers = crewMemberInputs
+          .filter(item=> item.checked)
+          .map(item=> String(item.dataset.crewMember || '').trim())
+          .filter(Boolean);
+        if(!selectedMembers.length){
+          const fallbackName = String(input.dataset.crewMember || '').trim() || DEFAULT_CREW_MEMBERS[0];
+          input.checked = true;
+          applyCrewMembersSelection([fallbackName], { skipDomSync: true });
+        }else{
+          applyCrewMembersSelection(selectedMembers, { skipDomSync: true });
+        }
+        persist();
+      });
     });
   }
 
