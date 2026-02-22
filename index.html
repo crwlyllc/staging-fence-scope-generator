@@ -1513,7 +1513,18 @@ document.addEventListener('DOMContentLoaded', function(){
     return detail ? detail.label : DRIVE_GATE_OPERATOR_FALLBACK_LABEL;
   }
 
-  const LABOR_RATE = 105;
+  const CREW_MEMBER_BASE_RATES = {
+    Jesus: 25,
+    Clay: 19,
+    Joel: 18,
+    JR: 18,
+  };
+  const CREW_LABOR_ASSUMPTIONS = {
+    regularHours: 40,
+    overtimeHours: 20,
+    overtimeMultiplier: 1.5,
+    payrollBurdenRate: 0.12,
+  };
   const CREW_SETTINGS = {
     minCrew: 1,
     maxCrew: 4,
@@ -1718,9 +1729,45 @@ document.addEventListener('DOMContentLoaded', function(){
     return DEFAULT_CREW_MEMBERS.filter(name=> selectedSet.has(name));
   }
 
+  function computeCrewLaborRate(members){
+    const crewMembers = normalizeCrewMembers(members);
+    const regularHours = Math.max(0, Number(CREW_LABOR_ASSUMPTIONS.regularHours || 0) || 0);
+    const overtimeHours = Math.max(0, Number(CREW_LABOR_ASSUMPTIONS.overtimeHours || 0) || 0);
+    const overtimeMultiplier = Math.max(0, Number(CREW_LABOR_ASSUMPTIONS.overtimeMultiplier || 0) || 0);
+    const payrollBurdenRate = Math.max(0, Number(CREW_LABOR_ASSUMPTIONS.payrollBurdenRate || 0) || 0);
+    const weeklyCrewHours = regularHours + overtimeHours;
+    if(!crewMembers.length || weeklyCrewHours <= 0){
+      return 0;
+    }
+    const weeklyWages = crewMembers.reduce((sum, name)=>{
+      const baseRate = Number(CREW_MEMBER_BASE_RATES[name]);
+      if(!isFinite(baseRate) || baseRate <= 0){
+        return sum;
+      }
+      const regularPay = regularHours * baseRate;
+      const overtimePay = overtimeHours * baseRate * overtimeMultiplier;
+      return sum + regularPay + overtimePay;
+    }, 0);
+    if(!isFinite(weeklyWages) || weeklyWages <= 0){
+      return 0;
+    }
+    const weeklyCostWithPayroll = weeklyWages * (1 + payrollBurdenRate);
+    return weeklyCostWithPayroll / weeklyCrewHours;
+  }
+
   function getActiveCrewMembers(){
     const selected = normalizeCrewMembers(state.crewMembers);
     return selected.length ? selected : DEFAULT_CREW_MEMBERS.slice();
+  }
+
+  function getActiveLaborRate(){
+    const rate = computeCrewLaborRate(getActiveCrewMembers());
+    return (isFinite(rate) && rate > 0) ? rate : 0;
+  }
+
+  function updateLaborRateDisplay(){
+    if(!laborRateInput) return;
+    laborRateInput.value = `$${money(getActiveLaborRate())}/hr (crew rate)`;
   }
 
   function applyCrewMembersSelection(nextMembers, options = {}){
@@ -1739,6 +1786,8 @@ document.addEventListener('DOMContentLoaded', function(){
     state.crewMembers = appliedMembers.slice();
     CREW_ROSTER.crew = appliedMembers.slice();
     ONSITE_CREW_SIZE = Math.max(1, appliedMembers.length);
+    updateLaborRateDisplay();
+    updateManualQuote();
 
     if(crewMembersHint){
       const peopleLabel = ONSITE_CREW_SIZE === 1 ? 'person' : 'people';
@@ -1749,9 +1798,6 @@ document.addEventListener('DOMContentLoaded', function(){
   setGateUnlocked(false);
   setCustomerTypeConfirmed(false);
 
-  if(laborRateInput){
-    laborRateInput.value = `$${money(LABOR_RATE)}/hr (crew rate)`;
-  }
   applyCrewMembersSelection(state.crewMembers);
 
   function uid(){ return 'sec_' + Math.random().toString(36).slice(2,9); }
@@ -2690,13 +2736,14 @@ document.addEventListener('DOMContentLoaded', function(){
     const fuelPerDay = (roundTripMiles / TRAVEL_SETTINGS.mpg) * TRAVEL_SETTINGS.dieselPrice;
     const totalFuelCost = fuelPerDay * travelDays;
     const travelHours = travelInfo.hoursPerDay * travelDays;
-    const travelLaborCost = travelHours * LABOR_RATE;
+    const laborRate = getActiveLaborRate();
+    const travelLaborCost = travelHours * laborRate;
 
     const cost = totalFuelCost + travelLaborCost;
     result.cost = cost;
     result.hours = travelHours;
     result.included = true;
-    result.breakdown.push(`- Travel: ${roundTripMiles.toFixed(1)} miles round trip x ${travelDays} day(s) = $${money(cost)} (fuel $${money(totalFuelCost)}, travel labor $${money(travelLaborCost)} @ $${money(LABOR_RATE)}/hr)`);
+    result.breakdown.push(`- Travel: ${roundTripMiles.toFixed(1)} miles round trip x ${travelDays} day(s) = $${money(cost)} (fuel $${money(totalFuelCost)}, travel labor $${money(travelLaborCost)} @ $${money(laborRate)}/hr)`);
     return result;
   }
 
@@ -8164,7 +8211,7 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
 
-    const laborCost = totalHours * LABOR_RATE;
+    const laborCost = totalHours * getActiveLaborRate();
     const travelCost = MANUAL_TRAVEL_FLAT;
     const totalCost = materialEquipmentCost + laborCost + travelCost;
     const pricing = computeChargeRevenue(totalCost, totalHours);
@@ -14017,7 +14064,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const laborHoursOnsite = isFinite(estimatedOnsiteHours) ? estimatedOnsiteHours : 0;
     const laborHoursShop = Math.max(0, Number(shopFabricationLaborHours || 0) || 0);
     const laborHoursBillable = laborHoursOnsite + laborHoursShop;
-    const laborCost = laborHoursBillable * LABOR_RATE;
+    const laborRate = getActiveLaborRate();
+    const laborCost = laborHoursBillable * laborRate;
     const baseConsumablesCost = scheduleEntries.length * 50;
     const shopFabricationConsumablesCost = Math.max(0, parseInt(totals.panelsInstallCustomShop || 0, 10) || 0) * 10;
     const consumablesCost = baseConsumablesCost + shopFabricationConsumablesCost;
@@ -14052,7 +14100,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     const laborTimeDetail = laborTimeParts.length ? laborTimeParts.join(' + ') : 'time TBD';
     const laborScheduleDetail = crewScheduleDetail.length ? `; ${crewScheduleDetail.join('; ')}` : '';
-    cost.push(`- Labor ($${money(LABOR_RATE)}/hr, crew): $${money(laborCost)} (${laborTimeDetail}${laborScheduleDetail})`);
+    cost.push(`- Labor ($${money(laborRate)}/hr, crew): $${money(laborCost)} (${laborTimeDetail}${laborScheduleDetail})`);
     const travelHoursLabel = formatHours(travelHours);
     const totalHoursLabel = formatHours(totalHours);
     const totalLaborHoursOverallLabel = formatHours(Math.max(
