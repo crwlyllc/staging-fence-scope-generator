@@ -8926,6 +8926,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let hasWroughtRepair = false;
     let wroughtInstallRemovalPanels = 0;
     const woodStainDetails = [];
+    const woodStainServiceDetails = [];
     const woodWashDetails = [];
     const materials = {};
     const installCapsByLabel = new Map();
@@ -10569,9 +10570,9 @@ document.addEventListener('DOMContentLoaded', function(){
             if(stainSelection.wash !== 'none'){
               hasWoodWashSelection = true;
             }
+            const stainBrand = normalizeWoodStainBrand(s.woodRepairStainBrand);
             if(stainSqft > 0){
               totals.woodStainSqft += stainSqft;
-              const stainBrand = normalizeWoodStainBrand(s.woodRepairStainBrand);
               woodStainSqftByBrand.set(stainBrand, (woodStainSqftByBrand.get(stainBrand) || 0) + stainSqft);
               const lfPerHour = sidesMultiplier === 2 ? 25 : 50;
               const baseHours = lfPerHour > 0 ? normalizedLengthFt / lfPerHour : 0;
@@ -10599,21 +10600,122 @@ document.addEventListener('DOMContentLoaded', function(){
             }
             hasWoodStaining = true;
             const sectionLabel = s.label || `Section ${idx + 1}`;
-            const lengthLabel = normalizedLengthFt > 0 ? `${Math.round(normalizedLengthFt)} linear ft` : '';
-            const heightLabel = heightFt > 0 ? `${formatFtValue(heightFt)} ft tall` : '';
-            const sizeLabel = [lengthLabel, heightLabel].filter(Boolean).join(' and ');
-            const sizeDetail = sizeLabel ? ` which is about ${sizeLabel}` : '';
             woodStainDetails.push({ sectionLabel, sideLabel, lengthFt: normalizedLengthFt, sqft: stainSqft });
-            const serviceName = stainSelection.wash === 'hail'
-              ? 'Wood Fence Wash Hail & Stain'
-              : (stainSelection.wash === 'standard' ? 'Wood Fence Wash & Stain' : 'Wood Fence Staining');
-            const washPrefix = stainSelection.wash === 'hail'
-              ? 'Pressure wash hail-damaged fence and stain'
-              : (stainSelection.wash === 'standard' ? 'Pressure wash and stain' : 'Stain');
-            addServiceLine(serviceName, `${labelPrefix}${washPrefix} ${sideLabel} of ${sectionLabel}${sizeDetail}.`);
+            woodStainServiceDetails.push({
+              side: stainSelection.side,
+              sideLabel,
+              lengthFt: normalizedLengthFt,
+              heightFt,
+              sqft: stainSqft,
+              washType: stainSelection.wash,
+              stainBrand
+            });
           }
         }
       });
+    }
+
+    const formatWoodStainLength = (value)=>{
+      const numeric = parseFloat(value);
+      const safe = isFinite(numeric) ? numeric : 0;
+      const rounded = Math.round(safe * 10) / 10;
+      return formatFtValue(rounded) || '0';
+    };
+    const buildWoodStainServiceSummary = (details)=>{
+      if(!Array.isArray(details) || !details.length) return '';
+      const lengthBySide = { both: 0, outside: 0, inside: 0 };
+      const otherSideLengths = new Map();
+      const heightValues = new Set();
+      const brandSet = new Set();
+      let totalSqft = 0;
+      let hasWash = false;
+      let hasStainOnly = false;
+      details.forEach(detail=>{
+        const sideKey = String(detail.side || '').trim().toLowerCase();
+        const lengthFt = parseFloat(detail.lengthFt) || 0;
+        const heightFt = parseFloat(detail.heightFt) || 0;
+        const sqft = parseFloat(detail.sqft) || 0;
+        const washType = String(detail.washType || 'none').trim().toLowerCase();
+        const brand = normalizeWoodStainBrand(detail.stainBrand);
+        if(lengthFt > 0){
+          if(Object.prototype.hasOwnProperty.call(lengthBySide, sideKey)){
+            lengthBySide[sideKey] += lengthFt;
+          } else if(sideKey){
+            otherSideLengths.set(sideKey, (otherSideLengths.get(sideKey) || 0) + lengthFt);
+          }
+        }
+        if(heightFt > 0){
+          heightValues.add(Math.round(heightFt * 100) / 100);
+        }
+        if(sqft > 0){
+          totalSqft += sqft;
+        }
+        if(brand){
+          brandSet.add(brand);
+        }
+        if(washType !== 'none'){
+          hasWash = true;
+        } else {
+          hasStainOnly = true;
+        }
+      });
+      const heightList = Array.from(heightValues);
+      let fenceLabel = 'wood fence';
+      if(heightList.length === 1){
+        const heightLabel = formatFtValue(heightList[0]);
+        if(heightLabel){
+          fenceLabel = `${heightLabel} ft tall wood fence`;
+        }
+      }
+      const sideParts = [];
+      if(lengthBySide.both > 0){
+        sideParts.push(`both sides of about ${formatWoodStainLength(lengthBySide.both)} linear ft of ${fenceLabel}`);
+      }
+      if(lengthBySide.outside > 0){
+        sideParts.push(`just the outside of about ${formatWoodStainLength(lengthBySide.outside)} linear ft of ${fenceLabel}`);
+      }
+      if(lengthBySide.inside > 0){
+        sideParts.push(`just the inside of about ${formatWoodStainLength(lengthBySide.inside)} linear ft of ${fenceLabel}`);
+      }
+      otherSideLengths.forEach((length, side)=>{
+        const safeSide = side.replace(/[^a-z0-9\s-]/gi, '').trim() || 'selected side';
+        sideParts.push(`${safeSide} of about ${formatWoodStainLength(length)} linear ft of ${fenceLabel}`);
+      });
+      const actionLead = hasWash ? (hasStainOnly ? 'Wash where needed and stain' : 'Wash and stain') : 'Stain';
+      const actionVerb = hasWash ? (hasStainOnly ? 'wash where needed and stain' : 'wash and stain') : 'stain';
+      const sentences = [];
+      if(sideParts.length){
+        sentences.push(`${actionLead} ${joinParts(sideParts)}.`);
+      }
+      const orderedBrands = [];
+      WOOD_STAIN_BRANDS.forEach(brand=>{
+        if(brandSet.has(brand)) orderedBrands.push(brand);
+      });
+      brandSet.forEach(brand=>{
+        if(!orderedBrands.includes(brand)) orderedBrands.push(brand);
+      });
+      let brandPhrase = '';
+      if(orderedBrands.length === 1){
+        brandPhrase = `${orderedBrands[0]} stain`;
+      } else if(orderedBrands.length > 1){
+        brandPhrase = `${joinParts(orderedBrands)} stain brands`;
+      }
+      if(totalSqft > 0){
+        const sqftLabel = Math.round(totalSqft);
+        sentences.push(`About ${sqftLabel} sq ft total to ${actionVerb}${brandPhrase ? `, using ${brandPhrase}` : ''}.`);
+      } else if(brandPhrase){
+        sentences.push(`Using ${brandPhrase}.`);
+      }
+      return sentences.join(' ');
+    };
+    const woodStainServiceSummary = buildWoodStainServiceSummary(woodStainServiceDetails);
+    if(woodStainServiceSummary){
+      const hasHailWash = woodStainServiceDetails.some(detail=>String(detail.washType || '').toLowerCase() === 'hail');
+      const hasAnyWash = woodStainServiceDetails.some(detail=>String(detail.washType || '').toLowerCase() !== 'none');
+      const serviceName = hasAnyWash
+        ? (hasHailWash ? 'Wood Fence Wash Hail & Stain' : 'Wood Fence Wash & Stain')
+        : 'Wood Fence Staining';
+      addServiceLine(serviceName, woodStainServiceSummary);
     }
 
     if(hasWoodStaining){
