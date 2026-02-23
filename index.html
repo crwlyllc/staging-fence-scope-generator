@@ -8742,12 +8742,24 @@ document.addEventListener('DOMContentLoaded', function(){
       const woodKickBoards = new Set();
       const woodTopCaps = new Set();
       const woodTrims = new Set();
+      let replacementWalkGateSingle = 0;
+      let replacementWalkGateDouble = 0;
       let replacementReusePostSections = 0;
       let replacementNewPostSections = 0;
       let concreteSetSections = 0;
       let anchoredSections = 0;
 
       sections.forEach(section=>{
+        if(includeRemoval && !isWood){
+          const gateCount = walkGateAddCount(section);
+          if(gateCount > 0){
+            if(walkGateTypeIsDouble(walkGateAddType(section))){
+              replacementWalkGateDouble += gateCount;
+            } else {
+              replacementWalkGateSingle += gateCount;
+            }
+          }
+        }
         const useExistingPostsForReplacement = includeRemoval && shouldUseExistingPostsForReplacement(section);
         if(useExistingPostsForReplacement){
           replacementReusePostSections += 1;
@@ -8979,10 +8991,23 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
 
+      let replacementWalkGateSentence = '';
+      if(includeRemoval && !isWood){
+        const gateParts = [];
+        if(replacementWalkGateSingle > 0){
+          gateParts.push(describeCount(replacementWalkGateSingle, 'single swing walk gate', 'single swing walk gates'));
+        }
+        if(replacementWalkGateDouble > 0){
+          gateParts.push(describeCount(replacementWalkGateDouble, 'double swing gate', 'double swing gates'));
+        }
+        if(gateParts.length){
+          replacementWalkGateSentence = `Includes cut-in and installation of ${joinParts(gateParts)} on the replacement sections, complete with posts, frame, pickets, latch, and hinges.`;
+        }
+      }
       const mixedPostHandlingSentence = (replacementReusePostSections > 0 && replacementNewPostSections > 0)
         ? 'Replacement sections marked to use existing posts exclude new post set or anchoring.'
         : '';
-      return [firstSentence, postsSentence, railSentence, woodAddOnSentence, mixedPostHandlingSentence].filter(Boolean).join(' ');
+      return [firstSentence, postsSentence, railSentence, woodAddOnSentence, replacementWalkGateSentence, mixedPostHandlingSentence].filter(Boolean).join(' ');
     }
     const zeroPostCounts = ()=>({ posts1p5:0, posts2x2:0, posts3x3:0, posts4x4:0 });
     const countWoodRealignMethods = (entries=[])=>{
@@ -11085,11 +11110,25 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.walkRebuild > 0){
       addServiceLine('Rebuild Walk Gates', `Rebuild ${describeCount(totals.walkRebuild, 'walk gate', 'walk gates')} with new frame and pickets to match the fence.`);
     }
-    if (totals.walkGateAddsSingle > 0){
-      addServiceLine('Add Single Walk Gate', `Cut in and install ${describeCount(totals.walkGateAddsSingle, 'single swing walk gate', 'single swing walk gates')} complete with posts, frame, and hardware.`);
+    const wroughtReplacementWalkGateCounts = state.sections.reduce((acc, section)=>{
+      if((section?.scopeType || 'repair') !== 'replace') return acc;
+      if((section?.fenceType || '').toLowerCase() !== 'wrought iron') return acc;
+      const gateCount = walkGateAddCount(section);
+      if(gateCount <= 0) return acc;
+      if(walkGateTypeIsDouble(walkGateAddType(section))){
+        acc.double += gateCount;
+      } else {
+        acc.single += gateCount;
+      }
+      return acc;
+    }, { single: 0, double: 0 });
+    const standaloneSingleWalkGateAdds = Math.max(0, (totals.walkGateAddsSingle || 0) - wroughtReplacementWalkGateCounts.single);
+    const standaloneDoubleWalkGateAdds = Math.max(0, (totals.walkGateAddsDouble || 0) - wroughtReplacementWalkGateCounts.double);
+    if (standaloneSingleWalkGateAdds > 0){
+      addServiceLine('Add Single Walk Gate', `Cut in and install ${describeCount(standaloneSingleWalkGateAdds, 'single swing walk gate', 'single swing walk gates')} complete with posts, frame, and hardware.`);
     }
-    if (totals.walkGateAddsDouble > 0){
-      addServiceLine('Add Double Walk Gate', `Cut in and install ${describeCount(totals.walkGateAddsDouble, 'double swing gate', 'double swing gates')} complete with posts, frame, and hardware.`);
+    if (standaloneDoubleWalkGateAdds > 0){
+      addServiceLine('Add Double Walk Gate', `Cut in and install ${describeCount(standaloneDoubleWalkGateAdds, 'double swing gate', 'double swing gates')} complete with posts, frame, and hardware.`);
     }
     if (totals.woodWalkGateAdds > 0){
       const detailParts = [];
