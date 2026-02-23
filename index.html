@@ -7910,6 +7910,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const PRICING = {
     targetGrossMarginAfterOverhead: 0.30,
+    minimumGrossMarginAfterOverhead: 0.20,
     maxGrossProfitPerDay: 1500,
     revenueMinimumResidential: 350,
     revenueMinimumCommercial: 2500,
@@ -7944,6 +7945,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function getTargetGrossMarginRate(){
     const rate = Number(PRICING.targetGrossMarginAfterOverhead);
+    return (isFinite(rate) && rate > 0 && rate < 1) ? rate : 0;
+  }
+
+  function getMinimumGrossMarginRate(){
+    const rate = Number(PRICING.minimumGrossMarginAfterOverhead);
     return (isFinite(rate) && rate > 0 && rate < 1) ? rate : 0;
   }
 
@@ -8005,11 +8011,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function getMinimumSummaryText(){
     const revenueMin = getBaseRevenueMinimum();
-    const marginLabel = formatPercentLabel(getTargetGrossMarginRate());
+    const targetMarginLabel = formatPercentLabel(getTargetGrossMarginRate());
+    const minimumMarginLabel = formatPercentLabel(getMinimumGrossMarginRate());
     if(isFinite(revenueMin) && revenueMin > 0){
-      return `${marginLabel}% target gross margin after overhead, $${money(revenueMin)} minimum charge`;
+      return `${targetMarginLabel}% target gross margin after overhead, ${minimumMarginLabel}% minimum gross margin after overhead, $${money(revenueMin)} minimum charge`;
     }
-    return `${marginLabel}% target gross margin after overhead`;
+    return `${targetMarginLabel}% target gross margin after overhead, ${minimumMarginLabel}% minimum gross margin after overhead`;
   }
 
   function updatePricingMinimumUI(){
@@ -8122,7 +8129,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const hours = Number(totalHours);
     if(!isFinite(cost) || cost < 0) return { revenue: NaN, mode: 'invalid' };
     const targetMargin = getTargetGrossMarginRate();
-    if(!isFinite(targetMargin) || targetMargin <= 0 || targetMargin >= 1){
+    const minimumMargin = getMinimumGrossMarginRate();
+    if(!isFinite(targetMargin) || targetMargin <= 0 || targetMargin >= 1
+      || !isFinite(minimumMargin) || minimumMargin <= 0 || minimumMargin >= 1){
       return { revenue: NaN, mode: 'invalid-margin-target' };
     }
 
@@ -8142,11 +8151,22 @@ document.addEventListener('DOMContentLoaded', function(){
     const revenueForGrossProfitCap = (isFinite(grossProfitCap) && grossProfitCap >= 0)
       ? solveRevenueForGrossProfitAmount(cost, grossProfitCap)
       : NaN;
-    const revenueBeforeGrossCap = revenue;
-    if(isFinite(revenueForGrossProfitCap) && revenueForGrossProfitCap > 0 && revenue > revenueForGrossProfitCap){
-      revenue = revenueForGrossProfitCap;
+    const revenueForMinimumMargin = solveRevenueForGrossProfitMargin(cost, minimumMargin);
+    const revenueBeforeGuards = revenue;
+    let revenueAfterCap = revenue;
+    if(isFinite(revenueForGrossProfitCap) && revenueForGrossProfitCap > 0 && revenueAfterCap > revenueForGrossProfitCap){
+      revenueAfterCap = revenueForGrossProfitCap;
     }
-    const grossCapApplied = isFinite(revenueForGrossProfitCap) && (revenueBeforeGrossCap - revenueForGrossProfitCap) > 0.01;
+    const grossCapApplied = (revenueBeforeGuards - revenueAfterCap) > 0.01;
+    let revenueAfterMinimumMargin = revenueAfterCap;
+    if(isFinite(revenueForMinimumMargin) && revenueForMinimumMargin > 0 && revenueAfterMinimumMargin < revenueForMinimumMargin){
+      revenueAfterMinimumMargin = revenueForMinimumMargin;
+    }
+    const minimumGrossMarginApplied = (revenueAfterMinimumMargin - revenueAfterCap) > 0.01;
+    revenue = revenueAfterMinimumMargin;
+    if(isFinite(revenueMinimum) && revenueMinimum > revenue){
+      revenue = revenueMinimum;
+    }
 
     const grossProfit = grossProfitForRevenue(revenue, cost);
     const grossMarginAchieved = (isFinite(grossProfit) && revenue > 0)
@@ -8160,6 +8180,9 @@ document.addEventListener('DOMContentLoaded', function(){
       revenueMinimum,
       grossMarginAchieved,
       overheadAmount: overheadAmountForRevenue(revenue),
+      minimumMargin,
+      revenueForMinimumMargin,
+      minimumGrossMarginApplied,
       grossProfitCapPerDay,
       grossProfitCapDays,
       grossProfitCap,
@@ -14178,6 +14201,10 @@ document.addEventListener('DOMContentLoaded', function(){
         const targetMarginLabel = formatPercentLabel(revenueRes.targetMargin);
         cost.push(`- Target gross margin after overhead: ${targetMarginLabel}%`);
       }
+      if(isFinite(revenueRes?.minimumMargin) && revenueRes.minimumMargin > 0){
+        const minimumMarginLabel = formatPercentLabel(revenueRes.minimumMargin);
+        cost.push(`- Minimum gross margin after overhead: ${minimumMarginLabel}%`);
+      }
       if(isFinite(revenueRes?.grossProfitCapPerDay) && revenueRes.grossProfitCapPerDay > 0){
         const capDays = Math.max(1, parseInt(revenueRes.grossProfitCapDays || 0, 10) || 1);
         const capTotal = Number(revenueRes.grossProfitCap);
@@ -14191,8 +14218,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const achievedMarginLabel = formatPercentLabel(revenueRes.grossMarginAchieved);
         cost.push(`- Estimated gross margin after overhead: ${achievedMarginLabel}%`);
       }
-      if(revenueRes?.grossCapApplied){
+      if(revenueRes?.grossCapApplied && revenueRes?.minimumGrossMarginApplied){
+        cost.push('- Applied the higher guardrail between gross cap and minimum gross margin floor.');
+      } else if(revenueRes?.grossCapApplied){
         cost.push('- Gross profit cap applied to final price.');
+      } else if(revenueRes?.minimumGrossMarginApplied){
+        cost.push('- Minimum gross margin floor applied to final price.');
       }
       if(isFinite(revenueRes?.revenueMinimum) && revenueRes.revenueMinimum > 0 && Math.abs(revenue - revenueRes.revenueMinimum) < 0.01){
         cost.push(`- Minimum charge floor applied: $${money(revenueRes.revenueMinimum)}`);
