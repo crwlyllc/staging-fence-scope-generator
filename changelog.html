@@ -227,6 +227,27 @@
 
       const RULES = [
         {
+          id: "crew-member-assignment",
+          re: /assigned crew members|crew member selection|specific crew members|crew subset|3-man crew/i,
+          title: "Assigned Crew Members",
+          description:
+            "Labor now includes an Assigned Crew Members selector so quotes and schedules can be calculated for whichever crew members are on the job."
+        },
+        {
+          id: "labor-rate-formula",
+          re: /labor rate formula|hourly rate from wages|payroll burden|60-hour week|time and a half/i,
+          title: "Labor Rate Formula by Crew",
+          description:
+            "Crew labor rate now calculates from each selected member's base pay using 40 regular hours, 20 overtime hours at 1.5x, and a 12% payroll burden."
+        },
+        {
+          id: "startup-event-binding-fix",
+          re: /manual quote popup fix|reload from notes popup fix|get estimate button fix|startup init fix/i,
+          title: "Manual/Reload/Get Estimate Fix",
+          description:
+            "Fixed an initialization issue that could block Manual Quote, Reload from Notes, and Fetch Estimate actions."
+        },
+        {
           id: "hcp-estimate-id-payload",
           re: /estimate id when pushing notes & line items|estimate id/i,
           title: "Send Estimate ID to HCP",

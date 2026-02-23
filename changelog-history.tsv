@@ -1,3 +1,6 @@
+2026-02-23	local	manual quote popup fix, reload from notes popup fix, get estimate button fix
+2026-02-23	local	labor rate formula from wages, overtime, and payroll burden
+2026-02-23	local	assigned crew members for labor calculations
 2026-02-21	e41aa9c	use routes api for travel eta
 2026-02-21	d5f7b11	travel time estimation
 2026-02-20	b14d89f	confirm service line item push
