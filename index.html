@@ -1529,7 +1529,7 @@ document.addEventListener('DOMContentLoaded', function(){
     minCrew: 1,
     maxCrew: 4,
     maxWelders: 2,
-    maxDayHours: 13,
+    maxDayHours: 9,
   };
   const DEFAULT_CREW_MEMBERS = ['Jesus', 'JR', 'Clay', 'Joel'];
   const ONSITE_CREW_SIZE_DEFAULT = DEFAULT_CREW_MEMBERS.length;
@@ -7910,9 +7910,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const PRICING = {
     targetGrossMarginAfterOverhead: 0.30,
+    maxGrossProfitPerDay: 1500,
     revenueMinimumResidential: 350,
     revenueMinimumCommercial: 2500,
-    revenueMinimumFullDayHours: 7,
+    revenueMinimumFullDayHours: 9,
     revenueMinimumFullDay: 2967
   };
   const MANUAL_TRAVEL_FLAT = 50;
@@ -7944,6 +7945,30 @@ document.addEventListener('DOMContentLoaded', function(){
   function getTargetGrossMarginRate(){
     const rate = Number(PRICING.targetGrossMarginAfterOverhead);
     return (isFinite(rate) && rate > 0 && rate < 1) ? rate : 0;
+  }
+
+  function getGrossProfitCapPerDay(){
+    const cap = Number(PRICING.maxGrossProfitPerDay);
+    return (isFinite(cap) && cap > 0) ? cap : 0;
+  }
+
+  function getGrossProfitCapDays(totalHours, explicitDayCount){
+    const explicit = Number(explicitDayCount);
+    if(isFinite(explicit) && explicit > 0){
+      return Math.max(1, Math.ceil(explicit));
+    }
+    const dayHours = Math.max(0.25, Number(CREW_SETTINGS.maxDayHours || 9) || 9);
+    const hours = Number(totalHours);
+    if(!isFinite(hours) || hours <= 0){
+      return 1;
+    }
+    return Math.max(1, Math.ceil(hours / dayHours));
+  }
+
+  function getGrossProfitCap(totalHours, explicitDayCount){
+    const capPerDay = getGrossProfitCapPerDay();
+    if(capPerDay <= 0) return null;
+    return capPerDay * getGrossProfitCapDays(totalHours, explicitDayCount);
   }
 
   function getBaseRevenueMinimum(){
@@ -8021,6 +8046,40 @@ document.addEventListener('DOMContentLoaded', function(){
     return rev - costs - overheadAmountForRevenue(rev);
   }
 
+  function solveRevenueForGrossProfitAmount(directCosts, targetGross){
+    const costs = Number(directCosts);
+    const target = Number(targetGross);
+    if(!isFinite(costs) || costs < 0) return NaN;
+    if(!isFinite(target) || target < 0) return NaN;
+
+    const meetsTargetGross = (revenue)=>{
+      const gross = grossProfitForRevenue(revenue, costs);
+      return isFinite(gross) && gross >= target;
+    };
+
+    let low = 0;
+    let high = Math.max(costs + target + 1, 100);
+    let attempts = 0;
+    while(!meetsTargetGross(high) && attempts < 60){
+      high *= 2;
+      attempts += 1;
+      if(!isFinite(high) || high > 1e12){
+        return NaN;
+      }
+    }
+    if(!meetsTargetGross(high)) return NaN;
+
+    for(let i=0;i<60;i++){
+      const mid = (low + high) / 2;
+      if(meetsTargetGross(mid)){
+        high = mid;
+      }else{
+        low = mid;
+      }
+    }
+    return high;
+  }
+
   function solveRevenueForGrossProfitMargin(directCosts, marginFloor){
     const costs = Number(directCosts);
     const ratio = Number(marginFloor);
@@ -8058,7 +8117,7 @@ document.addEventListener('DOMContentLoaded', function(){
     return high;
   }
 
-  function computeChargeRevenue(directCosts, totalHours){
+  function computeChargeRevenue(directCosts, totalHours, options = {}){
     const cost = Number(directCosts);
     const hours = Number(totalHours);
     if(!isFinite(cost) || cost < 0) return { revenue: NaN, mode: 'invalid' };
@@ -8077,6 +8136,18 @@ document.addEventListener('DOMContentLoaded', function(){
       revenue = revenueMinimum;
     }
 
+    const grossProfitCapPerDay = getGrossProfitCapPerDay();
+    const grossProfitCapDays = getGrossProfitCapDays(totalHours, options.dayCount);
+    const grossProfitCap = getGrossProfitCap(totalHours, options.dayCount);
+    const revenueForGrossProfitCap = (isFinite(grossProfitCap) && grossProfitCap >= 0)
+      ? solveRevenueForGrossProfitAmount(cost, grossProfitCap)
+      : NaN;
+    const revenueBeforeGrossCap = revenue;
+    if(isFinite(revenueForGrossProfitCap) && revenueForGrossProfitCap > 0 && revenue > revenueForGrossProfitCap){
+      revenue = revenueForGrossProfitCap;
+    }
+    const grossCapApplied = isFinite(revenueForGrossProfitCap) && (revenueBeforeGrossCap - revenueForGrossProfitCap) > 0.01;
+
     const grossProfit = grossProfitForRevenue(revenue, cost);
     const grossMarginAchieved = (isFinite(grossProfit) && revenue > 0)
       ? (grossProfit / revenue)
@@ -8088,7 +8159,11 @@ document.addEventListener('DOMContentLoaded', function(){
       hours,
       revenueMinimum,
       grossMarginAchieved,
-      overheadAmount: overheadAmountForRevenue(revenue)
+      overheadAmount: overheadAmountForRevenue(revenue),
+      grossProfitCapPerDay,
+      grossProfitCapDays,
+      grossProfitCap,
+      grossCapApplied
     };
   }
 
@@ -8166,7 +8241,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!pricing || !isFinite(pricing.revenue)){
       manualChargeOutput.textContent = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = 'Pricing inputs produced an invalid result. Check overhead and hours.';
+      manualStatusEl.textContent = 'Pricing inputs produced an invalid result. Check overhead, margin target, and costs.';
       manualStatusEl.dataset.state = 'error';
       clearManualMetrics();
       return;
@@ -14022,8 +14097,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const travelCost = travelCostResult.cost || 0;
     const travelHours = isFinite(travelCostResult.hours) ? travelCostResult.hours : 0;
     const totalHours = laborHoursBillable + travelHours;
+    const pricingDayCount = Math.max(1, Array.isArray(crewSchedule)
+      ? crewSchedule.filter(day => (day?.crew || 0) > 0).length
+      : 0);
     const directCosts = laborCost + travelCost + costMaterials + removalCost + consumablesCost;
-    const revenueRes = computeChargeRevenue(directCosts, totalHours);
+    const revenueRes = computeChargeRevenue(directCosts, totalHours, { dayCount: pricingDayCount });
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
     const overheadAmount = overheadAmountForRevenue(revenue);
@@ -14100,9 +14178,21 @@ document.addEventListener('DOMContentLoaded', function(){
         const targetMarginLabel = formatPercentLabel(revenueRes.targetMargin);
         cost.push(`- Target gross margin after overhead: ${targetMarginLabel}%`);
       }
+      if(isFinite(revenueRes?.grossProfitCapPerDay) && revenueRes.grossProfitCapPerDay > 0){
+        const capDays = Math.max(1, parseInt(revenueRes.grossProfitCapDays || 0, 10) || 1);
+        const capTotal = Number(revenueRes.grossProfitCap);
+        if(isFinite(capTotal) && capDays > 1){
+          cost.push(`- Gross profit cap: $${money(revenueRes.grossProfitCapPerDay)}/day × ${capDays} days = $${money(capTotal)}`);
+        }else{
+          cost.push(`- Gross profit cap: $${money(revenueRes.grossProfitCapPerDay)} per day`);
+        }
+      }
       if(isFinite(revenueRes?.grossMarginAchieved) && revenueRes.grossMarginAchieved >= 0){
         const achievedMarginLabel = formatPercentLabel(revenueRes.grossMarginAchieved);
         cost.push(`- Estimated gross margin after overhead: ${achievedMarginLabel}%`);
+      }
+      if(revenueRes?.grossCapApplied){
+        cost.push('- Gross profit cap applied to final price.');
       }
       if(isFinite(revenueRes?.revenueMinimum) && revenueRes.revenueMinimum > 0 && Math.abs(revenue - revenueRes.revenueMinimum) < 0.01){
         cost.push(`- Minimum charge floor applied: $${money(revenueRes.revenueMinimum)}`);
