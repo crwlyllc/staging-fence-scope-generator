@@ -7909,10 +7909,8 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   const PRICING = {
-    grossProfitTargetPerHour: 125,
-    grossProfitMinimumResidential: 350,
-    grossProfitMinimumCommercial: 350,
-    grossProfitMinimumRevenuePercent: 0.30,
+    targetGrossMarginAfterOverhead: 0.30,
+    revenueMinimumResidential: 350,
     revenueMinimumCommercial: 2500,
     revenueMinimumFullDayHours: 7,
     revenueMinimumFullDay: 2967
@@ -7936,28 +7934,33 @@ document.addEventListener('DOMContentLoaded', function(){
     return normalizeCustomerType(state.customerType);
   }
 
-  function getGrossProfitMinimum(){
+  function formatPercentLabel(rate){
+    const pct = Number(rate) * 100;
+    if(!isFinite(pct)) return '';
+    if(Number.isInteger(pct)) return `${pct}`;
+    return pct.toFixed(1).replace(/\.0$/, '');
+  }
+
+  function getTargetGrossMarginRate(){
+    const rate = Number(PRICING.targetGrossMarginAfterOverhead);
+    return (isFinite(rate) && rate > 0 && rate < 1) ? rate : 0;
+  }
+
+  function getBaseRevenueMinimum(){
     const type = getCustomerType();
     if(type === 'Commercial' || type === 'City'){
-      return PRICING.grossProfitMinimumCommercial;
+      const commercialMin = Number(PRICING.revenueMinimumCommercial);
+      return isFinite(commercialMin) && commercialMin > 0 ? commercialMin : null;
     }
-    return PRICING.grossProfitMinimumResidential;
-  }
-
-  function getGrossMarginFloorRate(){
-    const defaultRate = Number(PRICING.grossProfitMinimumRevenuePercent);
-    return isFinite(defaultRate) && defaultRate > 0 ? defaultRate : 0;
-  }
-
-  function shouldApplyGrossMarginFloor(){
-    return getGrossMarginFloorRate() > 0;
+    const residentialMin = Number(PRICING.revenueMinimumResidential);
+    return isFinite(residentialMin) && residentialMin > 0 ? residentialMin : null;
   }
 
   function getRevenueMinimum(totalHours){
     const mins = [];
-    const type = getCustomerType();
-    if(type === 'Commercial' || type === 'City'){
-      mins.push(PRICING.revenueMinimumCommercial);
+    const baseMinimum = getBaseRevenueMinimum();
+    if(isFinite(baseMinimum) && baseMinimum > 0){
+      mins.push(baseMinimum);
     }
     const hours = Number(totalHours);
     if(isFinite(hours) && hours >= PRICING.revenueMinimumFullDayHours){
@@ -7968,31 +7971,20 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function getMinimumLabelAndValue(){
-    const revenueMin = getRevenueMinimum();
+    const revenueMin = getBaseRevenueMinimum();
     if(isFinite(revenueMin) && revenueMin > 0){
       return { label: 'Minimum charge', value: revenueMin };
     }
-    return { label: 'Minimum gross', value: getGrossProfitMinimum() };
+    return { label: 'Minimum charge', value: 0 };
   }
 
   function getMinimumSummaryText(){
-    const minGross = getGrossProfitMinimum();
-    const revenueMin = getRevenueMinimum();
-    const marginFloorPct = getGrossMarginFloorRate() * 100;
-    const marginFloorLabel = Number.isInteger(marginFloorPct)
-      ? `${marginFloorPct}`
-      : marginFloorPct.toFixed(1).replace(/\.0$/, '');
-    const includeMarginFloor = shouldApplyGrossMarginFloor();
+    const revenueMin = getBaseRevenueMinimum();
+    const marginLabel = formatPercentLabel(getTargetGrossMarginRate());
     if(isFinite(revenueMin) && revenueMin > 0){
-      if(!includeMarginFloor){
-        return `$${money(minGross)} minimum gross, $${money(revenueMin)} minimum charge`;
-      }
-      return `$${money(minGross)} minimum gross, ${marginFloorLabel}% minimum gross margin, $${money(revenueMin)} minimum charge`;
+      return `${marginLabel}% target gross margin after overhead, $${money(revenueMin)} minimum charge`;
     }
-    if(!includeMarginFloor){
-      return `$${money(minGross)} minimum gross`;
-    }
-    return `$${money(minGross)} minimum gross, ${marginFloorLabel}% minimum gross margin`;
+    return `${marginLabel}% target gross margin after overhead`;
   }
 
   function updatePricingMinimumUI(){
@@ -8027,32 +8019,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const costs = Number(directCosts);
     if(!isFinite(rev) || !isFinite(costs)) return NaN;
     return rev - costs - overheadAmountForRevenue(rev);
-  }
-
-  function solveRevenueForTargetGross(directCosts, targetGross){
-    const costs = Number(directCosts);
-    const target = Number(targetGross);
-    if(!isFinite(costs) || costs < 0) return NaN;
-    if(!isFinite(target)) return NaN;
-    const required = costs + target;
-    const baseDenom = 1 - RATES.overhead;
-    const highDenom = 1 - RATES.overheadHighRevenueRate;
-    if(baseDenom <= 0 || highDenom <= 0) return NaN;
-
-    const capStartRevenue = (RATES.overhead > 0)
-      ? (RATES.overheadCap / RATES.overhead)
-      : Infinity;
-    const candidateBase = required / baseDenom;
-    if(isFinite(candidateBase) && candidateBase <= capStartRevenue){
-      return candidateBase;
-    }
-
-    const candidateCapped = required + RATES.overheadCap;
-    if(isFinite(candidateCapped) && candidateCapped <= RATES.overheadHighRevenueThreshold){
-      return candidateCapped;
-    }
-
-    return required / highDenom;
   }
 
   function solveRevenueForGrossProfitMargin(directCosts, marginFloor){
@@ -8092,52 +8058,36 @@ document.addEventListener('DOMContentLoaded', function(){
     return high;
   }
 
-  function computeTargetGross(hours, targetPerHour = PRICING.grossProfitTargetPerHour, minimum = getGrossProfitMinimum()){
-    const h = Number(hours);
-    const rate = Number(targetPerHour);
-    if(!isFinite(h) || h <= 0) return NaN;
-    if(!isFinite(rate) || rate < 0) return NaN;
-    const minValue = (isFinite(minimum) && minimum >= 0)
-      ? Number(minimum)
-      : PRICING.grossProfitMinimumResidential;
-    return Math.max(h * rate, minValue);
-  }
-
   function computeChargeRevenue(directCosts, totalHours){
     const cost = Number(directCosts);
     const hours = Number(totalHours);
     if(!isFinite(cost) || cost < 0) return { revenue: NaN, mode: 'invalid' };
-    if(!isFinite(hours) || hours <= 0) return { revenue: NaN, mode: 'invalid-hours' };
+    const targetMargin = getTargetGrossMarginRate();
+    if(!isFinite(targetMargin) || targetMargin <= 0 || targetMargin >= 1){
+      return { revenue: NaN, mode: 'invalid-margin-target' };
+    }
 
-    let targetGross = computeTargetGross(hours);
-    let revenue = solveRevenueForTargetGross(cost, targetGross);
+    let revenue = solveRevenueForGrossProfitMargin(cost, targetMargin);
     if(!isFinite(revenue) || revenue < 0){
       return { revenue: NaN, mode: 'invalid' };
     }
+
     const revenueMinimum = getRevenueMinimum(totalHours);
-    const marginFloor = getGrossMarginFloorRate();
-    const revenueMarginFloor = (isFinite(marginFloor) && marginFloor > 0)
-      ? solveRevenueForGrossProfitMargin(cost, marginFloor)
-      : NaN;
-    const requiredRevenue = Math.max(
-      revenue,
-      (isFinite(revenueMarginFloor) && revenueMarginFloor > 0) ? revenueMarginFloor : 0,
-      (isFinite(revenueMinimum) && revenueMinimum > 0) ? revenueMinimum : 0
-    );
-    if(isFinite(requiredRevenue) && requiredRevenue > revenue){
-      revenue = requiredRevenue;
-      const minTargetGross = grossProfitForRevenue(revenue, cost);
-      if(isFinite(minTargetGross)){
-        targetGross = Math.max(targetGross, minTargetGross);
-      }
+    if(isFinite(revenueMinimum) && revenueMinimum > revenue){
+      revenue = revenueMinimum;
     }
+
+    const grossProfit = grossProfitForRevenue(revenue, cost);
+    const grossMarginAchieved = (isFinite(grossProfit) && revenue > 0)
+      ? (grossProfit / revenue)
+      : NaN;
     return {
       revenue,
-      mode: 'gross-per-hour',
-      targetGross,
+      mode: 'gross-margin-target',
+      targetMargin,
       hours,
       revenueMinimum,
-      revenueMarginFloor,
+      grossMarginAchieved,
       overheadAmount: overheadAmountForRevenue(revenue)
     };
   }
@@ -8178,7 +8128,6 @@ document.addEventListener('DOMContentLoaded', function(){
   function updateManualQuote(){
     if(!manualCostInput || !manualChargeOutput || !manualStatusEl || !manualModeChip) return;
 
-    const minimumSummary = getMinimumSummaryText();
     const raw = (manualCostInput.value || '').trim();
     if(!raw){
       manualChargeOutput.textContent = '';
@@ -8225,7 +8174,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const revenue = pricing.revenue;
     manualChargeOutput.textContent = '$' + money(revenue);
-    manualModeChip.textContent = 'Gross/hr target';
+    manualModeChip.textContent = `${formatPercentLabel(getTargetGrossMarginRate())}% margin target`;
     manualModeChip.classList.remove('is-warn');
     manualModeChip.classList.add('is-info');
     manualModeChip.style.display = 'inline-block';
@@ -14140,25 +14089,23 @@ document.addEventListener('DOMContentLoaded', function(){
     cost.push('');
     cost.push('WHAT TO CHARGE');
     if (!isFinite(revenue)){
-      cost.push('⚠️ Pricing inputs produce an invalid result. Check overhead rate and ensure total hours > 0.');
+      cost.push('⚠️ Pricing inputs produced an invalid result. Check overhead, margin target, and costs.');
     } else {
       const grossProfit = revenue - directCosts - overheadAmount;
       const netProfit = grossProfit - commissionFormula$;
       const netProfitPct = revenue !== 0 ? (netProfit / revenue) * 100 : NaN;
       cost.push('- Price to charge: $'+money(revenue));
       cost.push('- Total direct costs: $'+money(directCosts));
-      if(isFinite(revenueRes?.targetGross)){
-        const hoursLabel = totalHoursLabel || (isFinite(totalHours) && totalHours > 0 ? `${totalHours.toFixed(1)} hours` : 'time TBD');
-        const marginFloorRate = getGrossMarginFloorRate();
-        if(marginFloorRate > 0){
-          const minGrossPct = marginFloorRate * 100;
-          const minGrossPctLabel = Number.isInteger(minGrossPct)
-            ? `${minGrossPct}`
-            : minGrossPct.toFixed(1).replace(/\.0$/, '');
-          cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}, $${money(getGrossProfitMinimum())} min, ${minGrossPctLabel}% of revenue min): $${money(revenueRes.targetGross)}`);
-        } else {
-          cost.push(`- Target gross profit ($${money(PRICING.grossProfitTargetPerHour)}/hr × ${hoursLabel}, $${money(getGrossProfitMinimum())} min): $${money(revenueRes.targetGross)}`);
-        }
+      if(isFinite(revenueRes?.targetMargin) && revenueRes.targetMargin > 0){
+        const targetMarginLabel = formatPercentLabel(revenueRes.targetMargin);
+        cost.push(`- Target gross margin after overhead: ${targetMarginLabel}%`);
+      }
+      if(isFinite(revenueRes?.grossMarginAchieved) && revenueRes.grossMarginAchieved >= 0){
+        const achievedMarginLabel = formatPercentLabel(revenueRes.grossMarginAchieved);
+        cost.push(`- Estimated gross margin after overhead: ${achievedMarginLabel}%`);
+      }
+      if(isFinite(revenueRes?.revenueMinimum) && revenueRes.revenueMinimum > 0 && Math.abs(revenue - revenueRes.revenueMinimum) < 0.01){
+        cost.push(`- Minimum charge floor applied: $${money(revenueRes.revenueMinimum)}`);
       }
       cost.push('- Overhead amount: $'+money(overheadAmount));
       cost.push('- Gross profit: $'+money(grossProfit));
