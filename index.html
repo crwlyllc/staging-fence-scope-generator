@@ -8744,6 +8744,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const woodTrims = new Set();
       let replacementWalkGateSingle = 0;
       let replacementWalkGateDouble = 0;
+      const replacementWalkGateHardware = new Map();
       let replacementReusePostSections = 0;
       let replacementNewPostSections = 0;
       let concreteSetSections = 0;
@@ -8758,6 +8759,10 @@ document.addEventListener('DOMContentLoaded', function(){
             } else {
               replacementWalkGateSingle += gateCount;
             }
+            const latchLabel = normalizeLabelText(walkGateAddLatchLabel(section) || '') || 'selected latch';
+            const hingeLabel = normalizeLabelText(walkGateAddHingeLabel(section) || '') || 'selected hinges';
+            const hardwareKey = `${latchLabel}|||${hingeLabel}`;
+            replacementWalkGateHardware.set(hardwareKey, (replacementWalkGateHardware.get(hardwareKey) || 0) + gateCount);
           }
         }
         const useExistingPostsForReplacement = includeRemoval && shouldUseExistingPostsForReplacement(section);
@@ -9001,7 +9006,21 @@ document.addEventListener('DOMContentLoaded', function(){
           gateParts.push(describeCount(replacementWalkGateDouble, 'double swing gate', 'double swing gates'));
         }
         if(gateParts.length){
-          replacementWalkGateSentence = `Includes cut-in and installation of ${joinParts(gateParts)} on the replacement sections, complete with posts, frame, pickets, latch, and hinges.`;
+          const hardwareParts = [];
+          replacementWalkGateHardware.forEach((count, key)=>{
+            const [latchRaw, hingeRaw] = String(key || '').split('|||');
+            const latchText = (latchRaw || 'selected latch').trim() || 'selected latch';
+            const hingeText = (hingeRaw || 'selected hinges').trim() || 'selected hinges';
+            if(replacementWalkGateHardware.size > 1){
+              hardwareParts.push(`${describeCount(count, 'gate', 'gates')} (latch: ${latchText}; hinges: ${hingeText})`);
+            } else {
+              hardwareParts.push(`latch: ${latchText}; hinges: ${hingeText}`);
+            }
+          });
+          const hardwareText = hardwareParts.length === 1
+            ? ` Hardware: ${hardwareParts[0]}.`
+            : (hardwareParts.length > 1 ? ` Hardware by gate: ${hardwareParts.join('; ')}.` : '');
+          replacementWalkGateSentence = `Includes cut-in and installation of ${joinParts(gateParts)} on the replacement sections, complete with posts, frame, and pickets.${hardwareText}`;
         }
       }
       const mixedPostHandlingSentence = (replacementReusePostSections > 0 && replacementNewPostSections > 0)
