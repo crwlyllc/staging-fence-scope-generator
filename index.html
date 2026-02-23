@@ -2707,7 +2707,7 @@ document.addEventListener('DOMContentLoaded', function(){
     return result;
   }
 
-  async function computeTravelCost({ crewSchedule, jobAddress, travelDayInfo }){
+  async function computeTravelCost({ crewSchedule, dayCount, jobAddress, travelDayInfo }){
     const result = { cost: 0, breakdown: [], hours: 0, included: false };
     const travelInfo = travelDayInfo || await computeTravelDayInfo(jobAddress);
 
@@ -2726,7 +2726,11 @@ document.addEventListener('DOMContentLoaded', function(){
       return result;
     }
 
-    const travelDays = crewSchedule.filter(day => (day.crew||0) > 0).length;
+    const explicitDayCount = Math.ceil(Number(dayCount) || 0);
+    const scheduleDayCount = Array.isArray(crewSchedule)
+      ? crewSchedule.filter(day => (day.crew||0) > 0).length
+      : 0;
+    const travelDays = explicitDayCount > 0 ? explicitDayCount : scheduleDayCount;
     if(travelDays <= 0){
       return result;
     }
@@ -12833,14 +12837,21 @@ document.addEventListener('DOMContentLoaded', function(){
       const isWhole = Math.abs(rounded - Math.round(rounded)) < 0.05;
       return isWhole ? `${Math.round(rounded)} hours` : `${rounded.toFixed(1)} hours`;
     };
-    const onsiteDayCount = Math.max(0, crewSchedule.filter(day => (day?.crew || 0) > 0).length);
+    const scheduledOnsiteDayCount = Math.max(0, crewSchedule.filter(day => (day?.crew || 0) > 0).length);
+    const minimumOnsiteDaysForHours = (hours) => {
+      if(!isFinite(hours) || hours <= 0) return 0;
+      return Math.max(1, Math.ceil(hours / HOURS_PER_PERSON));
+    };
+    const getOnsiteDayCount = (hours) => {
+      return Math.max(scheduledOnsiteDayCount, minimumOnsiteDaysForHours(hours));
+    };
     const formatOnsiteDays = (days) => {
       const wholeDays = parseInt(days, 10) || 0;
       if(wholeDays <= 0) return '';
       return wholeDays === 1 ? '1 day' : `${wholeDays} days`;
     };
-    const buildOnsiteSummaryLabel = (hoursLabel) => {
-      const daysLabel = formatOnsiteDays(onsiteDayCount);
+    const buildOnsiteSummaryLabel = (hoursLabel, hours) => {
+      const daysLabel = formatOnsiteDays(getOnsiteDayCount(hours));
       if(hoursLabel && daysLabel) return `${hoursLabel} onsite (${daysLabel})`;
       if(hoursLabel) return `${hoursLabel} onsite`;
       if(daysLabel) return `${daysLabel} onsite`;
@@ -12912,7 +12923,7 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push('Depart at: set manually');
     }
     const crewOnsiteLineIndex = sub.length;
-    sub.push(buildOnsiteSummaryLabel(estimatedOnsiteLabel));
+    sub.push(buildOnsiteSummaryLabel(estimatedOnsiteLabel, estimatedOnsiteHours));
     sub.push('');
     sub.push('PROCESS');
     const formatTaskHours = (hours)=>{
@@ -13904,7 +13915,7 @@ document.addEventListener('DOMContentLoaded', function(){
       estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
     }
     if(crewOnsiteLineIndex >= 0){
-      sub[crewOnsiteLineIndex] = buildOnsiteSummaryLabel(estimatedOnsiteLabel);
+      sub[crewOnsiteLineIndex] = buildOnsiteSummaryLabel(estimatedOnsiteLabel, estimatedOnsiteHours);
     }
 
     if(stageNumber === 1){
@@ -14225,6 +14236,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const laborHoursOnsite = isFinite(estimatedOnsiteHours) ? estimatedOnsiteHours : 0;
     const laborHoursShop = Math.max(0, Number(shopFabricationLaborHours || 0) || 0);
+    const effectiveOnsiteDayCount = getOnsiteDayCount(laborHoursOnsite);
     const laborHoursBillable = laborHoursOnsite + laborHoursShop;
     const laborRate = getActiveLaborRate();
     const laborCost = laborHoursBillable * laborRate;
@@ -14232,13 +14244,16 @@ document.addEventListener('DOMContentLoaded', function(){
     const shopFabricationConsumablesCost = Math.max(0, parseInt(totals.panelsInstallCustomShop || 0, 10) || 0) * 10;
     const consumablesCost = baseConsumablesCost + shopFabricationConsumablesCost;
     const removalCost = totals.removalCost || 0;
-    const travelCostResult = await computeTravelCost({ crewSchedule, jobAddress, travelDayInfo });
+    const travelCostResult = await computeTravelCost({
+      crewSchedule,
+      dayCount: effectiveOnsiteDayCount,
+      jobAddress,
+      travelDayInfo
+    });
     const travelCost = travelCostResult.cost || 0;
     const travelHours = isFinite(travelCostResult.hours) ? travelCostResult.hours : 0;
     const totalHours = laborHoursBillable + travelHours;
-    const scheduledCrewDays = Array.isArray(crewSchedule)
-      ? crewSchedule.filter(day => (day?.crew || 0) > 0).length
-      : 0;
+    const scheduledCrewDays = effectiveOnsiteDayCount;
     const retainingWallLengthForDays = Math.max(0, Number(totals.retainingWallLength || 0) || 0);
     const retainingWallDays = retainingWallLengthForDays > 0
       ? Math.max(2, Math.ceil(retainingWallLengthForDays / 20) * 2)
@@ -14260,6 +14275,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const dayTitle = entry.suffix ? `Day ${entry.number}${entry.suffix}` : `Day ${entry.number}`;
       return `${dayTitle}: ${entry.crewLabel}`;
     });
+    if(effectiveOnsiteDayCount > crewScheduleDetail.length){
+      const maxOnsiteHoursPerDayLabel = (Math.round(HOURS_PER_PERSON * 10) / 10).toFixed(1);
+      crewScheduleDetail.push(`Onsite duration requires ${effectiveOnsiteDayCount} day(s) at ${maxOnsiteHoursPerDayLabel} hrs/day max`);
+    }
     const shopFabricationHoursLabel = formatHours(laborHoursShop);
     const laborTimeParts = [];
     if(estimatedOnsiteLabel){
