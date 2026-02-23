@@ -1529,7 +1529,7 @@ document.addEventListener('DOMContentLoaded', function(){
     minCrew: 1,
     maxCrew: 4,
     maxWelders: 2,
-    maxDayHours: 9,
+    maxDayHours: 9.5,
   };
   const DEFAULT_CREW_MEMBERS = ['Jesus', 'JR', 'Clay', 'Joel'];
   const ONSITE_CREW_SIZE_DEFAULT = DEFAULT_CREW_MEMBERS.length;
@@ -7965,7 +7965,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(isFinite(explicit) && explicit > 0){
       return Math.max(1, Math.ceil(explicit));
     }
-    const dayHours = Math.max(0.25, Number(CREW_SETTINGS.maxDayHours || 9) || 9);
+    const dayHours = Math.max(0.25, Number(CREW_SETTINGS.maxDayHours || 9.5) || 9.5);
     const hours = Number(totalHours);
     if(!isFinite(hours) || hours <= 0){
       return 1;
