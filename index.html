@@ -1542,6 +1542,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const JOB_SETUP_HOURS = 20 / 60;
   const JOB_TEARDOWN_HOURS = 20 / 60;
   const JOB_SETUP_TEARDOWN_HOURS = JOB_SETUP_HOURS + JOB_TEARDOWN_HOURS;
+  const WOOD_STAIN_SETUP_TEARDOWN_HOURS = 2;
   const WOOD_INSTALL_PRODUCTION = {
     // Field production rates for wood install/replacement scope.
     postSpacingFt: 8,
@@ -10874,7 +10875,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const otherSideLengths = new Map();
       const heightValues = new Set();
       const brandSet = new Set();
-      const oversprayDisclaimer = 'We will use commercially reasonable efforts to minimize overspray onto adjacent structures, landscaping, and surrounding areas; however, we do not warrant or guarantee that overspray, drips, or incidental transfer will be fully avoided. Customer acknowledges and agrees that stain on ground surfaces within approximately two (2) feet on either side of the fence is reasonably expected as part of the work.';
+      const oversprayDisclaimer = 'We will use commercially reasonable efforts to minimize overspray onto adjacent structures, landscaping, and surrounding areas; however, we do not warrant or guarantee that overspray, drips, or incidental transfer will be fully avoided.';
       let totalSqft = 0;
       let hasWash = false;
       let hasStainOnly = false;
@@ -10971,10 +10972,10 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     if(hasWoodStaining){
-      const setupHours = 1;
-      woodStainHours += setupHours;
-      woodHelperHours += setupHours;
-      woodManHours += setupHours * 2;
+      const setupTeardownHours = WOOD_STAIN_SETUP_TEARDOWN_HOURS;
+      woodStainHours += setupTeardownHours;
+      woodHelperHours += setupTeardownHours;
+      woodManHours += setupTeardownHours * 2;
       const minCrewHours = 2;
       if(woodStainHours < minCrewHours){
         const addedHours = minCrewHours - woodStainHours;
