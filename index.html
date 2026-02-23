@@ -9071,6 +9071,8 @@ document.addEventListener('DOMContentLoaded', function(){
       driveGateOperatorInstallPowers: new Map(),
       driveGateOperatorInstallCombos: new Map(),
       driveGateOperatorInstallPlatforms:0,
+      retainingWallLength:0,
+      retainingWallMaxHeight:0,
       retainingWallSqft:0,
       retainingWallCost:0,
       panelsPrefab:0, panelsCustom:0,
@@ -9382,6 +9384,8 @@ document.addEventListener('DOMContentLoaded', function(){
           }
           const wallSqft = wallLength * wallHeight;
           const wallCost = Math.max(wallSqft * 35, 1500);
+          totals.retainingWallLength += wallLength;
+          totals.retainingWallMaxHeight = Math.max(totals.retainingWallMaxHeight, wallHeight);
           totals.retainingWallSqft += wallSqft;
           totals.retainingWallCost += wallCost;
         }
@@ -11148,9 +11152,21 @@ document.addEventListener('DOMContentLoaded', function(){
       addServiceLine('Install New Fence Sections', `Install panels for ${describeCount(totals.wroughtInstallSections, 'new wrought iron fence section', 'new wrought iron fence sections')} and set posts per section using the selected method (concrete-set or anchored with 1x ${POST_ANCHOR_PLATE_LABEL} + 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post).`);
     }
     if (totals.retainingWallSqft > 0){
+      const retainingWallLengthLabel = formatFtValue(totals.retainingWallLength);
+      const retainingWallMaxHeightLabel = formatFtValue(totals.retainingWallMaxHeight);
+      const retainingWallDimensionParts = [];
+      if(retainingWallLengthLabel){
+        retainingWallDimensionParts.push(`${retainingWallLengthLabel} linear ft`);
+      }
+      if(retainingWallMaxHeightLabel){
+        retainingWallDimensionParts.push(`maximum height ${retainingWallMaxHeightLabel} ft`);
+      }
+      const retainingWallDimensionText = retainingWallDimensionParts.length
+        ? `with ${joinParts(retainingWallDimensionParts)}`
+        : 'to the planned dimensions';
       addServiceLine(
         'Retaining Wall Installation',
-        `Install retaining wall scope totaling ${totals.retainingWallSqft.toFixed(2)} sq ft ($35/sq ft, $1,500 minimum). In-House 4 pours the wall (wall materials & labor included; post materials separate) and Jesus' crew installs the fence. Posts on the wall set in the pour with no extra concrete bags.`
+        `Install a poured concrete retaining wall ${retainingWallDimensionText}. Includes framing/formwork and rebar reinforcement installed 16" on center. Fence posts on the wall are set in the pour.`
       );
     }
 
