@@ -12730,6 +12730,19 @@ document.addEventListener('DOMContentLoaded', function(){
       const isWhole = Math.abs(rounded - Math.round(rounded)) < 0.05;
       return isWhole ? `${Math.round(rounded)} hours` : `${rounded.toFixed(1)} hours`;
     };
+    const onsiteDayCount = Math.max(0, crewSchedule.filter(day => (day?.crew || 0) > 0).length);
+    const formatOnsiteDays = (days) => {
+      const wholeDays = parseInt(days, 10) || 0;
+      if(wholeDays <= 0) return '';
+      return wholeDays === 1 ? '1 day' : `${wholeDays} days`;
+    };
+    const buildOnsiteSummaryLabel = (hoursLabel) => {
+      const daysLabel = formatOnsiteDays(onsiteDayCount);
+      if(hoursLabel && daysLabel) return `${hoursLabel} onsite (${daysLabel})`;
+      if(hoursLabel) return `${hoursLabel} onsite`;
+      if(daysLabel) return `${daysLabel} onsite`;
+      return '';
+    };
     let estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
     const totalLaborHoursLabel = formatHours(manHours);
 
@@ -12796,7 +12809,7 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push('Depart at: set manually');
     }
     const crewOnsiteLineIndex = sub.length;
-    sub.push(estimatedOnsiteLabel ? `${estimatedOnsiteLabel} onsite` : '');
+    sub.push(buildOnsiteSummaryLabel(estimatedOnsiteLabel));
     sub.push('');
     sub.push('PROCESS');
     const formatTaskHours = (hours)=>{
@@ -13788,7 +13801,7 @@ document.addEventListener('DOMContentLoaded', function(){
       estimatedOnsiteLabel = formatHours(estimatedOnsiteHours);
     }
     if(crewOnsiteLineIndex >= 0){
-      sub[crewOnsiteLineIndex] = estimatedOnsiteLabel ? `${estimatedOnsiteLabel} onsite` : '';
+      sub[crewOnsiteLineIndex] = buildOnsiteSummaryLabel(estimatedOnsiteLabel);
     }
 
     if(stageNumber === 1){
