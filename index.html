@@ -12507,12 +12507,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const jobAddress = mapAddressInput ? (mapAddressInput.value || '').trim() : lastEstimateAddress;
     const travelDayInfo = await computeTravelDayInfo(jobAddress);
-    const travelHoursPerDay = travelDayInfo.included && isFinite(travelDayInfo.hoursPerDay)
-      ? travelDayInfo.hoursPerDay
-      : 0;
     const MAX_CREW_DAY_HOURS = CREW_SETTINGS.maxDayHours || 13;
-    const onsiteHoursPerPerson = MAX_CREW_DAY_HOURS - travelHoursPerDay;
-    // Guard against zero/negative onsite capacity if travel time exceeds the day cap.
+    // `maxDayHours` is an onsite-hours cap; travel time does not reduce onsite production capacity.
+    const onsiteHoursPerPerson = MAX_CREW_DAY_HOURS;
     const HOURS_PER_PERSON = Math.max(0.25, onsiteHoursPerPerson);
     const primePaintScheduled = totalLenPrimePaint > 0;
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
