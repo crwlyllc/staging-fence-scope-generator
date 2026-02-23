@@ -8463,6 +8463,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const SERVICE_BUCKET_LABELS = {
       installation: 'Wrought Iron Installation',
       woodInstallation: 'Fence Installation',
+      retainingWall: 'Retaining Wall Installation',
       replacement: 'Wrought Iron Replacement',
       repairs: 'Wrought Iron Repairs',
       driveGateOperator: 'Drive Gate Operator Replacement',
@@ -8480,6 +8481,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const SERVICE_NAME_TO_BUCKET = {
       'Wrought Iron Fence Installation': 'installation',
       'Wood Fence Installation': 'woodInstallation',
+      'Retaining Wall Installation': 'retainingWall',
       'Install New Fence Sections': 'installation',
       'Add Single Walk Gate': 'installation',
       'Add Double Walk Gate': 'installation',
@@ -11105,6 +11107,12 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (totals.wroughtInstallSections > 0){
       addServiceLine('Install New Fence Sections', `Install panels for ${describeCount(totals.wroughtInstallSections, 'new wrought iron fence section', 'new wrought iron fence sections')} and set posts per section using the selected method (concrete-set or anchored with 1x ${POST_ANCHOR_PLATE_LABEL} + 4x ${POST_ANCHOR_HARDWARE_LABEL}s per post).`);
+    }
+    if (totals.retainingWallSqft > 0){
+      addServiceLine(
+        'Retaining Wall Installation',
+        `Install retaining wall scope totaling ${totals.retainingWallSqft.toFixed(2)} sq ft ($35/sq ft, $1,500 minimum). In-House 4 pours the wall (wall materials & labor included; post materials separate) and Jesus' crew installs the fence. Posts on the wall set in the pour with no extra concrete bags.`
+      );
     }
 
     const serviceLines = buildServiceLineOutput();
