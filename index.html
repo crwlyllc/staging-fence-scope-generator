@@ -8019,11 +8019,10 @@ document.addEventListener('DOMContentLoaded', function(){
   function getMinimumSummaryText(){
     const revenueMin = getBaseRevenueMinimum();
     const targetMarginLabel = formatPercentLabel(getTargetGrossMarginRate());
-    const minimumMarginLabel = formatPercentLabel(getMinimumGrossMarginRate());
     if(isFinite(revenueMin) && revenueMin > 0){
-      return `${targetMarginLabel}% target gross margin after overhead, ${minimumMarginLabel}% minimum gross margin after overhead, $${money(revenueMin)} minimum charge`;
+      return `${targetMarginLabel}% target gross margin after overhead, $${money(revenueMin)} minimum charge`;
     }
-    return `${targetMarginLabel}% target gross margin after overhead, ${minimumMarginLabel}% minimum gross margin after overhead`;
+    return `${targetMarginLabel}% target gross margin after overhead`;
   }
 
   function updatePricingMinimumUI(){
@@ -8136,9 +8135,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const hours = Number(totalHours);
     if(!isFinite(cost) || cost < 0) return { revenue: NaN, mode: 'invalid' };
     const targetMargin = getTargetGrossMarginRate();
-    const minimumMargin = getMinimumGrossMarginRate();
-    if(!isFinite(targetMargin) || targetMargin <= 0 || targetMargin >= 1
-      || !isFinite(minimumMargin) || minimumMargin <= 0 || minimumMargin >= 1){
+    if(!isFinite(targetMargin) || targetMargin <= 0 || targetMargin >= 1){
       return { revenue: NaN, mode: 'invalid-margin-target' };
     }
 
@@ -8148,41 +8145,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     const revenueMinimum = getRevenueMinimum(totalHours);
-    if(isFinite(revenueMinimum) && revenueMinimum > revenue){
-      revenue = revenueMinimum;
-    }
-
-    const grossProfitCapPerDay = getGrossProfitCapPerDay();
-    const grossProfitCapDays = getGrossProfitCapDays(totalHours, options.dayCount);
-    const grossProfitCap = getGrossProfitCap(totalHours, options.dayCount);
-    const revenueForDailyGrossThreshold = (isFinite(grossProfitCap) && grossProfitCap >= 0)
-      ? solveRevenueForGrossProfitAmount(cost, grossProfitCap)
-      : NaN;
-    const revenueForMinimumMargin = solveRevenueForGrossProfitMargin(cost, minimumMargin);
-
-    const guardrailCandidates = [];
-    if(isFinite(revenueForMinimumMargin) && revenueForMinimumMargin > 0){
-      guardrailCandidates.push(revenueForMinimumMargin);
-    }
-    if(isFinite(revenueForDailyGrossThreshold) && revenueForDailyGrossThreshold > 0){
-      guardrailCandidates.push(revenueForDailyGrossThreshold);
-    }
-    const revenueGuardrailCap = guardrailCandidates.length ? Math.max(...guardrailCandidates) : NaN;
-
-    const revenueBeforeGuards = revenue;
-    let revenueAfterGuardrailCap = revenue;
-    if(isFinite(revenueGuardrailCap) && revenueGuardrailCap > 0 && revenueAfterGuardrailCap > revenueGuardrailCap){
-      revenueAfterGuardrailCap = revenueGuardrailCap;
-    }
-    const grossGuardrailCapApplied = (revenueBeforeGuards - revenueAfterGuardrailCap) > 0.01;
-    const minimumMarginCapBasisUsed = grossGuardrailCapApplied
-      && isFinite(revenueForMinimumMargin)
-      && Math.abs(revenueAfterGuardrailCap - revenueForMinimumMargin) <= 0.01;
-    const dailyGrossCapBasisUsed = grossGuardrailCapApplied
-      && isFinite(revenueForDailyGrossThreshold)
-      && Math.abs(revenueAfterGuardrailCap - revenueForDailyGrossThreshold) <= 0.01;
-
-    revenue = revenueAfterGuardrailCap;
     if(isFinite(revenueMinimum) && revenueMinimum > revenue){
       revenue = revenueMinimum;
     }
@@ -8198,24 +8160,7 @@ document.addEventListener('DOMContentLoaded', function(){
       hours,
       revenueMinimum,
       grossMarginAchieved,
-      overheadAmount: overheadAmountForRevenue(revenue),
-      minimumMargin,
-      revenueForMinimumMargin,
-      revenueForDailyGrossThreshold,
-      revenueGuardrailCap,
-      grossGuardrailCapApplied,
-      minimumMarginCapBasisUsed,
-      dailyGrossCapBasisUsed,
-      grossProfitCapPerDay,
-      grossProfitCapDays,
-      grossProfitCap,
-      // Backward-compatible aliases.
-      grossCapApplied: grossGuardrailCapApplied,
-      minimumGrossMarginApplied: minimumMarginCapBasisUsed,
-      grossProfitFloorPerDay: grossProfitCapPerDay,
-      grossProfitFloorDays: grossProfitCapDays,
-      grossProfitFloor: grossProfitCap,
-      grossFloorApplied: grossGuardrailCapApplied
+      overheadAmount: overheadAmountForRevenue(revenue)
     };
   }
 
@@ -14342,35 +14287,9 @@ document.addEventListener('DOMContentLoaded', function(){
         const targetMarginLabel = formatPercentLabel(revenueRes.targetMargin);
         cost.push(`- Target gross margin after overhead: ${targetMarginLabel}%`);
       }
-      if(isFinite(revenueRes?.minimumMargin) && revenueRes.minimumMargin > 0){
-        const minimumMarginLabel = formatPercentLabel(revenueRes.minimumMargin);
-        cost.push(`- Minimum gross margin after overhead: ${minimumMarginLabel}%`);
-      }
-      const dailyGrossThresholdPerDay = Number(revenueRes?.grossProfitCapPerDay);
-      if(isFinite(dailyGrossThresholdPerDay) && dailyGrossThresholdPerDay > 0){
-        const thresholdDays = Math.max(1, parseInt(revenueRes?.grossProfitCapDays || 0, 10) || 1);
-        const thresholdTotal = Number(revenueRes?.grossProfitCap);
-        if(isFinite(thresholdTotal) && thresholdDays > 1){
-          cost.push(`- Daily gross threshold: $${money(dailyGrossThresholdPerDay)}/day × ${thresholdDays} days = $${money(thresholdTotal)}`);
-        }else{
-          cost.push(`- Daily gross threshold: $${money(dailyGrossThresholdPerDay)} per day`);
-        }
-      }
       if(isFinite(revenueRes?.grossMarginAchieved) && revenueRes.grossMarginAchieved >= 0){
         const achievedMarginLabel = formatPercentLabel(revenueRes.grossMarginAchieved);
         cost.push(`- Estimated gross margin after overhead: ${achievedMarginLabel}%`);
-      }
-      const grossGuardrailCapApplied = !!(revenueRes?.grossGuardrailCapApplied ?? revenueRes?.grossCapApplied);
-      const minimumMarginCapBasisUsed = !!(revenueRes?.minimumMarginCapBasisUsed ?? revenueRes?.minimumGrossMarginApplied);
-      const dailyGrossCapBasisUsed = !!(revenueRes?.dailyGrossCapBasisUsed);
-      if(grossGuardrailCapApplied && minimumMarginCapBasisUsed && dailyGrossCapBasisUsed){
-        cost.push('- Large-job cap applied: 20% gross margin and daily gross thresholds were equal.');
-      } else if(grossGuardrailCapApplied && minimumMarginCapBasisUsed){
-        cost.push('- Large-job cap applied at the 20% gross margin threshold (higher than daily gross threshold).');
-      } else if(grossGuardrailCapApplied && dailyGrossCapBasisUsed){
-        cost.push('- Large-job cap applied at the daily gross threshold (higher than 20% gross margin threshold).');
-      } else if(grossGuardrailCapApplied){
-        cost.push('- Large-job cap applied at the higher of the 20% margin threshold or daily gross threshold.');
       }
       if(isFinite(revenueRes?.revenueMinimum) && revenueRes.revenueMinimum > 0 && Math.abs(revenue - revenueRes.revenueMinimum) < 0.01){
         cost.push(`- Minimum charge floor applied: $${money(revenueRes.revenueMinimum)}`);
