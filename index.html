@@ -1629,6 +1629,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const HCP_MAP_SCREENSHOT_PADDING_RATIO = 0.14;
   const HCP_MAP_SCREENSHOT_MIN_ZOOM = 1;
   const HCP_MAP_SCREENSHOT_MAX_ZOOM = 21;
+  const HCP_MAP_LABEL_FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
   let pendingMapRestore = null;
   let mapUpdateScheduled = false;
 
@@ -3733,6 +3734,265 @@ document.addEventListener('DOMContentLoaded', function(){
     return { center, zoom };
   }
 
+  function computeDistanceFeetBetweenLiterals(start, end){
+    if(!start || !end) return 0;
+    const hasSphericalDistance = typeof google !== 'undefined'
+      && google.maps
+      && google.maps.geometry
+      && google.maps.geometry.spherical
+      && typeof google.maps.geometry.spherical.computeDistanceBetween === 'function'
+      && typeof google.maps.LatLng === 'function';
+    if(hasSphericalDistance){
+      const meters = google.maps.geometry.spherical.computeDistanceBetween(
+        new google.maps.LatLng(start.lat, start.lng),
+        new google.maps.LatLng(end.lat, end.lng)
+      );
+      const feet = meters * 3.28084;
+      return isFinite(feet) ? feet : 0;
+    }
+    const toRad = value=> (value * Math.PI) / 180;
+    const earthRadiusMeters = 6378137;
+    const dLat = toRad((end.lat || 0) - (start.lat || 0));
+    const dLng = toRad((end.lng || 0) - (start.lng || 0));
+    const lat1 = toRad(start.lat || 0);
+    const lat2 = toRad(end.lat || 0);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+      + Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+    const meters = earthRadiusMeters * c;
+    const feet = meters * 3.28084;
+    return isFinite(feet) ? feet : 0;
+  }
+
+  function midpointLiteralForStaticLabel(start, end){
+    if(!start || !end){
+      return null;
+    }
+    const hasGoogleLatLng = typeof google !== 'undefined'
+      && google.maps
+      && typeof google.maps.LatLng === 'function';
+    if(hasGoogleLatLng){
+      const midpoint = segmentMidpoint(
+        new google.maps.LatLng(start.lat, start.lng),
+        new google.maps.LatLng(end.lat, end.lng)
+      );
+      const literal = mapLatLngToLiteral(midpoint);
+      if(literal){
+        return literal;
+      }
+    }
+    return {
+      lat: ((start.lat || 0) + (end.lat || 0)) / 2,
+      lng: ((start.lng || 0) + (end.lng || 0)) / 2,
+    };
+  }
+
+  function collectHcpMapScreenshotSegmentLabels(){
+    const labels = [];
+    if(!Array.isArray(mapState.polylines) || !mapState.polylines.length){
+      return labels;
+    }
+    const sectionBySegmentId = new Map();
+    state.sections.forEach(section=>{
+      if(section && section.mapGenerated && section.mapSegmentId){
+        sectionBySegmentId.set(section.mapSegmentId, section);
+      }
+    });
+    mapState.polylines.forEach(polyline=>{
+      if(!polyline || typeof polyline.getPath !== 'function'){
+        return;
+      }
+      if(typeof polyline.getMap === 'function' && !polyline.getMap()){
+        return;
+      }
+      const path = polyline.getPath();
+      if(!path || typeof path.getLength !== 'function'){
+        return;
+      }
+      const polylineId = polyline.__spPolylineId || '';
+      const pathLength = path.getLength();
+      for(let i=0; i<pathLength - 1; i++){
+        const start = mapLatLngToLiteral(path.getAt(i));
+        const end = mapLatLngToLiteral(path.getAt(i + 1));
+        if(!start || !end){
+          continue;
+        }
+        const feet = computeDistanceFeetBetweenLiterals(start, end);
+        if(!isFinite(feet) || feet <= 0.1){
+          continue;
+        }
+        const measuredFeet = Math.round(feet);
+        const segmentId = `${polylineId}:${i}`;
+        const linkedSection = sectionBySegmentId.get(segmentId);
+        const overrideFeet = parsePositiveInt(linkedSection && linkedSection.mapLengthOverride);
+        const displayFeet = overrideFeet || measuredFeet;
+        if(!displayFeet){
+          continue;
+        }
+        const midpoint = midpointLiteralForStaticLabel(start, end);
+        if(!midpoint){
+          continue;
+        }
+        labels.push({
+          position: midpoint,
+          text: `${displayFeet} lf`,
+        });
+      }
+    });
+    return labels;
+  }
+
+  function staticMapWorldPointFromLiteral(point){
+    if(!point) return null;
+    const latRaw = Number(point.lat);
+    const lngRaw = Number(point.lng);
+    if(!isFinite(latRaw) || !isFinite(lngRaw)){
+      return null;
+    }
+    const lat = Math.max(-85.05112878, Math.min(85.05112878, latRaw));
+    const lng = ((((lngRaw + 180) % 360) + 360) % 360) - 180;
+    const sinVal = Math.sin((lat * Math.PI) / 180);
+    const x = 256 * (0.5 + (lng / 360));
+    const y = 256 * (0.5 - (Math.log((1 + sinVal) / (1 - sinVal)) / (4 * Math.PI)));
+    return { x, y };
+  }
+
+  function projectLiteralToStaticMapPixel(point, viewport, dimensions){
+    if(!point || !viewport || !viewport.center || !dimensions){
+      return null;
+    }
+    const zoom = Number(viewport.zoom);
+    if(!isFinite(zoom)){
+      return null;
+    }
+    const worldPoint = staticMapWorldPointFromLiteral(point);
+    const worldCenter = staticMapWorldPointFromLiteral(viewport.center);
+    if(!worldPoint || !worldCenter){
+      return null;
+    }
+    const scale = Math.pow(2, zoom);
+    const worldWidthPx = 256 * scale;
+    let dx = (worldPoint.x - worldCenter.x) * scale;
+    if(dx > worldWidthPx / 2){
+      dx -= worldWidthPx;
+    } else if(dx < -worldWidthPx / 2){
+      dx += worldWidthPx;
+    }
+    const dy = (worldPoint.y - worldCenter.y) * scale;
+    return {
+      x: (dimensions.width / 2) + dx,
+      y: (dimensions.height / 2) + dy,
+    };
+  }
+
+  function drawRoundedRectPath(ctx, x, y, width, height, radius){
+    const r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function blobToImageElement(blob){
+    return new Promise((resolve, reject)=>{
+      if(!(blob instanceof Blob)){
+        reject(new Error('Invalid image blob.'));
+        return;
+      }
+      const objectUrl = URL.createObjectURL(blob);
+      const image = new Image();
+      image.onload = ()=>{
+        URL.revokeObjectURL(objectUrl);
+        resolve(image);
+      };
+      image.onerror = ()=>{
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Unable to load image blob.'));
+      };
+      image.src = objectUrl;
+    });
+  }
+
+  async function buildLabeledHcpMapScreenshotDataUrl(baseBlob, viewport){
+    if(!(baseBlob instanceof Blob)){
+      return '';
+    }
+    const labels = collectHcpMapScreenshotSegmentLabels();
+    if(!labels.length || !viewport || !viewport.center || !isFinite(Number(viewport.zoom))){
+      return '';
+    }
+    const dimensions = getHcpStaticMapDimensionsPx();
+    if(typeof document === 'undefined' || typeof document.createElement !== 'function'){
+      return '';
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = dimensions.width;
+    canvas.height = dimensions.height;
+    const ctx = canvas.getContext('2d');
+    if(!ctx){
+      return '';
+    }
+    try{
+      const image = await blobToImageElement(baseBlob);
+      ctx.drawImage(image, 0, 0, dimensions.width, dimensions.height);
+    }catch(_err){
+      return '';
+    }
+    const fontSize = Math.max(12, Math.round(Math.min(dimensions.width, dimensions.height) * 0.022));
+    const padX = Math.max(6, Math.round(fontSize * 0.45));
+    const padY = Math.max(4, Math.round(fontSize * 0.28));
+    const borderRadius = Math.max(6, Math.round(fontSize * 0.55));
+    const strokeWidth = Math.max(2, Math.round(fontSize * 0.14));
+    const margin = 2;
+    ctx.font = `800 ${fontSize}px ${HCP_MAP_LABEL_FONT_FAMILY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    labels.forEach(label=>{
+      if(!label || !label.position){
+        return;
+      }
+      const text = String(label.text || '').trim();
+      if(!text){
+        return;
+      }
+      const point = projectLiteralToStaticMapPixel(label.position, viewport, dimensions);
+      if(!point){
+        return;
+      }
+      const metrics = ctx.measureText(text);
+      const textWidth = Math.max(1, metrics.width);
+      const textHeight = Math.max(
+        fontSize,
+        (metrics.actualBoundingBoxAscent || (fontSize * 0.75))
+          + (metrics.actualBoundingBoxDescent || (fontSize * 0.25))
+      );
+      const boxWidth = textWidth + (padX * 2);
+      const boxHeight = textHeight + (padY * 2);
+      let left = point.x - (boxWidth / 2);
+      let top = point.y - (boxHeight / 2);
+      left = Math.min(Math.max(left, margin), dimensions.width - boxWidth - margin);
+      top = Math.min(Math.max(top, margin), dimensions.height - boxHeight - margin);
+
+      drawRoundedRectPath(ctx, left, top, boxWidth, boxHeight, borderRadius);
+      ctx.fillStyle = 'rgba(255,255,255,0.96)';
+      ctx.fill();
+      ctx.lineWidth = strokeWidth;
+      ctx.strokeStyle = 'rgba(15,23,42,0.95)';
+      ctx.stroke();
+
+      ctx.fillStyle = '#111827';
+      ctx.fillText(text, left + (boxWidth / 2), top + (boxHeight / 2));
+    });
+    return canvas.toDataURL('image/png');
+  }
+
   function buildHcpMapScreenshotUrl(){
     if(!mapState.map){
       return '';
@@ -3799,6 +4059,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!url){
       return null;
     }
+    const viewport = getHcpMapScreenshotViewport();
     const payload = {
       url,
       mapType: HCP_MAP_SCREENSHOT_MAPTYPE,
@@ -3809,7 +4070,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const response = await fetch(url);
       if(response.ok){
         const blob = await response.blob();
-        const dataUrl = await blobToDataUrl(blob);
+        let dataUrl = await buildLabeledHcpMapScreenshotDataUrl(blob, viewport);
+        if(!dataUrl){
+          dataUrl = await blobToDataUrl(blob);
+        }
         if(dataUrl && dataUrl.length <= HCP_MAP_SCREENSHOT_MAX_DATA_URL_LENGTH){
           payload.dataUrl = dataUrl;
           payload.mimeType = blob.type || 'image/png';
