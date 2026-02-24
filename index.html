@@ -1626,6 +1626,9 @@ document.addEventListener('DOMContentLoaded', function(){
   const HCP_MAP_SCREENSHOT_WEIGHT = 5;
   const HCP_MAP_SCREENSHOT_MAPTYPE = 'satellite';
   const HCP_MAP_SCREENSHOT_MAX_DATA_URL_LENGTH = 1500000;
+  const HCP_MAP_SCREENSHOT_PADDING_RATIO = 0.14;
+  const HCP_MAP_SCREENSHOT_MIN_ZOOM = 1;
+  const HCP_MAP_SCREENSHOT_MAX_ZOOM = 21;
   let pendingMapRestore = null;
   let mapUpdateScheduled = false;
 
@@ -3640,6 +3643,96 @@ document.addEventListener('DOMContentLoaded', function(){
     return params;
   }
 
+  function getHcpStaticMapDimensionsPx(){
+    const raw = String(HCP_MAP_SCREENSHOT_SIZE || '').trim().toLowerCase();
+    const match = raw.match(/^(\d+)\s*x\s*(\d+)$/);
+    const width = Math.max(1, parseInt(match && match[1], 10) || 640) * (parseInt(HCP_MAP_SCREENSHOT_SCALE, 10) || 1);
+    const height = Math.max(1, parseInt(match && match[2], 10) || 360) * (parseInt(HCP_MAP_SCREENSHOT_SCALE, 10) || 1);
+    return { width, height };
+  }
+
+  function staticMapLatToMercatorRadians(lat){
+    const sinVal = Math.sin((Math.PI * lat) / 180);
+    const radX2 = Math.log((1 + sinVal) / (1 - sinVal)) / 2;
+    return Math.max(Math.min(radX2, Math.PI), -Math.PI) / 2;
+  }
+
+  function getHcpMapScreenshotViewport(){
+    if(!Array.isArray(mapState.polylines) || !mapState.polylines.length){
+      return null;
+    }
+    const points = [];
+    mapState.polylines.forEach(polyline=>{
+      if(!polyline || typeof polyline.getPath !== 'function'){
+        return;
+      }
+      if(typeof polyline.getMap === 'function' && !polyline.getMap()){
+        return;
+      }
+      const path = polyline.getPath();
+      if(!path || typeof path.getLength !== 'function'){
+        return;
+      }
+      const pathLength = path.getLength();
+      for(let i=0;i<pathLength;i++){
+        const literal = mapLatLngToLiteral(path.getAt(i));
+        if(literal){
+          points.push(literal);
+        }
+      }
+    });
+    if(!points.length){
+      return null;
+    }
+
+    let minLat = points[0].lat;
+    let maxLat = points[0].lat;
+    let minLng = points[0].lng;
+    let maxLng = points[0].lng;
+    points.forEach(point=>{
+      minLat = Math.min(minLat, point.lat);
+      maxLat = Math.max(maxLat, point.lat);
+      minLng = Math.min(minLng, point.lng);
+      maxLng = Math.max(maxLng, point.lng);
+    });
+
+    const center = {
+      lat: (minLat + maxLat) / 2,
+      lng: (minLng + maxLng) / 2,
+    };
+
+    const dimensions = getHcpStaticMapDimensionsPx();
+    const paddingRatio = Math.min(0.4, Math.max(0, Number(HCP_MAP_SCREENSHOT_PADDING_RATIO) || 0));
+    const innerWidthPx = Math.max(64, Math.floor(dimensions.width * (1 - (paddingRatio * 2))));
+    const innerHeightPx = Math.max(64, Math.floor(dimensions.height * (1 - (paddingRatio * 2))));
+
+    const lngDiff = Math.max(0, maxLng - minLng);
+    const lngFraction = Math.max(0, Math.min(1, lngDiff / 360));
+    const latFraction = Math.max(0, Math.min(1, Math.abs(
+      staticMapLatToMercatorRadians(maxLat) - staticMapLatToMercatorRadians(minLat)
+    ) / Math.PI));
+
+    const zoomForFraction = (pixelSize, fraction)=>{
+      if(!(fraction > 0)){
+        return HCP_MAP_SCREENSHOT_MAX_ZOOM;
+      }
+      const zoom = Math.floor(Math.log((pixelSize / 256) / fraction) / Math.LN2);
+      if(!isFinite(zoom)){
+        return HCP_MAP_SCREENSHOT_MAX_ZOOM;
+      }
+      return zoom;
+    };
+
+    const latZoom = zoomForFraction(innerHeightPx, latFraction);
+    const lngZoom = zoomForFraction(innerWidthPx, lngFraction);
+    const minAllowedZoom = Number(HCP_MAP_SCREENSHOT_MIN_ZOOM) || 1;
+    const maxAllowedZoom = Number(HCP_MAP_SCREENSHOT_MAX_ZOOM) || 21;
+    const fittedZoom = Math.min(latZoom, lngZoom, maxAllowedZoom);
+    const zoom = Math.max(minAllowedZoom, isFinite(fittedZoom) ? fittedZoom : maxAllowedZoom);
+
+    return { center, zoom };
+  }
+
   function buildHcpMapScreenshotUrl(){
     if(!mapState.map){
       return '';
@@ -3652,9 +3745,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!pathParams.length){
       return '';
     }
-    const center = mapState.map.getCenter ? mapState.map.getCenter() : null;
-    const centerLiteral = mapLatLngToLiteral(center);
-    const zoom = Number(mapState.map.getZoom ? mapState.map.getZoom() : NaN);
+    const fittedViewport = getHcpMapScreenshotViewport();
+    const fallbackCenter = mapLatLngToLiteral(mapState.map.getCenter ? mapState.map.getCenter() : null);
+    const centerLiteral = (fittedViewport && fittedViewport.center) ? fittedViewport.center : fallbackCenter;
+    const fallbackZoom = Number(mapState.map.getZoom ? mapState.map.getZoom() : NaN);
+    const zoom = Number(fittedViewport && isFinite(fittedViewport.zoom) ? fittedViewport.zoom : fallbackZoom);
     const mapTypeId = String(mapState.map.getMapTypeId ? mapState.map.getMapTypeId() : '').toLowerCase();
     const mapType = (mapTypeId === 'hybrid' || mapTypeId === 'satellite') ? 'satellite' : HCP_MAP_SCREENSHOT_MAPTYPE;
     const createUrl = (count)=>{
@@ -14184,7 +14279,16 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push(`- Puppy pickets to replace: ${totals.puppyPickets}${detail}`);
     }
     if (totals.weldRedos > 0)       sub.push('- Weld redos: '+totals.weldRedos);
-    if (totals.wiPatches > 0)       sub.push(`- ${totals.wiPatches}x rail ${plural(totals.wiPatches, 'patch', 'patches')}`);
+    if (totals.wiPatches > 0){
+      const patchSizes = Array.from(totals.wiPatchSizes || []).filter(Boolean);
+      if(patchSizes.length === 1){
+        sub.push(`- ${totals.wiPatches}x ${patchSizes[0]} rail ${plural(totals.wiPatches, 'patch', 'patches')}`);
+      } else if(patchSizes.length > 1){
+        sub.push(`- ${totals.wiPatches}x rail ${plural(totals.wiPatches, 'patch', 'patches')} (${joinParts(patchSizes)})`);
+      } else {
+        sub.push(`- ${totals.wiPatches}x rail ${plural(totals.wiPatches, 'patch', 'patches')}`);
+      }
+    }
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
     if (totals.wiRailGaps > 0)      sub.push('- Full rail gap fillers: '+totals.wiRailGaps);
     if (totals.walkRealign > 0) {
