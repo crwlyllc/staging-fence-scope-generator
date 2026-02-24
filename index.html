@@ -8813,7 +8813,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const grossProfitCapAmount = getGrossProfitCap(totalHours, options);
     let capApplied = false;
     let capSkippedForGrossTarget = false;
-    if(isFinite(grossProfitCapAmount) && grossProfitCapAmount >= 0){
+    if(Number.isFinite(grossProfitCapAmount) && grossProfitCapAmount > 0){
       const cappedRevenue = solveRevenueForGrossProfitAmount(cost, grossProfitCapAmount);
       if(isFinite(cappedRevenue) && cappedRevenue >= 0 && cappedRevenue < revenue){
         const cappedRevenueGross = grossProfitForRevenue(cappedRevenue, cost);
