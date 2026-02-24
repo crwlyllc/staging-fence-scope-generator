@@ -1421,12 +1421,13 @@ document.addEventListener('DOMContentLoaded', function(){
     WROUGHT_PANEL_FABRICATION_ORDER_TMI
   ];
   const WROUGHT_TMI_CUSTOM_PANEL_COST = 300;
-  const WOOD_STAIN_BRANDS = ['HueMiller','Ready Seal','Wood Defender'];
+  const WOOD_STAIN_BRANDS = ['HueMiller','Ready Seal','Wood Defender','Exterior Paint'];
   const DEFAULT_WOOD_STAIN_BRAND = WOOD_STAIN_BRANDS[0];
   const WOOD_STAIN_BUCKET_COSTS = {
     'HueMiller': 124.49,
     'Ready Seal': 160,
-    'Wood Defender': 185
+    'Wood Defender': 185,
+    'Exterior Paint': 250
   };
   const NO_TIES_OPTION = 'No ties';
   const SIMPSON_TIE_OPTIONS = ['1 piece ties','2 piece ties', NO_TIES_OPTION];
@@ -7928,6 +7929,13 @@ document.addEventListener('DOMContentLoaded', function(){
   function woodStainBucketMaterialLabel(brand){
     return `5 gal wood stain bucket (${normalizeWoodStainBrand(brand)})`;
   }
+  function woodStainProductPhrase(brand){
+    const normalized = normalizeWoodStainBrand(brand);
+    if(normalized.toLowerCase() === 'exterior paint'){
+      return 'exterior paint';
+    }
+    return `${normalized} oil based stain`;
+  }
   function isPostmasterPost(post){
     return /postmaster/i.test(String(post||''));
   }
@@ -8404,6 +8412,7 @@ document.addEventListener('DOMContentLoaded', function(){
     '5 gal wood stain bucket (HueMiller)': WOOD_STAIN_BUCKET_COSTS['HueMiller'],
     '5 gal wood stain bucket (Ready Seal)': WOOD_STAIN_BUCKET_COSTS['Ready Seal'],
     '5 gal wood stain bucket (Wood Defender)': WOOD_STAIN_BUCKET_COSTS['Wood Defender'],
+    '5 gal wood stain bucket (Exterior Paint)': WOOD_STAIN_BUCKET_COSTS['Exterior Paint'],
     'wood picket': 3.0,
     'wood picket (3.5")': 2.5,
     'wood picket (4")': 2.75,
@@ -11433,10 +11442,9 @@ document.addEventListener('DOMContentLoaded', function(){
         if(!orderedBrands.includes(brand)) orderedBrands.push(brand);
       });
       let brandPhrase = '';
-      if(orderedBrands.length === 1){
-        brandPhrase = `${orderedBrands[0]} oil based stain`;
-      } else if(orderedBrands.length > 1){
-        brandPhrase = `${joinParts(orderedBrands)} oil based stain brands`;
+      if(orderedBrands.length > 0){
+        const productPhrases = orderedBrands.map(brand=>woodStainProductPhrase(brand));
+        brandPhrase = joinParts(productPhrases);
       }
       if(totalSqft > 0){
         const sqftLabel = Math.round(totalSqft);
