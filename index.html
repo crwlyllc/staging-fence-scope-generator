@@ -14054,19 +14054,72 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push('');
     }
     sub.push('SCOPE (Totals)');
-    const pushPostLinesSub = (label, counts)=>{
-      const parts = [];
+    const postCountItems = (counts)=>{
+      const items = [];
       const addIfPresent = (key, label)=>{
         const qty = parseInt(counts?.[key], 10) || 0;
-        if(qty > 0) parts.push(`${qty} × ${label}`);
+        if(qty > 0) items.push({ qty, label });
       };
       addIfPresent('posts1p5', '1 1/2" x 1 1/2"');
       addIfPresent('posts2x2', '2x2');
       addIfPresent('posts3x3', '3x3');
       addIfPresent('posts4x4', '4x4');
+      return items;
+    };
+    const pushPostReplaceActionLine = (counts)=>{
+      const items = postCountItems(counts);
+      if(!items.length) return;
+      if(items.length === 1){
+        const item = items[0];
+        const noun = item.qty === 1 ? 'post' : 'posts';
+        sub.push(`- Replace ${item.qty}x ${item.label} ${noun}`);
+        return;
+      }
+      const compactParts = items.map(item=> `${item.qty}x ${item.label}`);
+      sub.push(`- Replace posts: ${compactParts.join(', ')}`);
+    };
+    const pushPostLinesSub = (label, counts)=>{
+      const parts = postCountItems(counts).map(item=> `${item.qty} × ${item.label}`);
       if(parts.length) sub.push(`- ${label}: ${parts.join(', ')}`);
     };
-    pushPostLinesSub('Posts to replace', totals.postsReplace || zeroPostCounts());
+    const summarizeFinialReplacementFromMaterials = ()=>{
+      const finialEntries = Object.entries(materials)
+        .filter(([label, qty])=> String(label || '').toLowerCase().startsWith('finials - ') && (parseInt(qty, 10) || 0) > 0)
+        .map(([label, qty])=>({ label: String(label || '').trim(), qty: parseInt(qty, 10) || 0 }));
+      if(!finialEntries.length){
+        return null;
+      }
+      const groups = new Map();
+      let totalQty = 0;
+      finialEntries.forEach(entry=>{
+        totalQty += entry.qty;
+        const match = entry.label.match(/^finials\s*-\s*(.+?)\s*-\s*(.+?)\s*\((.+?)\)\s*$/i);
+        if(!match){
+          const existing = groups.get('misc') || { qty: 0, text: 'mixed styles' };
+          existing.qty += entry.qty;
+          groups.set('misc', existing);
+          return;
+        }
+        const material = normalizeLabelText(match[1] || '').toLowerCase();
+        const style = normalizeLabelText(match[2] || '').toLowerCase();
+        const picketSize = normalizeSize(match[3] || '');
+        const detailText = [picketSize, style, material].filter(Boolean).join(' ');
+        const key = detailText || 'mixed styles';
+        const existing = groups.get(key) || { qty: 0, text: detailText || 'mixed styles' };
+        existing.qty += entry.qty;
+        groups.set(key, existing);
+      });
+      const details = Array.from(groups.values())
+        .filter(group=> group.qty > 0)
+        .map(group=>`${group.qty}x ${group.text}`);
+      return {
+        totalQty,
+        detailLabel: details.length === 1
+          ? details[0].replace(/^\d+x\s+/i, '')
+          : details.join('; ')
+      };
+    };
+    pushPostReplaceActionLine(totals.postsReplace || zeroPostCounts());
     if (totals.postsRealign2x2 > 0) sub.push('- 2x2 posts to realign: '+totals.postsRealign2x2);
     if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
     if (totals.postsRealignCutWeld > 0) sub.push('- Posts to realign (cut & weld): '+totals.postsRealignCutWeld);
@@ -14109,7 +14162,17 @@ document.addEventListener('DOMContentLoaded', function(){
         sub.push(`- Removal & haul away: ${totals.removalLf} lf (crew labor included)`);
       }
     }
-    if (totals.wiPickets > 0)       sub.push('- Pickets to replace: '+totals.wiPickets);
+    if (totals.wiPickets > 0){
+      const picketSizes = Array.from(totals.wiPicketSizes || []).filter(Boolean);
+      if(picketSizes.length === 1){
+        const noun = totals.wiPickets === 1 ? 'picket' : 'pickets';
+        sub.push(`- Replace ${totals.wiPickets}x ${picketSizes[0]} ${noun}`);
+      } else if(picketSizes.length > 1){
+        sub.push(`- Replace ${totals.wiPickets}x pickets (${joinParts(picketSizes)})`);
+      } else {
+        sub.push(`- Replace ${totals.wiPickets}x pickets`);
+      }
+    }
     if (totals.puppyPickets > 0){
       const detailParts = [];
       if(totals.puppyPicketDetails && typeof totals.puppyPicketDetails.forEach === 'function'){
@@ -14121,7 +14184,7 @@ document.addEventListener('DOMContentLoaded', function(){
       sub.push(`- Puppy pickets to replace: ${totals.puppyPickets}${detail}`);
     }
     if (totals.weldRedos > 0)       sub.push('- Weld redos: '+totals.weldRedos);
-    if (totals.wiPatches > 0)       sub.push('- Rail patches: '+totals.wiPatches);
+    if (totals.wiPatches > 0)       sub.push(`- ${totals.wiPatches}x rail ${plural(totals.wiPatches, 'patch', 'patches')}`);
     if (totals.wiRails > 0)         sub.push('- Full rail replacements: '+totals.wiRails);
     if (totals.wiRailGaps > 0)      sub.push('- Full rail gap fillers: '+totals.wiRailGaps);
     if (totals.walkRealign > 0) {
@@ -14184,7 +14247,15 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.driveGateChainReplacements > 0){
       sub.push('- Sliding drive gate chains to replace: '+totals.driveGateChainReplacements);
     }
-    if (totals.finials > 0)         sub.push('- Finials to replace: '+totals.finials);
+    const finialReplacementSummary = summarizeFinialReplacementFromMaterials();
+    if(finialReplacementSummary && finialReplacementSummary.totalQty > 0){
+      const finialLabel = finialReplacementSummary.totalQty === 1 ? 'finial' : 'finials';
+      const detailSuffix = finialReplacementSummary.detailLabel ? ` (${finialReplacementSummary.detailLabel})` : '';
+      sub.push(`- Replace ${finialReplacementSummary.totalQty}x ${finialLabel}${detailSuffix}`);
+    } else if (totals.finials > 0){
+      const finialLabel = totals.finials === 1 ? 'finial' : 'finials';
+      sub.push(`- Replace ${totals.finials}x ${finialLabel}`);
+    }
     if (totals.puppyInserts > 0)    sub.push('- Puppy picket inserts: '+totals.puppyInserts);
     if (totals.caps > 0)            sub.push('- Post caps to replace: '+totals.caps);
     if (installCapsByLabel.size > 0){
@@ -14204,7 +14275,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if (totals.digOut > 0)          sub.push('- Dig out: '+totals.digOut+' lf');
     if (prefabReplacementCount > 0){
       const detailSuffix = prefabReplacementDetail ? ` (${prefabReplacementDetail})` : '';
-      sub.push(`- Prefab panel replacements: ${prefabReplacementCount}${detailSuffix}`);
+      const panelLabel = prefabReplacementCount === 1 ? 'panel' : 'panels';
+      sub.push(`- Replace ${prefabReplacementCount}x ${panelLabel}${detailSuffix}`);
     }
     if (totals.panelsCustom > 0)    sub.push('- Panels requiring custom fabrication: '+totals.panelsCustom);
     if (totals.panelsInstallPrefab > 0) sub.push('- New prefab panels: '+totals.panelsInstallPrefab);
