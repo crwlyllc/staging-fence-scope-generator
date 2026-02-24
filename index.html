@@ -15574,8 +15574,17 @@ document.addEventListener('DOMContentLoaded', function(){
         payload.map = mapDrawing;
         const mapScreenshot = await buildHcpMapScreenshotPayload();
         if(mapScreenshot){
-          payload.mapScreenshot = mapScreenshot;
-          payload.mapScreenshotUrl = mapScreenshot.url;
+          const sourceMapScreenshotUrl = mapScreenshot.url || '';
+          const preferredMapScreenshotUrl = mapScreenshot.dataUrl || sourceMapScreenshotUrl;
+          payload.mapScreenshot = {
+            ...mapScreenshot,
+            url: preferredMapScreenshotUrl,
+            sourceUrl: sourceMapScreenshotUrl,
+          };
+          payload.mapScreenshotUrl = preferredMapScreenshotUrl;
+          if(sourceMapScreenshotUrl){
+            payload.mapScreenshotSourceUrl = sourceMapScreenshotUrl;
+          }
           if(mapScreenshot.dataUrl){
             payload.mapScreenshotDataUrl = mapScreenshot.dataUrl;
           }
