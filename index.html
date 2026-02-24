@@ -11010,13 +11010,28 @@ document.addEventListener('DOMContentLoaded', function(){
         const match = list.find(item=>item.value === val);
         return match ? match.label : (val || '');
       };
+      const resolveWoodSectionLengthFt = (section)=>{
+        const directLength = parseFloat(section && section.length || 0);
+        if(isFinite(directLength) && directLength > 0){
+          return directLength;
+        }
+        const mapOverrideLength = parsePositiveInt(section && section.mapLengthOverride);
+        if(mapOverrideLength > 0){
+          return mapOverrideLength;
+        }
+        const mapMeasuredLength = parsePositiveInt(section && section.mapMeasuredLength);
+        if(mapMeasuredLength > 0){
+          return mapMeasuredLength;
+        }
+        return 0;
+      };
       woodRepairSections.forEach((s, idx)=>{
         const parts = [];
         const labelPrefix = s.label ? `${s.label}: ` : '';
         const railSize = s.woodRailSize || '';
         const picketWidth = s.woodPicketWidth || '';
         const woodHeightFt = feetFromStr(s.woodHeight || '');
-        const sectionLengthFt = parseFloat(s.length||0) || 0;
+        const sectionLengthFt = resolveWoodSectionLengthFt(s);
         const useOverlapCount = woodStyleUsesOverlapPickets(s.woodStyle || '');
         const addCount = (count, singular, plural)=>{
           const n = parseInt(count||0,10) || 0;
@@ -11373,6 +11388,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const otherSideLengths = new Map();
       const heightValues = new Set();
       const brandSet = new Set();
+      const selectedSides = new Set();
       const oversprayDisclaimer = 'We will use commercially reasonable efforts to minimize overspray onto adjacent structures, landscaping, and surrounding areas; however, we do not warrant or guarantee that overspray, drips, or incidental transfer will be fully avoided.';
       let totalSqft = 0;
       let hasWash = false;
@@ -11390,6 +11406,9 @@ document.addEventListener('DOMContentLoaded', function(){
           } else if(sideKey){
             otherSideLengths.set(sideKey, (otherSideLengths.get(sideKey) || 0) + lengthFt);
           }
+        }
+        if(sideKey && sideKey !== 'none'){
+          selectedSides.add(sideKey);
         }
         if(heightFt > 0){
           heightValues.add(Math.round(heightFt * 100) / 100);
@@ -11428,6 +11447,28 @@ document.addEventListener('DOMContentLoaded', function(){
         const safeSide = side.replace(/[^a-z0-9\s-]/gi, '').trim() || 'selected side';
         sideParts.push(`${safeSide} of about ${formatWoodStainLength(length)} linear ft of ${fenceLabel}`);
       });
+      if(!sideParts.length && selectedSides.size){
+        const sideSelectionParts = [];
+        if(selectedSides.has('both')){
+          sideSelectionParts.push(`both sides of the selected ${fenceLabel}`);
+        }
+        if(selectedSides.has('outside')){
+          sideSelectionParts.push(`just the outside of the selected ${fenceLabel}`);
+        }
+        if(selectedSides.has('inside')){
+          sideSelectionParts.push(`just the inside of the selected ${fenceLabel}`);
+        }
+        selectedSides.forEach(side=>{
+          if(side === 'both' || side === 'outside' || side === 'inside'){
+            return;
+          }
+          const safeSide = side.replace(/[^a-z0-9\s-]/gi, '').trim() || 'selected side';
+          sideSelectionParts.push(`${safeSide} of the selected ${fenceLabel}`);
+        });
+        if(sideSelectionParts.length){
+          sideParts.push(...sideSelectionParts);
+        }
+      }
       const actionLead = hasWash ? (hasStainOnly ? 'Wash where needed and stain' : 'Wash and stain') : 'Stain';
       const actionVerb = hasWash ? (hasStainOnly ? 'wash where needed and stain' : 'wash and stain') : 'stain';
       const sentences = [];
@@ -11449,6 +11490,8 @@ document.addEventListener('DOMContentLoaded', function(){
       if(totalSqft > 0){
         const sqftLabel = Math.round(totalSqft);
         sentences.push(`About ${sqftLabel} sq ft total to ${actionVerb}${brandPhrase ? `, using ${brandPhrase}` : ''}.`);
+      } else if(sideParts.length){
+        sentences.push(`Add section length and height to estimate total area${brandPhrase ? `, using ${brandPhrase}` : ''}.`);
       } else if(brandPhrase){
         sentences.push(`Using ${brandPhrase}.`);
       }
