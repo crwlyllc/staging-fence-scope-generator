@@ -13897,9 +13897,29 @@ document.addEventListener('DOMContentLoaded', function(){
     const railReplaceWelderHours = totals.wiRails * (45/60);
     const railGapWelderHours = totals.wiRailGaps * (20/60);
     const diagonalBraceWelderHours = totals.diagonalBraces * (20/60);
-    const picketWelderHours = totals.wiPickets * (12/60);
     const puppyPicketWelderHours = totals.puppyPickets * (12/60);
     const weldRedoWelderHours = totals.weldRedos * (5/60);
+    const maxParallelWelders = Math.max(1, Math.min(maxWeldersConfigured, Math.max(1, ONSITE_CREW_SIZE - 1)));
+    const splitQuantityAcrossWelders = (quantity, maxLanes)=>{
+      const total = Math.max(0, parseInt(quantity, 10) || 0);
+      if(total <= 0){
+        return [];
+      }
+      const laneCount = Math.max(1, Math.min(parseInt(maxLanes, 10) || 1, total));
+      const baseQty = Math.floor(total / laneCount);
+      let remainder = total % laneCount;
+      const splits = [];
+      for(let i=0;i<laneCount;i++){
+        const chunkQty = baseQty + (remainder > 0 ? 1 : 0);
+        if(remainder > 0){
+          remainder -= 1;
+        }
+        if(chunkQty > 0){
+          splits.push(chunkQty);
+        }
+      }
+      return splits;
+    };
     const welderTaskGroups = [];
     if(totals.wiPatches > 0){
       welderTaskGroups.push({ hours: patchWelderHours, label: `${totals.wiPatches}x rail ${plural(totals.wiPatches, 'patch', 'patches')}` });
@@ -13921,7 +13941,13 @@ document.addEventListener('DOMContentLoaded', function(){
       welderTaskGroups.push({ hours: diagonalBraceWelderHours, label: `${totals.diagonalBraces}x diagonal ${plural(totals.diagonalBraces, 'brace')} addition` });
     }
     if(totals.wiPickets > 0){
-      welderTaskGroups.push({ hours: picketWelderHours, label: `${totals.wiPickets}x metal picket ${plural(totals.wiPickets, 'replacement')}` });
+      const picketSplits = splitQuantityAcrossWelders(totals.wiPickets, maxParallelWelders);
+      picketSplits.forEach(splitQty=>{
+        welderTaskGroups.push({
+          hours: splitQty * (12/60),
+          label: `${splitQty}x metal picket ${plural(splitQty, 'replacement')}`
+        });
+      });
     }
     if(totals.puppyPickets > 0){
       welderTaskGroups.push({ hours: puppyPicketWelderHours, label: `${totals.puppyPickets}x puppy picket ${plural(totals.puppyPickets, 'replacement')}` });
@@ -13942,7 +13968,6 @@ document.addEventListener('DOMContentLoaded', function(){
       welderTaskGroups.push({ hours: woodPostCutWeldWelderHours, label: `${totals.woodPostRealignCutWeld}x cut/weld wood post ${plural(totals.woodPostRealignCutWeld, 'realign')}` });
     }
     const welderActiveTaskCount = welderTaskGroups.filter(group=> isFinite(group?.hours) && group.hours > 0).length;
-    const maxParallelWelders = Math.max(1, Math.min(maxWeldersConfigured, Math.max(1, ONSITE_CREW_SIZE - 1)));
     const weldLaneCount = Math.max(1, Math.min(maxParallelWelders, welderActiveTaskCount || 1));
     const helperLaneParallel = Math.max(1, ONSITE_CREW_SIZE - Math.min(weldLaneCount, Math.max(0, ONSITE_CREW_SIZE - 1)));
 
