@@ -1119,6 +1119,16 @@
             </select>
             <div class="sp-hint" id="sp-customer-min-hint">Minimum charge: $350</div>
           </div>
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-pricing-target-margin">Target Gross Margin After Overhead (%)</label>
+            <input class="sp-input" id="sp-pricing-target-margin" type="number" inputmode="decimal" step="0.1" min="0.1" max="99.9" value="30" />
+            <div class="sp-hint">Used to set the recommended price floor.</div>
+          </div>
+          <div class="sp-field col-12">
+            <label class="sp-label" for="sp-pricing-target-gross">Target Gross Profit After Overhead ($, optional)</label>
+            <input class="sp-input" id="sp-pricing-target-gross" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Leave blank to use margin target only" />
+            <div class="sp-hint">When set, pricing aims to meet at least this gross amount after overhead.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1663,6 +1673,8 @@ document.addEventListener('DOMContentLoaded', function(){
   
   const customerTypeSelect = document.getElementById('sp-customer-type');
   const customerMinHint = document.getElementById('sp-customer-min-hint');
+  const pricingTargetMarginInput = document.getElementById('sp-pricing-target-margin');
+  const pricingTargetGrossInput = document.getElementById('sp-pricing-target-gross');
   const customerCardEl = document.getElementById('sp-customer-card');
   const customerConfirmBtn = document.getElementById('sp-customer-confirm');
   const manualModal = document.getElementById('sp-manual-modal');
@@ -8277,7 +8289,11 @@ document.addEventListener('DOMContentLoaded', function(){
       state: {
         sections,
         customerType: getCustomerType(),
-        crewMembers
+        crewMembers,
+        pricing: {
+          targetGrossMarginAfterOverhead: getTargetGrossMarginRate(),
+          targetGrossProfitAfterOverhead: getTargetGrossProfitAmount()
+        }
       },
       map: serializeMapDrawing(),
       estimate: {
@@ -8311,6 +8327,22 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     const snapshotCrewMembers = normalizeCrewMembers(payload.state && payload.state.crewMembers);
     applyCrewMembersSelection(snapshotCrewMembers.length ? snapshotCrewMembers : DEFAULT_CREW_MEMBERS.slice());
+    const snapshotPricing = payload.state && payload.state.pricing ? payload.state.pricing : null;
+    const snapshotTargetMargin = snapshotPricing && Object.prototype.hasOwnProperty.call(snapshotPricing, 'targetGrossMarginAfterOverhead')
+      ? snapshotPricing.targetGrossMarginAfterOverhead
+      : (payload.state && payload.state.targetGrossMarginAfterOverhead);
+    const snapshotTargetGross = snapshotPricing && Object.prototype.hasOwnProperty.call(snapshotPricing, 'targetGrossProfitAfterOverhead')
+      ? snapshotPricing.targetGrossProfitAfterOverhead
+      : (payload.state && payload.state.targetGrossProfitAfterOverhead);
+    if(isFinite(normalizeTargetGrossMarginRate(snapshotTargetMargin))){
+      setTargetGrossMarginRate(snapshotTargetMargin);
+    }
+    if(snapshotTargetGross !== undefined){
+      const parsedTargetGross = Number(snapshotTargetGross);
+      if(isFinite(parsedTargetGross) && parsedTargetGross >= 0){
+        setTargetGrossProfitAmount(parsedTargetGross);
+      }
+    }
     updatePricingMinimumUI();
     setCustomerTypeConfirmed(false);
 
@@ -8465,10 +8497,16 @@ document.addEventListener('DOMContentLoaded', function(){
     const num = parseFloat(cleaned);
     return isFinite(num) ? num : NaN;
   }
+  function formatDecimalInputValue(value, decimals = 2){
+    const num = Number(value);
+    if(!isFinite(num)) return '';
+    return num.toFixed(decimals).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+  }
 
   const PRICING = {
     targetGrossMarginAfterOverhead: 0.30,
     minimumGrossMarginAfterOverhead: 0.20,
+    targetGrossProfitAfterOverhead: 0,
     maxGrossProfitPerHour: 150,
     revenueMinimumResidential: 350,
     revenueMinimumCommercial: 2500,
@@ -8501,9 +8539,43 @@ document.addEventListener('DOMContentLoaded', function(){
     return pct.toFixed(1).replace(/\.0$/, '');
   }
 
+  function normalizeTargetGrossMarginRate(value){
+    const raw = Number(value);
+    if(!isFinite(raw)) return NaN;
+    const rate = raw > 1 ? (raw / 100) : raw;
+    return (isFinite(rate) && rate > 0 && rate < 1) ? rate : NaN;
+  }
+
+  function setTargetGrossMarginRate(value, options = {}){
+    const nextRate = normalizeTargetGrossMarginRate(value);
+    if(!isFinite(nextRate)) return false;
+    const prevRate = getTargetGrossMarginRate();
+    PRICING.targetGrossMarginAfterOverhead = nextRate;
+    if(pricingTargetMarginInput && !options.skipDomSync && document.activeElement !== pricingTargetMarginInput){
+      pricingTargetMarginInput.value = formatPercentLabel(nextRate);
+    }
+    return Math.abs(prevRate - nextRate) > 0.000001;
+  }
+
+  function setTargetGrossProfitAmount(value, options = {}){
+    const raw = Number(value);
+    const nextAmount = (isFinite(raw) && raw > 0) ? raw : 0;
+    const prevAmount = getTargetGrossProfitAmount();
+    PRICING.targetGrossProfitAfterOverhead = nextAmount;
+    if(pricingTargetGrossInput && !options.skipDomSync && document.activeElement !== pricingTargetGrossInput){
+      pricingTargetGrossInput.value = nextAmount > 0 ? formatDecimalInputValue(nextAmount, 2) : '';
+    }
+    return Math.abs(prevAmount - nextAmount) > 0.0001;
+  }
+
   function getTargetGrossMarginRate(){
     const rate = Number(PRICING.targetGrossMarginAfterOverhead);
     return (isFinite(rate) && rate > 0 && rate < 1) ? rate : 0;
+  }
+
+  function getTargetGrossProfitAmount(){
+    const amount = Number(PRICING.targetGrossProfitAfterOverhead);
+    return (isFinite(amount) && amount > 0) ? amount : 0;
   }
 
   function getMinimumGrossMarginRate(){
@@ -8571,13 +8643,16 @@ document.addEventListener('DOMContentLoaded', function(){
   function getMinimumSummaryText(){
     const revenueMin = getBaseRevenueMinimum();
     const targetMarginLabel = formatPercentLabel(getTargetGrossMarginRate());
+    const targetGrossAmount = getTargetGrossProfitAmount();
     const grossCapPerHour = getGrossProfitCapPerHour();
-    const grossCapLabel = grossCapPerHour > 0
-      ? `$${money(grossCapPerHour)}/hr gross cap (travel + onsite)`
-      : '';
-    const baseSummary = grossCapLabel
-      ? `${targetMarginLabel}% target gross margin after overhead, ${grossCapLabel}`
-      : `${targetMarginLabel}% target gross margin after overhead`;
+    const summaryParts = [`${targetMarginLabel}% target gross margin after overhead`];
+    if(targetGrossAmount > 0){
+      summaryParts.push(`$${money(targetGrossAmount)} gross target after overhead`);
+    }
+    if(grossCapPerHour > 0){
+      summaryParts.push(`$${money(grossCapPerHour)}/hr gross cap (travel + onsite)`);
+    }
+    const baseSummary = summaryParts.join(', ');
     if(isFinite(revenueMin) && revenueMin > 0){
       return `${baseSummary}, $${money(revenueMin)} minimum charge`;
     }
@@ -8588,6 +8663,13 @@ document.addEventListener('DOMContentLoaded', function(){
     const minValue = getMinimumLabelAndValue();
     if(customerMinHint){
       customerMinHint.textContent = `${minValue.label}: $${money(minValue.value)}`;
+    }
+    if(pricingTargetMarginInput && document.activeElement !== pricingTargetMarginInput){
+      pricingTargetMarginInput.value = formatPercentLabel(getTargetGrossMarginRate());
+    }
+    if(pricingTargetGrossInput && document.activeElement !== pricingTargetGrossInput){
+      const grossTarget = getTargetGrossProfitAmount();
+      pricingTargetGrossInput.value = grossTarget > 0 ? formatDecimalInputValue(grossTarget, 2) : '';
     }
     updateManualQuote();
   }
@@ -8694,6 +8776,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const hours = Number(totalHours);
     if(!isFinite(cost) || cost < 0) return { revenue: NaN, mode: 'invalid' };
     const targetMargin = getTargetGrossMarginRate();
+    const targetGrossProfitAfterOverhead = getTargetGrossProfitAmount();
     if(!isFinite(targetMargin) || targetMargin <= 0 || targetMargin >= 1){
       return { revenue: NaN, mode: 'invalid-margin-target' };
     }
@@ -8701,6 +8784,14 @@ document.addEventListener('DOMContentLoaded', function(){
     let revenue = solveRevenueForGrossProfitMargin(cost, targetMargin);
     if(!isFinite(revenue) || revenue < 0){
       return { revenue: NaN, mode: 'invalid' };
+    }
+    let grossTargetApplied = false;
+    if(targetGrossProfitAfterOverhead > 0){
+      const grossTargetRevenue = solveRevenueForGrossProfitAmount(cost, targetGrossProfitAfterOverhead);
+      if(isFinite(grossTargetRevenue) && grossTargetRevenue > revenue){
+        revenue = grossTargetRevenue;
+        grossTargetApplied = true;
+      }
     }
 
     const revenueMinimum = getRevenueMinimum(totalHours);
@@ -8712,11 +8803,21 @@ document.addEventListener('DOMContentLoaded', function(){
     const grossProfitCapHours = resolveGrossProfitCapHours(totalHours, options);
     const grossProfitCapAmount = getGrossProfitCap(totalHours, options);
     let capApplied = false;
+    let capSkippedForGrossTarget = false;
     if(isFinite(grossProfitCapAmount) && grossProfitCapAmount >= 0){
       const cappedRevenue = solveRevenueForGrossProfitAmount(cost, grossProfitCapAmount);
       if(isFinite(cappedRevenue) && cappedRevenue >= 0 && cappedRevenue < revenue){
-        revenue = cappedRevenue;
-        capApplied = true;
+        const cappedRevenueGross = grossProfitForRevenue(cappedRevenue, cost);
+        if(
+          targetGrossProfitAfterOverhead > 0 &&
+          isFinite(cappedRevenueGross) &&
+          (cappedRevenueGross + 0.005) < targetGrossProfitAfterOverhead
+        ){
+          capSkippedForGrossTarget = true;
+        }else{
+          revenue = cappedRevenue;
+          capApplied = true;
+        }
       }
     }
 
@@ -8724,10 +8825,18 @@ document.addEventListener('DOMContentLoaded', function(){
     const grossMarginAchieved = (isFinite(grossProfit) && revenue > 0)
       ? (grossProfit / revenue)
       : NaN;
+    let mode = 'gross-margin-target';
+    if(grossTargetApplied){
+      mode = 'gross-target-after-overhead';
+    }
+    if(capApplied){
+      mode = 'gross-profit-hour-cap';
+    }
     return {
       revenue,
-      mode: capApplied ? 'gross-profit-hour-cap' : 'gross-margin-target',
+      mode,
       targetMargin,
+      targetGrossProfitAfterOverhead,
       hours,
       revenueMinimum,
       grossMarginAchieved,
@@ -8735,7 +8844,9 @@ document.addEventListener('DOMContentLoaded', function(){
       grossProfitCapPerHour,
       grossProfitCapHours,
       grossProfitCapAmount,
-      capApplied
+      capApplied,
+      capSkippedForGrossTarget,
+      grossTargetApplied
     };
   }
 
@@ -8813,7 +8924,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!pricing || !isFinite(pricing.revenue)){
       manualChargeOutput.textContent = '';
       manualModeChip.style.display = 'none';
-      manualStatusEl.textContent = 'Pricing inputs produced an invalid result. Check overhead, margin target, and costs.';
+      manualStatusEl.textContent = 'Pricing inputs produced an invalid result. Check overhead, margin target, gross target, and costs.';
       manualStatusEl.dataset.state = 'error';
       clearManualMetrics();
       return;
@@ -8821,11 +8932,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const revenue = pricing.revenue;
     manualChargeOutput.textContent = '$' + money(revenue);
+    const grossTargetLabel = isFinite(pricing.targetGrossProfitAfterOverhead) && pricing.targetGrossProfitAfterOverhead > 0
+      ? `, $${money(pricing.targetGrossProfitAfterOverhead)} gross target`
+      : '';
     const capPerHourLabel = isFinite(pricing.grossProfitCapPerHour) && pricing.grossProfitCapPerHour > 0
       ? `, $${money(pricing.grossProfitCapPerHour)}/hr gross cap`
       : '';
     const capAppliedLabel = pricing.capApplied ? ' (cap applied)' : '';
-    manualModeChip.textContent = `${formatPercentLabel(getTargetGrossMarginRate())}% margin target${capPerHourLabel}${capAppliedLabel}`;
+    const capSkippedLabel = pricing.capSkippedForGrossTarget ? ' (cap bypassed for gross target)' : '';
+    manualModeChip.textContent = `${formatPercentLabel(getTargetGrossMarginRate())}% margin target${grossTargetLabel}${capPerHourLabel}${capAppliedLabel}${capSkippedLabel}`;
     manualModeChip.classList.remove('is-warn');
     manualModeChip.classList.add('is-info');
     manualModeChip.style.display = 'inline-block';
@@ -15000,7 +15115,7 @@ document.addEventListener('DOMContentLoaded', function(){
     cost.push('');
     cost.push('WHAT TO CHARGE');
     if (!isFinite(revenue)){
-      cost.push('⚠️ Pricing inputs produced an invalid result. Check overhead, margin target, and costs.');
+      cost.push('⚠️ Pricing inputs produced an invalid result. Check overhead, margin target, gross target, and costs.');
     } else {
       const grossProfit = revenue - directCosts - overheadAmount;
       const netProfit = grossProfit - commissionFormula$;
@@ -15010,6 +15125,9 @@ document.addEventListener('DOMContentLoaded', function(){
       if(isFinite(revenueRes?.targetMargin) && revenueRes.targetMargin > 0){
         const targetMarginLabel = formatPercentLabel(revenueRes.targetMargin);
         cost.push(`- Target gross margin after overhead: ${targetMarginLabel}%`);
+      }
+      if(isFinite(revenueRes?.targetGrossProfitAfterOverhead) && revenueRes.targetGrossProfitAfterOverhead > 0){
+        cost.push(`- Target gross profit after overhead: $${money(revenueRes.targetGrossProfitAfterOverhead)}`);
       }
       if(isFinite(revenueRes?.grossProfitCapPerHour) && revenueRes.grossProfitCapPerHour > 0){
         const capHoursLabel = formatHours(revenueRes.grossProfitCapHours);
@@ -15025,6 +15143,8 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       if(revenueRes?.capApplied){
         cost.push('- Gross profit hourly cap applied.');
+      }else if(revenueRes?.capSkippedForGrossTarget){
+        cost.push('- Gross profit hourly cap bypassed to meet gross target.');
       }
       if(isFinite(revenueRes?.revenueMinimum) && revenueRes.revenueMinimum > 0 && Math.abs(revenue - revenueRes.revenueMinimum) < 0.01){
         cost.push(`- Minimum charge floor applied: $${money(revenueRes.revenueMinimum)}`);
@@ -15894,9 +16014,67 @@ document.addEventListener('DOMContentLoaded', function(){
       generateNotes({ skipScroll: true });
     });
   }
+  if(pricingTargetMarginInput){
+    pricingTargetMarginInput.addEventListener('input', ()=>{
+      const raw = parseFloat(pricingTargetMarginInput.value || '');
+      if(!isFinite(raw)) return;
+      const changed = setTargetGrossMarginRate(raw / 100, { skipDomSync: true });
+      if(!changed) return;
+      updatePricingMinimumUI();
+      persist();
+    });
+    pricingTargetMarginInput.addEventListener('blur', ()=>{
+      const raw = parseFloat(pricingTargetMarginInput.value || '');
+      if(isFinite(raw)){
+        setTargetGrossMarginRate(raw / 100);
+      }
+      pricingTargetMarginInput.value = formatPercentLabel(getTargetGrossMarginRate());
+    });
+  }
+  if(pricingTargetGrossInput){
+    pricingTargetGrossInput.addEventListener('input', ()=>{
+      const raw = (pricingTargetGrossInput.value || '').trim();
+      if(!raw){
+        const changed = setTargetGrossProfitAmount(0, { skipDomSync: true });
+        if(changed){
+          updatePricingMinimumUI();
+          persist();
+        }
+        return;
+      }
+      const value = parseCurrencyInput(raw);
+      if(!isFinite(value) || value < 0){
+        return;
+      }
+      const changed = setTargetGrossProfitAmount(value, { skipDomSync: true });
+      if(!changed) return;
+      updatePricingMinimumUI();
+      persist();
+    });
+    pricingTargetGrossInput.addEventListener('blur', ()=>{
+      const raw = (pricingTargetGrossInput.value || '').trim();
+      if(!raw){
+        setTargetGrossProfitAmount(0);
+      }else{
+        const value = parseCurrencyInput(raw);
+        if(isFinite(value) && value >= 0){
+          setTargetGrossProfitAmount(value);
+        }
+      }
+      const grossTarget = getTargetGrossProfitAmount();
+      pricingTargetGrossInput.value = grossTarget > 0 ? formatDecimalInputValue(grossTarget, 2) : '';
+    });
+  }
   if(customerTypeSelect){
     customerTypeSelect.value = normalizeCustomerType(customerTypeSelect.value);
     state.customerType = customerTypeSelect.value;
+  }
+  if(pricingTargetMarginInput){
+    pricingTargetMarginInput.value = formatPercentLabel(getTargetGrossMarginRate());
+  }
+  if(pricingTargetGrossInput){
+    const grossTarget = getTargetGrossProfitAmount();
+    pricingTargetGrossInput.value = grossTarget > 0 ? formatDecimalInputValue(grossTarget, 2) : '';
   }
   updatePricingMinimumUI();
   if(customerConfirmBtn){
