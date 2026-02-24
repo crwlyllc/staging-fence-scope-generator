@@ -15625,9 +15625,9 @@ document.addEventListener('DOMContentLoaded', function(){
         payload.map = mapDrawing;
         const mapScreenshot = await buildHcpMapScreenshotPayload();
         if(mapScreenshot){
-          const preferredMapScreenshotUrl = mapScreenshot.dataUrl || mapScreenshot.url || '';
-          if(preferredMapScreenshotUrl){
-            payload.mapScreenshotUrl = preferredMapScreenshotUrl;
+          const mapScreenshotUrl = mapScreenshot.url || '';
+          if(mapScreenshotUrl){
+            payload.mapScreenshotUrl = mapScreenshotUrl;
           }
         }
       }
