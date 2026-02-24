@@ -1537,6 +1537,10 @@ document.addEventListener('DOMContentLoaded', function(){
     Joel: 18,
     JR: 18,
   };
+  const CREW_MEMBER_WELD_PRODUCTIVITY = {
+    Jesus: 1,
+    JR: 0.66,
+  };
   const CREW_LABOR_ASSUMPTIONS = {
     regularHours: 40,
     overtimeHours: 20,
@@ -1759,6 +1763,13 @@ document.addEventListener('DOMContentLoaded', function(){
       : [];
     const selectedSet = new Set(selected);
     return DEFAULT_CREW_MEMBERS.filter(name=> selectedSet.has(name));
+  }
+
+  function getCrewMemberWeldProductivity(name){
+    const member = String(name || '').trim();
+    if(!member) return 1;
+    const rate = Number(CREW_MEMBER_WELD_PRODUCTIVITY[member]);
+    return (Number.isFinite(rate) && rate > 0) ? rate : 1;
   }
 
   function computeCrewLaborRate(members){
@@ -13644,6 +13655,10 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!welderNames.length && crewNames.length){
       welderNames.push(crewNames[0]);
     }
+    const welderProductivityByName = {};
+    welderNames.forEach(name=>{
+      welderProductivityByName[name] = getCrewMemberWeldProductivity(name);
+    });
     const shopFabricationCrewSize = Math.max(1, Math.min(ONSITE_CREW_SIZE, crewNames.length || ONSITE_CREW_SIZE));
     const formatNameList = (names)=>{
       const list = (Array.isArray(names) ? names : []).filter(Boolean);
@@ -13698,17 +13713,24 @@ document.addEventListener('DOMContentLoaded', function(){
         personAvailableAt[name] = Math.max(getPersonAvailableAt(name), endTime);
       });
     };
-    const scheduleWorkByAvailability = ({ names, totalHours, earliestStart = 0, latestEnd = null })=>{
+    const scheduleWorkByAvailability = ({ names, totalHours, earliestStart = 0, latestEnd = null, productivityByName = null })=>{
       const roster = Array.from(new Set((Array.isArray(names) ? names : []).filter(Boolean)));
       const allocations = {};
       roster.forEach(name=>{
         allocations[name] = 0;
       });
-      let remaining = Math.max(0, Number(totalHours) || 0);
+      const plannedHours = Math.max(0, Number(totalHours) || 0);
+      let remaining = plannedHours;
       let cursor = Math.max(0, Number(earliestStart) || 0);
       const hasBoundedEnd = latestEnd !== null && latestEnd !== undefined && isFinite(Number(latestEnd));
       const boundedEnd = hasBoundedEnd ? Number(latestEnd) : null;
       let startedAt = null;
+      const productivityFor = (name)=>{
+        const mapped = productivityByName && Object.prototype.hasOwnProperty.call(productivityByName, name)
+          ? Number(productivityByName[name])
+          : 1;
+        return (Number.isFinite(mapped) && mapped > 0) ? mapped : 1;
+      };
 
       if(!roster.length || remaining <= 0){
         return {
@@ -13726,7 +13748,7 @@ document.addEventListener('DOMContentLoaded', function(){
       while(remaining > 0.0001){
         const active = releases
           .filter(item=> item.time <= (cursor + 1e-9))
-          .map(item=> item.name);
+          .map(item=> ({ name: item.name, productivity: productivityFor(item.name) }));
         if(!active.length){
           const nextRelease = Math.min(...releases.filter(item=> item.time > (cursor + 1e-9)).map(item=> item.time));
           if(!isFinite(nextRelease)) break;
@@ -13753,19 +13775,23 @@ document.addEventListener('DOMContentLoaded', function(){
         }
 
         const span = nextBoundary - cursor;
-        const capacity = active.length * span;
+        const activeProductivity = active.reduce((sum, item)=> sum + item.productivity, 0);
+        if(!(activeProductivity > 0)){
+          break;
+        }
+        const capacity = activeProductivity * span;
         if(capacity >= (remaining - 1e-9)){
-          const eachWork = remaining / active.length;
-          active.forEach(name=>{
-            allocations[name] += eachWork;
+          const elapsedForRemaining = remaining / activeProductivity;
+          active.forEach(item=>{
+            allocations[item.name] += elapsedForRemaining;
           });
-          cursor += eachWork;
+          cursor += elapsedForRemaining;
           remaining = 0;
           break;
         }
 
-        active.forEach(name=>{
-          allocations[name] += span;
+        active.forEach(item=>{
+          allocations[item.name] += span;
         });
         remaining -= capacity;
         cursor = nextBoundary;
@@ -13777,7 +13803,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       if(startedAt === null) startedAt = cursor;
       const participants = roster.filter(name=> (allocations[name] || 0) > (1/120));
-      const workDone = participants.reduce((sum, name)=> sum + (allocations[name] || 0), 0);
+      const workDone = Math.max(0, plannedHours - remaining);
       return {
         startTime: startedAt,
         endTime: cursor,
@@ -14182,15 +14208,17 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     welderBuckets.forEach((bucket, idx)=>{
       const welderName = postStageWelderNames[idx] || `Welder ${idx + 1}`;
-      reservePeopleUntil([welderName], bucket.hours);
-      stageOneEndAt = Math.max(stageOneEndAt, bucket.hours);
+      const weldProductivity = getCrewMemberWeldProductivity(welderName);
+      const bucketDuration = bucket.hours / weldProductivity;
+      reservePeopleUntil([welderName], bucketDuration);
+      stageOneEndAt = Math.max(stageOneEndAt, bucketDuration);
       const cutWeldPattern = /\bcut\/weld\b/i;
       const hasCutWeldTask = bucket.tasks.some(task=> cutWeldPattern.test(String(task || '')));
       const hasNonCutWeldTask = bucket.tasks.some(task=> !cutWeldPattern.test(String(task || '')));
       if(helperAssistOnly && hasCutWeldTask && !hasNonCutWeldTask){
         return;
       }
-      postAndWeldLines.push(`${formatNameList([welderName])}: ${bucket.tasks.join('; ')} (${formatTaskHours(bucket.hours)}).`);
+      postAndWeldLines.push(`${formatNameList([welderName])}: ${bucket.tasks.join('; ')} (${formatTaskHours(bucketDuration)}).`);
     });
     if(
       hasWelderLane &&
@@ -14329,7 +14357,8 @@ document.addEventListener('DOMContentLoaded', function(){
       tieInSchedule = scheduleWorkByAvailability({
         names: tieInCandidates,
         totalHours: postPanelTieInWelderHours,
-        earliestStart: tieInStartGate
+        earliestStart: tieInStartGate,
+        productivityByName: welderProductivityByName
       });
       tieInWelderNames = tieInSchedule.participants.length ? tieInSchedule.participants : tieInCandidates;
       if(tieInSchedule.workDone > 0){
@@ -14433,7 +14462,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const gateWelderSchedule = scheduleWorkByAvailability({
         names: gateWelderCandidates,
         totalHours: gateWelderHours,
-        earliestStart: gateStartGate
+        earliestStart: gateStartGate,
+        productivityByName: welderProductivityByName
       });
       gateWelderNames = gateWelderSchedule.participants.length ? gateWelderSchedule.participants : gateWelderCandidates;
       if(gateWelderSchedule.workDone > 0){
