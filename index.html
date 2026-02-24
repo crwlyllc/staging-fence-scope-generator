@@ -1198,7 +1198,7 @@
         <div class="sp-card-header">
           <div class="sp-card-title">Quick Costs</div>
           <div class="sp-row">
-            <button class="sp-btn" id="sp-copy-costs-all" type="button" disabled>Copy All 7</button>
+            <button class="sp-btn" id="sp-copy-costs-all" type="button" disabled>Copy All 8</button>
           </div>
         </div>
         <div class="sp-grid">
@@ -1245,6 +1245,13 @@
             </div>
           </div>
           <div class="sp-field col-12">
+            <label class="sp-label" for="sp-cost-gross-after-overhead">Gross After Overhead</label>
+            <div class="sp-copy-row">
+              <input class="sp-input" id="sp-cost-gross-after-overhead" type="text" readonly value="—" />
+              <button class="sp-btn ghost" id="sp-copy-cost-gross-after-overhead" type="button" disabled>Copy</button>
+            </div>
+          </div>
+          <div class="sp-field col-12">
             <label class="sp-label" for="sp-cost-commission">Commission</label>
             <div class="sp-copy-row">
               <input class="sp-input" id="sp-cost-commission" type="text" readonly value="—" />
@@ -1252,7 +1259,7 @@
             </div>
           </div>
         </div>
-        <div class="sp-hint">Fast copy values for HCP: Price to Charge, Travel, Materials, Consumables, Labor, Overhead, and Commission.</div>
+        <div class="sp-hint">Fast copy values for HCP: Price to Charge, Travel, Materials, Consumables, Labor, Overhead, Gross After Overhead, and Commission.</div>
       </div>
 
       <div class="sp-card" id="sp-sub">
@@ -1697,6 +1704,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const quickCostConsumablesInput = document.getElementById('sp-cost-consumables');
   const quickCostLaborInput = document.getElementById('sp-cost-labor');
   const quickCostOverheadInput = document.getElementById('sp-cost-overhead');
+  const quickCostGrossAfterOverheadInput = document.getElementById('sp-cost-gross-after-overhead');
   const quickCostCommissionInput = document.getElementById('sp-cost-commission');
   const quickCostChargeBtn = document.getElementById('sp-copy-cost-charge');
   const quickCostTravelBtn = document.getElementById('sp-copy-cost-travel');
@@ -1704,6 +1712,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const quickCostConsumablesBtn = document.getElementById('sp-copy-cost-consumables');
   const quickCostLaborBtn = document.getElementById('sp-copy-cost-labor');
   const quickCostOverheadBtn = document.getElementById('sp-copy-cost-overhead');
+  const quickCostGrossAfterOverheadBtn = document.getElementById('sp-copy-cost-gross-after-overhead');
   const quickCostCommissionBtn = document.getElementById('sp-copy-cost-commission');
   const laborRateInput = document.getElementById('sp-labor-rate');
   const crewMemberInputs = Array.from(document.querySelectorAll('input[data-crew-member]'));
@@ -15049,6 +15058,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const revenue = revenueRes && isFinite(revenueRes.revenue) ? revenueRes.revenue : NaN;
     const revenueExcludingMcor = revenue * (1 - RATES.mcor);
     const overheadAmount = overheadAmountForRevenue(revenue);
+    const grossAfterOverhead = isFinite(revenue) ? (revenue - directCosts - overheadAmount) : NaN;
     const overheadAmountForCommission = overheadAmountForRevenue(revenueExcludingMcor);
     const commissionFormula$ = isFinite(revenue)
       ? (RATES.commission * (revenueExcludingMcor - overheadAmountForCommission - directCosts))
@@ -15117,7 +15127,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!isFinite(revenue)){
       cost.push('⚠️ Pricing inputs produced an invalid result. Check overhead, margin target, gross target, and costs.');
     } else {
-      const grossProfit = revenue - directCosts - overheadAmount;
+      const grossProfit = grossAfterOverhead;
       const netProfit = grossProfit - commissionFormula$;
       const netProfitPct = revenue !== 0 ? (netProfit / revenue) * 100 : NaN;
       cost.push('- Price to charge: $'+money(revenue));
@@ -15163,6 +15173,7 @@ document.addEventListener('DOMContentLoaded', function(){
       consumables: consumablesCost,
       labor: laborCost,
       overhead: overheadAmount,
+      grossAfterOverhead,
       commission: commissionFormula$,
       travelIncluded: !!travelCostResult.included
     });
@@ -15347,6 +15358,7 @@ document.addEventListener('DOMContentLoaded', function(){
       { key: 'consumables', label: 'Consumables', input: quickCostConsumablesInput, button: quickCostConsumablesBtn },
       { key: 'labor', label: 'Labor', input: quickCostLaborInput, button: quickCostLaborBtn },
       { key: 'overhead', label: 'Overhead', input: quickCostOverheadInput, button: quickCostOverheadBtn },
+      { key: 'grossAfterOverhead', label: 'Gross After Overhead', input: quickCostGrossAfterOverheadInput, button: quickCostGrossAfterOverheadBtn },
       { key: 'commission', label: 'Commission', input: quickCostCommissionInput, button: quickCostCommissionBtn },
     ];
   }
@@ -15384,6 +15396,7 @@ document.addEventListener('DOMContentLoaded', function(){
       consumables: Number(costs.consumables),
       labor: Number(costs.labor),
       overhead: Number(costs.overhead),
+      grossAfterOverhead: Number(costs.grossAfterOverhead),
       commission: Number(costs.commission),
       travelIncluded: costs.travelIncluded !== false
     };
@@ -15442,6 +15455,7 @@ document.addEventListener('DOMContentLoaded', function(){
       `Consumables: $${money(lastQuickCosts.consumables)}`,
       `Labor: $${money(lastQuickCosts.labor)}`,
       `Overhead: $${money(lastQuickCosts.overhead)}`,
+      `Gross after overhead: $${money(lastQuickCosts.grossAfterOverhead)}`,
       `Commission: $${money(lastQuickCosts.commission)}`
     ];
     const text = lines.join('\n');
@@ -16097,6 +16111,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if(quickCostConsumablesBtn){ quickCostConsumablesBtn.addEventListener('click', copyQuickCostButton); }
   if(quickCostLaborBtn){ quickCostLaborBtn.addEventListener('click', copyQuickCostButton); }
   if(quickCostOverheadBtn){ quickCostOverheadBtn.addEventListener('click', copyQuickCostButton); }
+  if(quickCostGrossAfterOverheadBtn){ quickCostGrossAfterOverheadBtn.addEventListener('click', copyQuickCostButton); }
   if(quickCostCommissionBtn){ quickCostCommissionBtn.addEventListener('click', copyQuickCostButton); }
   if(estimateNumberInput){
     estimateNumberInput.addEventListener('input', ()=>{
