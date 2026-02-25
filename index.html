@@ -10664,7 +10664,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
 
-      const driveGateChainReplace = (isRepair && (isWrought || isWood)) ? i(s.driveGateChainReplace) : 0;
+      const driveGateChainReplace = isRepair ? i(s.driveGateChainReplace) : 0;
       if(driveGateChainReplace){
         lines.push(`- Sliding drive gate chains to replace: ${driveGateChainReplace}`);
         totals.driveGateChainReplacements += driveGateChainReplace;
@@ -10676,7 +10676,9 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // Drive gate operator replacement
-      const dgo = (isWrought || isWood) ? i(s.driveGateOperatorReplace) : 0;
+      // Count drive gate operator replacements whenever qty > 0.
+      // Fence-type strings can vary in imported snapshots, so avoid hard-gating by type.
+      const dgo = i(s.driveGateOperatorReplace);
       if(dgo){
         const rawType = (s.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
         const rawPower = (s.driveGateOperatorPower || DRIVE_GATE_POWER_TYPES[0] || '').trim();
@@ -10716,7 +10718,8 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // Drive gate operator installation
-      const dgi = (isWrought || isWood) ? i(s.driveGateOperatorInstall) : 0;
+      // Count drive gate operator installs whenever qty > 0.
+      const dgi = i(s.driveGateOperatorInstall);
       if(dgi){
         const rawType = (s.driveGateOperatorInstallType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
         const rawPower = (s.driveGateOperatorInstallPower || DRIVE_GATE_POWER_TYPES_INSTALL[0] || '').trim();
