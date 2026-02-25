@@ -5046,18 +5046,18 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
 
         <!-- NEW: Replace Sliding Drive Gate Chain -->
-        <div class="sp-field col-3" data-repair-only data-wrought-only>
+        <div class="sp-field col-3" data-repair-only>
           <label class="sp-label"># Sliding Drive Gate Chains to Replace</label>
           ${numberControl('driveGateChainReplace','0')}
           <div class="sp-hint">Adds $150 materials and 1 crew hour per chain.</div>
         </div>
 
         <!-- NEW: Replace Drive Gate Operator -->
-        <div class="sp-field col-3" data-wrought-only>
+        <div class="sp-field col-3">
           <label class="sp-label"># Drive Gate Operators to Replace</label>
           ${numberControl('driveGateOperatorReplace','0')}
         </div>
-        <div class="sp-field col-12" data-drive-operator-wrap data-wrought-only style="display:none">
+        <div class="sp-field col-12" data-drive-operator-wrap style="display:none">
           <div class="sp-grid">
             <div class="sp-field col-3">
               <label class="sp-label">Drive Gate Type</label>
@@ -5072,11 +5072,11 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
 
         <!-- NEW: Install Drive Gate Operator -->
-        <div class="sp-field col-3" data-wrought-only>
+        <div class="sp-field col-3">
           <label class="sp-label"># Drive Gate Operators to Install</label>
           ${numberControl('driveGateOperatorInstall','0')}
         </div>
-        <div class="sp-field col-12" data-drive-operator-install-wrap data-wrought-only style="display:none">
+        <div class="sp-field col-12" data-drive-operator-install-wrap style="display:none">
           <div class="sp-grid">
             <div class="sp-field col-3">
               <label class="sp-label">Drive Gate Type</label>
@@ -10664,7 +10664,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
 
-      const driveGateChainReplace = (isRepair && isWrought) ? i(s.driveGateChainReplace) : 0;
+      const driveGateChainReplace = (isRepair && (isWrought || isWood)) ? i(s.driveGateChainReplace) : 0;
       if(driveGateChainReplace){
         lines.push(`- Sliding drive gate chains to replace: ${driveGateChainReplace}`);
         totals.driveGateChainReplacements += driveGateChainReplace;
@@ -10676,7 +10676,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // Drive gate operator replacement
-      const dgo = isWrought ? i(s.driveGateOperatorReplace) : 0;
+      const dgo = (isWrought || isWood) ? i(s.driveGateOperatorReplace) : 0;
       if(dgo){
         const rawType = (s.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
         const rawPower = (s.driveGateOperatorPower || DRIVE_GATE_POWER_TYPES[0] || '').trim();
@@ -10716,7 +10716,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // Drive gate operator installation
-      const dgi = isWrought ? i(s.driveGateOperatorInstall) : 0;
+      const dgi = (isWrought || isWood) ? i(s.driveGateOperatorInstall) : 0;
       if(dgi){
         const rawType = (s.driveGateOperatorInstallType || DRIVE_GATE_OPERATOR_TYPES[0] || '').trim();
         const rawPower = (s.driveGateOperatorInstallPower || DRIVE_GATE_POWER_TYPES_INSTALL[0] || '').trim();
