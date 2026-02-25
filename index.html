@@ -13217,6 +13217,52 @@ document.addEventListener('DOMContentLoaded', function(){
     // `maxDayHours` is an onsite-hours cap; travel time does not reduce onsite production capacity.
     const onsiteHoursPerPerson = MAX_CREW_DAY_HOURS;
     const HOURS_PER_PERSON = Math.max(0.25, onsiteHoursPerPerson);
+    const LAST_DAY_BLEED_MAX_HOURS = 2;
+    const HOURS_PER_PERSON_WITH_LAST_DAY_BLEED = HOURS_PER_PERSON + LAST_DAY_BLEED_MAX_HOURS;
+    const dayOnsiteHours = (day)=>{
+      const crewCount = Math.max(1, parseInt(day?.crew || 0, 10) || 1);
+      const manHours = Math.max(0, Number(day?.hours || 0) || 0);
+      return manHours / crewCount;
+    };
+    const absorbShortLastDay = (days)=>{
+      if(!Array.isArray(days) || days.length < 2) return false;
+      const prevIndex = days.length - 2;
+      const prevDay = days[prevIndex];
+      const lastDay = days[days.length - 1];
+      const prevCrew = parseInt(prevDay?.crew || 0, 10) || 0;
+      const lastCrew = parseInt(lastDay?.crew || 0, 10) || 0;
+      if(prevCrew <= 0 || lastCrew <= 0 || prevCrew !== lastCrew) return false;
+      const prevKind = String(prevDay?.kind || '');
+      const lastKind = String(lastDay?.kind || '');
+      if(prevKind !== lastKind) return false;
+      const trailingOnsiteHours = dayOnsiteHours(lastDay);
+      if(!(trailingOnsiteHours > 0) || trailingOnsiteHours > (LAST_DAY_BLEED_MAX_HOURS + 0.01)){
+        return false;
+      }
+      const prevOnsiteHours = dayOnsiteHours(prevDay);
+      if((prevOnsiteHours + trailingOnsiteHours) > (HOURS_PER_PERSON_WITH_LAST_DAY_BLEED + 0.01)){
+        return false;
+      }
+      prevDay.hours = (Number(prevDay.hours || 0) || 0) + (Number(lastDay.hours || 0) || 0);
+      prevDay.hasWash = !!prevDay.hasWash || !!lastDay.hasWash;
+      prevDay.hasBase = !!prevDay.hasBase || !!lastDay.hasBase;
+      days.pop();
+      return true;
+    };
+    const onsiteDayCountForHours = (hours)=>{
+      const totalHours = Math.max(0, Number(hours) || 0);
+      if(totalHours <= 0) return 0;
+      const fullDays = Math.floor(totalHours / HOURS_PER_PERSON);
+      const remainder = Math.max(0, totalHours - (fullDays * HOURS_PER_PERSON));
+      if(remainder <= 0.01){
+        return Math.max(1, fullDays);
+      }
+      let dayCount = fullDays + 1;
+      if(dayCount > 1 && remainder <= (LAST_DAY_BLEED_MAX_HOURS + 0.01)){
+        dayCount -= 1;
+      }
+      return Math.max(1, dayCount);
+    };
     const primePaintScheduled = totalLenPrimePaint > 0;
     const hasInstallOrReplace = (totals.installSections > 0) || (totals.replaceSections > 0);
     const requiresTwoPersonCrew = hasInstallOrReplace || (totals.postsRealignCutWeld > 0) || woodRequiresTwoPerson || stainHours > 0 || woodInstallPlan.sections > 0;
@@ -13271,6 +13317,7 @@ document.addEventListener('DOMContentLoaded', function(){
       appendWoodPhaseDays(woodInstallPlan.postCrewHours + woodInstallPlan.removalCrewHours, 'wood-posts');
       appendWoodPhaseDays(woodInstallPlan.buildCrewHours, 'wood-build');
     }
+    absorbShortLastDay(woodInstallDays);
     woodInstallPlan.removalDays = woodInstallDays.filter(day => day.kind === 'wood-posts').length;
     woodInstallPlan.postDays = woodInstallPlan.removalDays;
     const explicitBuildDays = woodInstallDays.filter(day => day.kind === 'wood-build').length;
@@ -13312,6 +13359,7 @@ document.addEventListener('DOMContentLoaded', function(){
         break;
       }
     }
+    absorbShortLastDay(washDays);
 
     const baseDays = [];
     let remainingWelderHours = baseWelderHours;
@@ -13372,6 +13420,7 @@ document.addEventListener('DOMContentLoaded', function(){
         break;
       }
     }
+    absorbShortLastDay(baseDays);
 
     const finishDays = [];
     let remainingFinishWelderHours = finishWelderHours;
@@ -13423,6 +13472,7 @@ document.addEventListener('DOMContentLoaded', function(){
         break;
       }
     }
+    absorbShortLastDay(finishDays);
 
     if(washDays.length && baseDays.length){
       const firstWash = washDays[0];
@@ -13465,6 +13515,7 @@ document.addEventListener('DOMContentLoaded', function(){
     washDays.forEach(day => crewSchedule.push({ ...day, kind: 'wash' }));
     baseDays.forEach(day => crewSchedule.push({ ...day, kind: primePaintScheduled ? 'prime' : 'base' }));
     finishDays.forEach(day => crewSchedule.push({ ...day, kind: 'finish' }));
+    absorbShortLastDay(crewSchedule);
 
     const crewLabelWithMix = (count) => {
       const crewCount = parseInt(count, 10) || 0;
@@ -13541,8 +13592,7 @@ document.addEventListener('DOMContentLoaded', function(){
     };
     const scheduledOnsiteDayCount = Math.max(0, crewSchedule.filter(day => (day?.crew || 0) > 0).length);
     const minimumOnsiteDaysForHours = (hours) => {
-      if(!isFinite(hours) || hours <= 0) return 0;
-      return Math.max(1, Math.ceil(hours / HOURS_PER_PERSON));
+      return onsiteDayCountForHours(hours);
     };
     const getOnsiteDayCount = (hours) => {
       return Math.max(scheduledOnsiteDayCount, minimumOnsiteDaysForHours(hours));
@@ -15102,7 +15152,8 @@ document.addEventListener('DOMContentLoaded', function(){
     });
     if(effectiveOnsiteDayCount > crewScheduleDetail.length){
       const maxOnsiteHoursPerDayLabel = (Math.round(HOURS_PER_PERSON * 10) / 10).toFixed(1);
-      crewScheduleDetail.push(`Onsite duration requires ${effectiveOnsiteDayCount} day(s) at ${maxOnsiteHoursPerDayLabel} hrs/day max`);
+      const carryoverHoursLabel = (Math.round(LAST_DAY_BLEED_MAX_HOURS * 10) / 10).toFixed(1);
+      crewScheduleDetail.push(`Onsite duration requires ${effectiveOnsiteDayCount} day(s) at ${maxOnsiteHoursPerDayLabel} hrs/day max (+${carryoverHoursLabel} hrs carryover to prior day)`);
     }
     const shopFabricationHoursLabel = formatHours(laborHoursShop);
     const laborTimeParts = [];
