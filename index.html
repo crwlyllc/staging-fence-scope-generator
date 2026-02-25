@@ -1118,6 +1118,7 @@
               <option value="City">City</option>
             </select>
             <div class="sp-hint" id="sp-customer-min-hint">Minimum charge: $350</div>
+            <div class="sp-hint" id="sp-customer-crew-suggestion">Ideal crew suggestion: Add scope to calculate (advisory only; bid is unchanged).</div>
           </div>
           <div class="sp-field col-12">
             <label class="sp-label" for="sp-pricing-target-margin">Target Gross Margin After Overhead (%)</label>
@@ -1684,6 +1685,7 @@ document.addEventListener('DOMContentLoaded', function(){
   
   const customerTypeSelect = document.getElementById('sp-customer-type');
   const customerMinHint = document.getElementById('sp-customer-min-hint');
+  const customerCrewSuggestionHint = document.getElementById('sp-customer-crew-suggestion');
   const pricingTargetMarginInput = document.getElementById('sp-pricing-target-margin');
   const pricingTargetGrossInput = document.getElementById('sp-pricing-target-gross');
   const customerCardEl = document.getElementById('sp-customer-card');
@@ -8679,6 +8681,12 @@ document.addEventListener('DOMContentLoaded', function(){
     return baseSummary;
   }
 
+  function updateCustomerCrewSuggestionHint(message){
+    if(!customerCrewSuggestionHint) return;
+    const text = String(message || '').trim();
+    customerCrewSuggestionHint.textContent = text || 'Ideal crew suggestion: Add scope to calculate (advisory only; bid is unchanged).';
+  }
+
   function updatePricingMinimumUI(){
     const minValue = getMinimumLabelAndValue();
     if(customerMinHint){
@@ -15129,6 +15137,131 @@ document.addEventListener('DOMContentLoaded', function(){
     });
     const travelCost = travelCostResult.cost || 0;
     const travelHours = isFinite(travelCostResult.hours) ? travelCostResult.hours : 0;
+    const buildIdealCrewSuggestion = ()=>{
+      const leadMember = 'Jesus';
+      const availableMembers = DEFAULT_CREW_MEMBERS.slice().filter(Boolean);
+      if(!availableMembers.includes(leadMember)){
+        return null;
+      }
+
+      const minCrewForScope = Math.max(
+        1,
+        Math.max(parseInt(CREW_SETTINGS.minCrew || 1, 10) || 1, minCrewBase)
+      );
+      const maxCrewAllowed = Math.max(
+        minCrewForScope,
+        Math.min(
+          availableMembers.length,
+          Math.max(1, parseInt(CREW_SETTINGS.maxCrew || availableMembers.length, 10) || availableMembers.length)
+        )
+      );
+      const baselineCrewCount = Math.max(1, ONSITE_CREW_SIZE);
+      const baselineOnsiteHours = Math.max(0, Number(laborHoursOnsite) || 0);
+      const baselineCrewManHours = baselineOnsiteHours * baselineCrewCount;
+      const shopHours = Math.max(0, Number(laborHoursShop) || 0);
+      const scheduleDayFloor = Math.max(0, parseInt(scheduledOnsiteDayCount, 10) || 0);
+      const travelIncluded = !!(travelDayInfo && travelDayInfo.included);
+      const travelHoursPerDay = travelIncluded ? Math.max(0, Number(travelDayInfo.hoursPerDay) || 0) : 0;
+      const roundTripMiles = travelIncluded ? Math.max(0, Number(travelDayInfo.roundTripMiles) || 0) : 0;
+      const mpg = Math.max(0.0001, Number(TRAVEL_SETTINGS.mpg) || 0.0001);
+      const dieselPrice = Math.max(0, Number(TRAVEL_SETTINGS.dieselPrice) || 0);
+      const fuelCostPerDay = travelIncluded ? ((roundTripMiles / mpg) * dieselPrice) : 0;
+      const otherMembers = availableMembers.filter(name=> name !== leadMember);
+      const candidates = [];
+
+      const pushCandidate = (members)=>{
+        const crewMembers = normalizeCrewMembers(members);
+        if(!crewMembers.includes(leadMember)){
+          return;
+        }
+        const crewCount = crewMembers.length;
+        if(crewCount < minCrewForScope || crewCount > maxCrewAllowed){
+          return;
+        }
+        const laborRateForCrew = computeCrewLaborRate(crewMembers);
+        if(!(laborRateForCrew > 0)){
+          return;
+        }
+        const projectedOnsiteHours = crewCount > 0 ? (baselineCrewManHours / crewCount) : baselineOnsiteHours;
+        const projectedOnsiteDays = Math.max(scheduleDayFloor, onsiteDayCountForHours(projectedOnsiteHours));
+        const projectedTravelHours = travelIncluded ? (travelHoursPerDay * projectedOnsiteDays) : 0;
+        const projectedLaborHours = projectedOnsiteHours + shopHours;
+        const projectedLaborCost = projectedLaborHours * laborRateForCrew;
+        const projectedTravelCost = travelIncluded
+          ? ((projectedTravelHours * laborRateForCrew) + (fuelCostPerDay * projectedOnsiteDays))
+          : 0;
+        const projectedCost = projectedLaborCost + projectedTravelCost;
+        candidates.push({
+          members: crewMembers,
+          crewCount,
+          laborRate: laborRateForCrew,
+          projectedOnsiteHours,
+          projectedOnsiteDays,
+          projectedCost,
+          projectedCostBasis: travelIncluded ? 'labor + travel' : 'labor'
+        });
+      };
+
+      const buildCombinations = (pool, needed, startIndex, picked)=>{
+        if(needed <= 0){
+          pushCandidate([leadMember, ...picked]);
+          return;
+        }
+        for(let i=startIndex; i<=pool.length - needed; i++){
+          picked.push(pool[i]);
+          buildCombinations(pool, needed - 1, i + 1, picked);
+          picked.pop();
+        }
+      };
+
+      for(let crewCount=minCrewForScope; crewCount<=maxCrewAllowed; crewCount++){
+        const extraMembers = crewCount - 1;
+        if(extraMembers <= 0){
+          pushCandidate([leadMember]);
+        }else{
+          buildCombinations(otherMembers, extraMembers, 0, []);
+        }
+      }
+
+      if(!candidates.length){
+        return null;
+      }
+
+      candidates.sort((a, b)=>{
+        if(Math.abs(a.projectedCost - b.projectedCost) > 0.01){
+          return a.projectedCost - b.projectedCost;
+        }
+        if(a.crewCount !== b.crewCount){
+          return a.crewCount - b.crewCount;
+        }
+        if(a.projectedOnsiteDays !== b.projectedOnsiteDays){
+          return a.projectedOnsiteDays - b.projectedOnsiteDays;
+        }
+        return a.laborRate - b.laborRate;
+      });
+
+      return candidates[0];
+    };
+    const idealCrewSuggestion = buildIdealCrewSuggestion();
+    if(idealCrewSuggestion){
+      const crewCount = idealCrewSuggestion.crewCount;
+      const peopleLabel = crewCount === 1 ? 'person' : 'people';
+      const membersLabel = idealCrewSuggestion.members.join(', ');
+      const onsiteHoursLabel = formatHours(idealCrewSuggestion.projectedOnsiteHours) || '0 hours';
+      const dayCount = Math.max(0, parseInt(idealCrewSuggestion.projectedOnsiteDays, 10) || 0);
+      const daysLabel = dayCount === 1 ? '1 day' : `${dayCount} days`;
+      const currentCrewMembers = getActiveCrewMembers();
+      const currentMatchSuffix = sameNameSet(currentCrewMembers, idealCrewSuggestion.members)
+        ? ' Current assignment already matches this suggestion.'
+        : ` Current assignment: ${currentCrewMembers.join(', ')}.`;
+      updateCustomerCrewSuggestionHint(
+        `Ideal crew suggestion (advisory only; bid is unchanged): ${crewCount} ${peopleLabel} (${membersLabel}). ` +
+        `Lowest estimated ${idealCrewSuggestion.projectedCostBasis} cost: $${money(idealCrewSuggestion.projectedCost)} ` +
+        `(~${onsiteHoursLabel} onsite, ${daysLabel}).${currentMatchSuffix}`
+      );
+    }else{
+      updateCustomerCrewSuggestionHint('Ideal crew suggestion: Add scope to calculate (advisory only; bid is unchanged).');
+    }
     const totalHours = laborHoursBillable + travelHours;
     const grossProfitCapHours = Math.max(0, laborHoursOnsite + travelHours);
     const directCosts = laborCost + travelCost + costMaterials + removalCost + consumablesCost;
