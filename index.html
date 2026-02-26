@@ -1508,7 +1508,9 @@ document.addEventListener('DOMContentLoaded', function(){
   };
   const WALK_GATE_TYPES = ['Single Swing Walk Gate','Double Swing Gate'];
   const WOOD_GATE_POST_TYPES = ['Wood 4x4','Round Steel','Postmaster'];
-  const WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT = 24;
+  const WOOD_SLIDING_GATE_MIN_LENGTH_FT = 12;
+  const WOOD_SLIDING_GATE_MAX_LENGTH_FT = 24;
+  const WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT = WOOD_SLIDING_GATE_MAX_LENGTH_FT;
   const WOOD_SLIDING_GATE_STEEL_STICKS_24FT = { sixFt: 4, eightFt: 5 };
   const WOOD_SLIDING_GATE_RAILS = { sixFt: 3, eightFt: 4 };
   const WOOD_SLIDING_GATE_MAN_HOURS = 24;
@@ -3074,6 +3076,7 @@ document.addEventListener('DOMContentLoaded', function(){
     merged.useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(merged.useExistingPostsForReplacement);
     merged.woodInstallPostSpacing = normalizeWoodInstallPostSpacing(merged.woodInstallPostSpacing);
     merged.woodReplacementPostSpacing = normalizeWoodReplacementPostSpacing(merged.woodReplacementPostSpacing);
+    merged.woodSlidingGateLengthFt = normalizeWoodSlidingGateLengthFt(merged.woodSlidingGateLengthFt);
     merged.wroughtCustomStickLength = normalizeWroughtCustomStickLength(merged.wroughtCustomStickLength);
     merged.wroughtPanelFabrication = normalizeWroughtPanelFabrication(merged.wroughtPanelFabrication);
     merged.wroughtPowderCoatPanels = false;
@@ -5051,8 +5054,8 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
         <div class="sp-field col-3" data-wood-only data-wood-sliding-gate-length-wrap style="display:none">
           <label class="sp-label">Sliding Gate Length (ft)</label>
-          <input class="sp-input" data-field="woodSlidingGateLengthFt" type="number" min="1" step="0.1" placeholder="24" />
-          <div class="sp-hint">Approximate driveway gate length used in description and material takeoff.</div>
+          <input class="sp-input" data-field="woodSlidingGateLengthFt" type="number" min="${WOOD_SLIDING_GATE_MIN_LENGTH_FT}" max="${WOOD_SLIDING_GATE_MAX_LENGTH_FT}" step="0.1" placeholder="${WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT}" />
+          <div class="sp-hint">Approximate driveway gate length used in description and material takeoff (${WOOD_SLIDING_GATE_MIN_LENGTH_FT}-${WOOD_SLIDING_GATE_MAX_LENGTH_FT} ft).</div>
         </div>
 
         <!-- NEW: Replace Sliding Drive Gate Chain -->
@@ -5671,7 +5674,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodWalkAddFrameSize: val('woodWalkAddFrameSize'),
       woodWalkAddPicketWidth: val('woodWalkAddPicketWidth'),
       woodSlidingGatesAdd: val('woodSlidingGatesAdd'),
-      woodSlidingGateLengthFt: val('woodSlidingGateLengthFt'),
+      woodSlidingGateLengthFt: normalizeWoodSlidingGateLengthFt(val('woodSlidingGateLengthFt')),
       driveGateChainReplace: val('driveGateChainReplace'),
       driveGateOperatorReplace: val('driveGateOperatorReplace'),
       driveGateOperatorType: val('driveGateOperatorType'),
@@ -5871,7 +5874,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodWalkAddFrameSize', normalizeWoodGateFrameSize(data.woodWalkAddFrameSize || data.walkAddFrameSize || data.woodRailSize || WOOD_RAIL_SIZES[1]));
     set('woodWalkAddPicketWidth', normalizeWoodGatePicketWidth(data.woodWalkAddPicketWidth || data.walkAddPicketSize || data.woodPicketWidth || WOOD_PICKET_WIDTHS[2]));
     set('woodSlidingGatesAdd', data.woodSlidingGatesAdd || '');
-    set('woodSlidingGateLengthFt', data.woodSlidingGateLengthFt || WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT);
+    set('woodSlidingGateLengthFt', normalizeWoodSlidingGateLengthFt(data.woodSlidingGateLengthFt));
     set('driveGateChainReplace', data.driveGateChainReplace || '');
     set('driveGateOperatorReplace', data.driveGateOperatorReplace || '');
     set('driveGateOperatorType', data.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0]);
@@ -7172,6 +7175,9 @@ document.addEventListener('DOMContentLoaded', function(){
     card.addEventListener('change', (e)=>{
       const t = e.target;
       if(!t) return;
+      if(t.matches('[data-field="woodSlidingGateLengthFt"]')){
+        t.value = String(normalizeWoodSlidingGateLengthFt(t.value));
+      }
       if(t.matches('input[data-field^="railStacked_"]')){
         const key = t.getAttribute('data-field');
         const cond = card.querySelector(`[data-if="${key}"]`);
@@ -8031,6 +8037,17 @@ document.addEventListener('DOMContentLoaded', function(){
     const match = WOOD_PICKET_WIDTHS.find(item=>normalizeSize(item) === raw);
     return match || fallback;
   }
+  function normalizeWoodSlidingGateLengthFt(value){
+    const parsed = parseFloat(value);
+    if(!isFinite(parsed) || parsed <= 0){
+      return WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT;
+    }
+    const clamped = Math.min(
+      WOOD_SLIDING_GATE_MAX_LENGTH_FT,
+      Math.max(WOOD_SLIDING_GATE_MIN_LENGTH_FT, parsed)
+    );
+    return Math.round(clamped * 10) / 10;
+  }
   function applyWoodPostDefaults(card, prevPost){
     if(!card) return;
     const postSel = card.querySelector('[data-field="woodPost"]');
@@ -8171,11 +8188,7 @@ document.addEventListener('DOMContentLoaded', function(){
     return parseInt(section?.woodSlidingGatesAdd || 0, 10) || 0;
   }
   function woodSlidingGateLengthFt(section){
-    const parsed = parseFloat(section?.woodSlidingGateLengthFt);
-    if(isFinite(parsed) && parsed > 0){
-      return parsed;
-    }
-    return WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT;
+    return normalizeWoodSlidingGateLengthFt(section?.woodSlidingGateLengthFt);
   }
   function woodSlidingGateIsTall(section){
     const heightFt = Math.max(0, feetFromStr(section?.woodHeight || section?.height || ''));
