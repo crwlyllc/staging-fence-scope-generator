@@ -1508,7 +1508,7 @@ document.addEventListener('DOMContentLoaded', function(){
   };
   const WALK_GATE_TYPES = ['Single Swing Walk Gate','Double Swing Gate'];
   const WOOD_GATE_POST_TYPES = ['Wood 4x4','Round Steel','Postmaster'];
-  const WOOD_SLIDING_GATE_WIDTH_FT = 24;
+  const WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT = 24;
   const WOOD_SLIDING_GATE_STEEL_STICKS_24FT = { sixFt: 4, eightFt: 5 };
   const WOOD_SLIDING_GATE_RAILS = { sixFt: 3, eightFt: 4 };
   const WOOD_SLIDING_GATE_MAN_HOURS = 24;
@@ -2979,6 +2979,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodWalkAddFrameSize: WOOD_RAIL_SIZES[1],
       woodWalkAddPicketWidth: WOOD_PICKET_WIDTHS[2],
       woodSlidingGatesAdd: 0,
+      woodSlidingGateLengthFt: WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT,
       driveGateChainReplace: 0,
       driveGateOperatorReplace: 0,
       driveGateOperatorType: DRIVE_GATE_OPERATOR_TYPES[0],
@@ -5046,7 +5047,12 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="sp-field col-3" data-wood-only>
           <label class="sp-label"># Sliding Gates to Add</label>
           ${numberControl('woodSlidingGatesAdd','0')}
-          <div class="sp-hint">Per gate: 6ft uses ${WOOD_SLIDING_GATE_STEEL_STICKS_24FT.sixFt}x 24ft (or ${WOOD_SLIDING_GATE_STEEL_STICKS_24FT.sixFt * 2}x 12ft) 2x2 steel sticks + ${WOOD_SLIDING_GATE_RAILS.sixFt}x 2x4 rails. 8ft uses ${WOOD_SLIDING_GATE_STEEL_STICKS_24FT.eightFt}x 24ft (or ${WOOD_SLIDING_GATE_STEEL_STICKS_24FT.eightFt * 2}x 12ft) 2x2 sticks + ${WOOD_SLIDING_GATE_RAILS.eightFt}x 2x4 rails. Includes pickets and ring shank nails to skin each gate. Labor per gate: 3 workers x 8 hr to fabricate, paint, and install the manually operated gate.</div>
+          <div class="sp-hint">Per gate base: 6ft uses ${WOOD_SLIDING_GATE_STEEL_STICKS_24FT.sixFt}x 24ft (or ${WOOD_SLIDING_GATE_STEEL_STICKS_24FT.sixFt * 2}x 12ft) 2x2 steel sticks + ${WOOD_SLIDING_GATE_RAILS.sixFt}x 2x4 rails. 8ft uses ${WOOD_SLIDING_GATE_STEEL_STICKS_24FT.eightFt}x 24ft (or ${WOOD_SLIDING_GATE_STEEL_STICKS_24FT.eightFt * 2}x 12ft) 2x2 sticks + ${WOOD_SLIDING_GATE_RAILS.eightFt}x 2x4 rails. Includes pickets and ring shank nails. Labor per gate: 3 workers x 8 hr to fabricate, paint, and install the manually operated gate.</div>
+        </div>
+        <div class="sp-field col-3" data-wood-only data-wood-sliding-gate-length-wrap style="display:none">
+          <label class="sp-label">Sliding Gate Length (ft)</label>
+          <input class="sp-input" data-field="woodSlidingGateLengthFt" type="number" min="1" step="0.1" placeholder="24" />
+          <div class="sp-hint">Approximate driveway gate length used in description and material takeoff.</div>
         </div>
 
         <!-- NEW: Replace Sliding Drive Gate Chain -->
@@ -5142,7 +5148,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'walkAddPicketSize','walkAddLatch','walkAddHinges','woodWalkAddType','woodWalkAddPostType','woodWalkAddFrameSize',
     'woodWalkAddPicketWidth','driveGateChainReplace','driveGateOperatorReplace','driveGateOperatorType',
     'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
-    'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap','woodWalkGatesAdd','woodSlidingGatesAdd',
+    'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap','woodWalkGatesAdd','woodSlidingGatesAdd','woodSlidingGateLengthFt',
     'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie','useExistingPostsForReplacement','postInstallMethod','woodInstallPostSpacing','woodReplacementPostSpacing'
   ];
 
@@ -5665,6 +5671,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodWalkAddFrameSize: val('woodWalkAddFrameSize'),
       woodWalkAddPicketWidth: val('woodWalkAddPicketWidth'),
       woodSlidingGatesAdd: val('woodSlidingGatesAdd'),
+      woodSlidingGateLengthFt: val('woodSlidingGateLengthFt'),
       driveGateChainReplace: val('driveGateChainReplace'),
       driveGateOperatorReplace: val('driveGateOperatorReplace'),
       driveGateOperatorType: val('driveGateOperatorType'),
@@ -5864,6 +5871,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodWalkAddFrameSize', normalizeWoodGateFrameSize(data.woodWalkAddFrameSize || data.walkAddFrameSize || data.woodRailSize || WOOD_RAIL_SIZES[1]));
     set('woodWalkAddPicketWidth', normalizeWoodGatePicketWidth(data.woodWalkAddPicketWidth || data.walkAddPicketSize || data.woodPicketWidth || WOOD_PICKET_WIDTHS[2]));
     set('woodSlidingGatesAdd', data.woodSlidingGatesAdd || '');
+    set('woodSlidingGateLengthFt', data.woodSlidingGateLengthFt || WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT);
     set('driveGateChainReplace', data.driveGateChainReplace || '');
     set('driveGateOperatorReplace', data.driveGateOperatorReplace || '');
     set('driveGateOperatorType', data.driveGateOperatorType || DRIVE_GATE_OPERATOR_TYPES[0]);
@@ -7440,6 +7448,7 @@ document.addEventListener('DOMContentLoaded', function(){
         woodWalkAddPostType: defaultWoodPost,
         woodWalkAddFrameSize: WOOD_RAIL_SIZES[1],
         woodWalkAddPicketWidth: WOOD_PICKET_WIDTHS[2],
+        woodSlidingGateLengthFt: WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT,
         woodPostRealignments: [],
         woodRepairPostInstallMethod: WOOD_POST_INSTALL_METHODS[1].value,
         woodRepairPostReplaceTie: defaultTie,
@@ -7560,6 +7569,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const rb = getN('walkGatesRebuild');
     const add = getN('walkGatesAdd');
     const woodAdd = getN('woodWalkGatesAdd');
+    const woodSlidingAdd = getN('woodSlidingGatesAdd');
     const scopeSel = card.querySelector('[data-field="scopeType"]');
     const scope = scopeSel ? scopeSel.value : 'repair';
     const isInstall = scope === 'install' || scope === 'replace';
@@ -7577,6 +7587,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if(addWrap){ addWrap.style.display = (!isWood && add>0) ? 'block' : 'none'; }
     const woodAddWrap = card.querySelector('[data-wood-wg-add-wrap]');
     if(woodAddWrap){ woodAddWrap.style.display = (isWood && woodAdd>0) ? 'block' : 'none'; }
+    const woodSlidingLengthWrap = card.querySelector('[data-wood-sliding-gate-length-wrap]');
+    if(woodSlidingLengthWrap){ woodSlidingLengthWrap.style.display = (isWood && woodSlidingAdd>0) ? 'block' : 'none'; }
   }
 
   function updateDriveGateOperatorConditional(card){
@@ -8158,6 +8170,13 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     return parseInt(section?.woodSlidingGatesAdd || 0, 10) || 0;
   }
+  function woodSlidingGateLengthFt(section){
+    const parsed = parseFloat(section?.woodSlidingGateLengthFt);
+    if(isFinite(parsed) && parsed > 0){
+      return parsed;
+    }
+    return WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT;
+  }
   function woodSlidingGateIsTall(section){
     const heightFt = Math.max(0, feetFromStr(section?.woodHeight || section?.height || ''));
     return heightFt >= 8;
@@ -8168,9 +8187,11 @@ document.addEventListener('DOMContentLoaded', function(){
       : WOOD_SLIDING_GATE_RAILS.sixFt;
   }
   function woodSlidingGateSteelSticks24FtPerGate(section){
-    return woodSlidingGateIsTall(section)
+    const baseCount = woodSlidingGateIsTall(section)
       ? WOOD_SLIDING_GATE_STEEL_STICKS_24FT.eightFt
       : WOOD_SLIDING_GATE_STEEL_STICKS_24FT.sixFt;
+    const lengthFt = woodSlidingGateLengthFt(section);
+    return Math.max(1, Math.ceil((baseCount * lengthFt) / WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT));
   }
   function woodGateFrameMaterialLabel(section, frameSize){
     if(!section) return 'wood rail (2x4)';
@@ -10701,7 +10722,10 @@ document.addEventListener('DOMContentLoaded', function(){
         const usesTallMaterialSet = woodSlidingGateIsTall(s);
         const steelSticks24 = woodSlidingGateSteelSticks24FtPerGate(s);
         const railsPerGate = woodSlidingGateRailsPerGate(s);
+        const gateLengthFt = woodSlidingGateLengthFt(s);
+        const gateLengthLabel = formatFtValue(gateLengthFt) || `${WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT}`;
         lines.push(`- Add wood sliding gate(s): ${wsg}`);
+        lines.push(`  - Gate length: about ${gateLengthLabel}ft each`);
         lines.push(`  - Height profile: ${usesTallMaterialSet ? '8ft' : '6ft'}; Frame steel: ${steelSticks24} x 24ft 2x2 sticks per gate (${steelSticks24 * 2} x 12ft equivalent)`);
         lines.push(`  - Wood rails: ${railsPerGate} x 2x4 runs per gate, plus pickets and ring shank nails to skin the gate`);
       }
@@ -11967,7 +11991,22 @@ document.addEventListener('DOMContentLoaded', function(){
         detailParts.push(`${totals.woodSlidingGateAdds8ft} on 8ft fence sections`);
       }
       const detail = detailParts.length ? ` (${detailParts.join('; ')})` : '';
-      addServiceLine('Fence Installation: Wood Sliding Gates', `Fabricate, paint, and install ${describeCount(totals.woodSlidingGateAdds, 'wood sliding gate', 'wood sliding gates')}${detail}. Includes 2x2 steel frame fabrication, ${WOOD_SLIDING_GATE_RAILS.sixFt}/${WOOD_SLIDING_GATE_RAILS.eightFt} rail layout by fence height, pickets, ring shank nails, v-track, and rollers for manual operation.`);
+      const slidingGateLengthLabels = [];
+      state.sections.forEach(section=>{
+        const gateQty = woodSlidingGateAddCount(section);
+        if(gateQty <= 0) return;
+        const lengthLabel = formatFtValue(woodSlidingGateLengthFt(section)) || `${WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT}`;
+        if(!slidingGateLengthLabels.includes(lengthLabel)){
+          slidingGateLengthLabels.push(lengthLabel);
+        }
+      });
+      const slidingGateLengthPhrase = slidingGateLengthLabels.length === 1
+        ? `${slidingGateLengthLabels[0]}ft`
+        : (slidingGateLengthLabels.length > 1
+          ? `${joinParts(slidingGateLengthLabels.map(label=> `${label}ft`))}`
+          : `${WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT}ft`);
+      const drivewayGateNoun = totals.woodSlidingGateAdds === 1 ? 'gate' : 'gates';
+      addServiceLine('Fence Installation: Wood Sliding Gates', `Fabricate, paint, and install ${describeCount(totals.woodSlidingGateAdds, 'wood sliding gate', 'wood sliding gates')}${detail}. Includes 2x2 steel frame fabrication, 3/4 rail layout by fence height, pickets, ring shank nails, v-track, and rollers for manual operation. Fabricate ${totals.woodSlidingGateAdds} sliding driveway ${drivewayGateNoun} about ${slidingGateLengthPhrase} long. Frame will be made out of 2x2 steel, painted black, then wood in the same style as the rest of the fence will be added to it.`);
     }
     if (totals.wroughtReplaceSections > 0){
       addServiceLine('Remove Fence Sections', `Take down and haul away ${describeCount(totals.wroughtReplaceSections, 'existing fence section', 'existing fence sections')} prior to installation.`);
@@ -12731,14 +12770,15 @@ document.addEventListener('DOMContentLoaded', function(){
       if(woodSlidingGates > 0){
         const railsPerGate = woodSlidingGateRailsPerGate(s);
         const steelSticksPerGate = woodSlidingGateSteelSticks24FtPerGate(s);
+        const gateLengthFt = woodSlidingGateLengthFt(s);
         const totalSteelSticks = woodSlidingGates * steelSticksPerGate;
         const totalRails = woodSlidingGates * railsPerGate;
         addSteelRawSticks('raw2x2', totalSteelSticks, 24);
-        addMat(materials, woodRailMaterialLabel(s, WOOD_SLIDING_GATE_WIDTH_FT, true), totalRails);
+        addMat(materials, woodRailMaterialLabel(s, gateLengthFt, true), totalRails);
 
         const picketWidthIn = Math.max(0.1, parseWoodInches(s.woodPicketWidth, 5.5));
         const useOverlapCount = woodStyleUsesOverlapPickets(s.woodStyle || '');
-        const picketsPerGate = woodPicketCountForWidth(WOOD_SLIDING_GATE_WIDTH_FT * 12, picketWidthIn, useOverlapCount);
+        const picketsPerGate = woodPicketCountForWidth(gateLengthFt * 12, picketWidthIn, useOverlapCount);
         const totalPickets = picketsPerGate * woodSlidingGates;
         if(totalPickets > 0){
           addMat(materials, woodPicketMaterialLabel(s), totalPickets);
