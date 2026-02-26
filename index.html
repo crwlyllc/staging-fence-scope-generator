@@ -9257,6 +9257,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'Install Puppy Picket Inserts': 'repairs',
       'Rail Replacement': 'railReplacement',
       'Wood Fence Repairs': 'woodRepairs',
+      'Sliding Driveway Gate': 'woodInstallation',
       'Wood Fence Staining': 'woodStain',
       'Wood Fence Wash & Stain': 'woodStain',
       'Wood Fence Wash Hail & Stain': 'woodStain'
@@ -11983,14 +11984,6 @@ document.addEventListener('DOMContentLoaded', function(){
       addServiceLine('Fence Installation: Walk Gates', `Cut in and install ${describeCount(totals.woodWalkGateAdds, 'wood walk gate', 'wood walk gates')}${detail} complete with wood posts, frame, pickets, and hardware.`);
     }
     if (totals.woodSlidingGateAdds > 0){
-      const detailParts = [];
-      if(totals.woodSlidingGateAdds6ft > 0){
-        detailParts.push(`${totals.woodSlidingGateAdds6ft} on 6ft fence sections`);
-      }
-      if(totals.woodSlidingGateAdds8ft > 0){
-        detailParts.push(`${totals.woodSlidingGateAdds8ft} on 8ft fence sections`);
-      }
-      const detail = detailParts.length ? ` (${detailParts.join('; ')})` : '';
       const slidingGateLengthLabels = [];
       state.sections.forEach(section=>{
         const gateQty = woodSlidingGateAddCount(section);
@@ -12006,7 +11999,8 @@ document.addEventListener('DOMContentLoaded', function(){
           ? `${joinParts(slidingGateLengthLabels.map(label=> `${label}ft`))}`
           : `${WOOD_SLIDING_GATE_DEFAULT_LENGTH_FT}ft`);
       const drivewayGateNoun = totals.woodSlidingGateAdds === 1 ? 'gate' : 'gates';
-      addServiceLine('Fence Installation: Wood Sliding Gates', `Fabricate, paint, and install ${describeCount(totals.woodSlidingGateAdds, 'wood sliding gate', 'wood sliding gates')}${detail}. Includes 2x2 steel frame fabrication, 3/4 rail layout by fence height, pickets, ring shank nails, v-track, and rollers for manual operation. Fabricate ${totals.woodSlidingGateAdds} sliding driveway ${drivewayGateNoun} about ${slidingGateLengthPhrase} long. Frame will be made out of 2x2 steel, painted black, then wood in the same style as the rest of the fence will be added to it.`);
+      const gateObjectPronoun = totals.woodSlidingGateAdds === 1 ? 'it' : 'them';
+      addServiceLine('Sliding Driveway Gate', `Fabricate ${totals.woodSlidingGateAdds} sliding driveway ${drivewayGateNoun} about ${slidingGateLengthPhrase} long. Frame will be made out of 2x2 steel, painted black, then wood in the same style as the rest of the fence will be added to ${gateObjectPronoun}.`);
     }
     if (totals.wroughtReplaceSections > 0){
       addServiceLine('Remove Fence Sections', `Take down and haul away ${describeCount(totals.wroughtReplaceSections, 'existing fence section', 'existing fence sections')} prior to installation.`);
