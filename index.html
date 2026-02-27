@@ -2969,6 +2969,8 @@ document.addEventListener('DOMContentLoaded', function(){
       walkRebuildLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
       walkRebuildHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
       walkGatesAdd: 0,
+      walkGatesAddSingle: 0,
+      walkGatesAddDouble: 0,
       walkAddType: WALK_GATE_TYPES[0],
       walkAddPostSize: '2x2',
       walkAddFrameSize: SEED.railSize[0],
@@ -3105,6 +3107,8 @@ document.addEventListener('DOMContentLoaded', function(){
       walkRebuildLatch: (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch',
       walkRebuildHinges: (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges',
       walkGatesAdd: 0,
+      walkGatesAddSingle: 0,
+      walkGatesAddDouble: 0,
       walkAddType: WALK_GATE_TYPES[0],
       walkAddPostSize: section.postSize || '2x2',
       walkAddFrameSize: SEED.railSize[0],
@@ -3133,6 +3137,9 @@ document.addEventListener('DOMContentLoaded', function(){
       Number(section.digOut||0) === 0 &&
       Number(section.puppyPicketReplace||0) === 0 &&
       Number(section.walkGates||0) === 0 &&
+      Number(section.walkGatesAdd||0) === 0 &&
+      Number(section.walkGatesAddSingle||0) === 0 &&
+      Number(section.walkGatesAddDouble||0) === 0 &&
       Number(section.woodSlidingGatesAdd||0) === 0 &&
       Number(section.driveGateChainReplace||0) === 0 &&
       Number(section.driveGateOperatorReplace||0) === 0 &&
@@ -4985,17 +4992,17 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
 
-        <!-- Add a Wrought Iron Walk Gate (into existing fence) -->
+        <!-- Add Wrought Iron Walk Gates (into existing fence) -->
         <div class="sp-field col-3" data-wrought-only>
-          <label class="sp-label"># Walk Gates to Add</label>
-          ${numberControl('walkGatesAdd','0')}
+          <label class="sp-label"># Single Swing Gates to Add</label>
+          ${numberControl('walkGatesAddSingle','0')}
+        </div>
+        <div class="sp-field col-3" data-wrought-only>
+          <label class="sp-label"># Double Swing Gates to Add</label>
+          ${numberControl('walkGatesAddDouble','0')}
         </div>
         <div class="sp-field col-12" data-wrought-only data-wg-add-wrap style="display:none">
           <div class="sp-grid">
-            <div class="sp-field col-3">
-              <label class="sp-label">Gate Type</label>
-              <select class="sp-select" data-field="walkAddType">${createSelect(WALK_GATE_TYPES)}</select>
-            </div>
             <div class="sp-field col-3">
               <label class="sp-label">Gate Post Size</label>
               <select class="sp-select" data-field="walkAddPostSize">${createSelect(SEED.postSize)}</select>
@@ -5017,7 +5024,7 @@ document.addEventListener('DOMContentLoaded', function(){
               <select class="sp-select" data-field="walkAddHinges">${createSelect(GATE.hingeTypes)}</select>
             </div>
           </div>
-          <div class="sp-hint">Single swing: adds 2 labor hours, 1 post, and 2× 12ft rails per rail size. Double swing: adds 3 labor hours, 1 post, and 4× 12ft rails per rail size. For install/replace sections set to Anchored, use 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per gate post; otherwise use 1 bag concrete per gate post.</div>
+          <div class="sp-hint">Single swing: adds 2 labor hours, 1 post, and 2× 12ft rails per rail size. Double swing: adds 3 labor hours, 1 post, and 4× 12ft rails per rail size. For install/replace sections set to Anchored, use 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per gate post; otherwise use 1 bag concrete per gate post. Legacy gate type field remains supported for imported snapshots.</div>
         </div>
 
         <!-- Add a Wood Walk Gate -->
@@ -5148,7 +5155,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','woodRepairStainBrand','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
-    'walkAddPicketSize','walkAddLatch','walkAddHinges','woodWalkAddType','woodWalkAddPostType','woodWalkAddFrameSize',
+    'walkAddPicketSize','walkAddLatch','walkAddHinges','walkGatesAddSingle','walkGatesAddDouble','woodWalkAddType','woodWalkAddPostType','woodWalkAddFrameSize',
     'woodWalkAddPicketWidth','driveGateChainReplace','driveGateOperatorReplace','driveGateOperatorType',
     'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
     'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap','woodWalkGatesAdd','woodSlidingGatesAdd','woodSlidingGateLengthFt',
@@ -5662,6 +5669,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
       // NEW
       walkGatesAdd: val('walkGatesAdd'),
+      walkGatesAddSingle: val('walkGatesAddSingle'),
+      walkGatesAddDouble: val('walkGatesAddDouble'),
       walkAddType: val('walkAddType'),
       walkAddPostSize: val('walkAddPostSize'),
       walkAddFrameSize: val('walkAddFrameSize'),
@@ -5859,8 +5868,18 @@ document.addEventListener('DOMContentLoaded', function(){
     set('walkRebuildLatch', data.walkRebuildLatch || (GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
     set('walkRebuildHinges', data.walkRebuildHinges || (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
 
-    set('walkGatesAdd', data.walkGatesAdd||'');
-    set('walkAddType', data.walkAddType || WALK_GATE_TYPES[0]);
+    const legacyWroughtGateCount = data.walkGatesAdd || '';
+    const legacyWroughtGateType = data.walkAddType || WALK_GATE_TYPES[0];
+    const derivedLegacySingle = walkGateTypeIsDouble(legacyWroughtGateType) ? '' : legacyWroughtGateCount;
+    const derivedLegacyDouble = walkGateTypeIsDouble(legacyWroughtGateType) ? legacyWroughtGateCount : '';
+    const splitSingleValue = parseInt(data.walkGatesAddSingle || 0, 10) || 0;
+    const splitDoubleValue = parseInt(data.walkGatesAddDouble || 0, 10) || 0;
+    const legacyWroughtGateCountValue = parseInt(legacyWroughtGateCount || 0, 10) || 0;
+    const shouldUseSplitCounts = (splitSingleValue + splitDoubleValue) > 0 || legacyWroughtGateCountValue <= 0;
+    set('walkGatesAdd', legacyWroughtGateCount);
+    set('walkGatesAddSingle', shouldUseSplitCounts ? data.walkGatesAddSingle : derivedLegacySingle);
+    set('walkGatesAddDouble', shouldUseSplitCounts ? data.walkGatesAddDouble : derivedLegacyDouble);
+    set('walkAddType', legacyWroughtGateType);
     set('walkAddPostSize', data.walkAddPostSize || data.postSize || '2x2');
     set('walkAddFrameSize', data.walkAddFrameSize || SEED.railSize[0]);
     set('walkAddPicketSize', data.walkAddPicketSize || SEED.picketSize[0]);
@@ -7574,6 +7593,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const hw = getN('walkGatesHardware');
     const rb = getN('walkGatesRebuild');
     const add = getN('walkGatesAdd');
+    const addSingle = getN('walkGatesAddSingle');
+    const addDouble = getN('walkGatesAddDouble');
+    const addTotal = addSingle + addDouble + add;
     const woodAdd = getN('woodWalkGatesAdd');
     const woodSlidingAdd = getN('woodSlidingGatesAdd');
     const scopeSel = card.querySelector('[data-field="scopeType"]');
@@ -7590,7 +7612,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(rbWrap){ rbWrap.style.display = (!isInstall && wg>0 && rb>0) ? 'block' : 'none'; }
 
     const addWrap = card.querySelector('[data-wg-add-wrap]');
-    if(addWrap){ addWrap.style.display = (!isWood && add>0) ? 'block' : 'none'; }
+    if(addWrap){ addWrap.style.display = (!isWood && addTotal>0) ? 'block' : 'none'; }
     const woodAddWrap = card.querySelector('[data-wood-wg-add-wrap]');
     if(woodAddWrap){ woodAddWrap.style.display = (isWood && woodAdd>0) ? 'block' : 'none'; }
     const woodSlidingLengthWrap = card.querySelector('[data-wood-sliding-gate-length-wrap]');
@@ -8138,12 +8160,27 @@ document.addEventListener('DOMContentLoaded', function(){
   function walkGateTypeIsDouble(typeLabel){
     return /double/i.test(String(typeLabel || ''));
   }
+  function wroughtWalkGateAddCounts(section){
+    const single = Math.max(0, parseInt(section?.walkGatesAddSingle || 0, 10) || 0);
+    const double = Math.max(0, parseInt(section?.walkGatesAddDouble || 0, 10) || 0);
+    if(single > 0 || double > 0){
+      return { single, double, total: single + double };
+    }
+    const legacyTotal = Math.max(0, parseInt(section?.walkGatesAdd || 0, 10) || 0);
+    if(legacyTotal <= 0){
+      return { single: 0, double: 0, total: 0 };
+    }
+    if(walkGateTypeIsDouble(section?.walkAddType || WALK_GATE_TYPES[0])){
+      return { single: 0, double: legacyTotal, total: legacyTotal };
+    }
+    return { single: legacyTotal, double: 0, total: legacyTotal };
+  }
   function walkGateAddCount(section){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
       const count = parseInt(section?.woodWalkGatesAdd ?? section?.walkGatesAdd ?? 0, 10) || 0;
       return count;
     }
-    return parseInt(section?.walkGatesAdd || 0, 10) || 0;
+    return wroughtWalkGateAddCounts(section).total;
   }
   function walkGateAddType(section){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
@@ -9513,17 +9550,14 @@ document.addEventListener('DOMContentLoaded', function(){
 
       sections.forEach(section=>{
         if(includeRemoval && !isWood){
-          const gateCount = walkGateAddCount(section);
-          if(gateCount > 0){
-            if(walkGateTypeIsDouble(walkGateAddType(section))){
-              replacementWalkGateDouble += gateCount;
-            } else {
-              replacementWalkGateSingle += gateCount;
-            }
+          const gateAdds = wroughtWalkGateAddCounts(section);
+          if(gateAdds.total > 0){
+            replacementWalkGateSingle += gateAdds.single;
+            replacementWalkGateDouble += gateAdds.double;
             const latchLabel = normalizeLabelText(walkGateAddLatchLabel(section) || '') || 'selected latch';
             const hingeLabel = normalizeLabelText(walkGateAddHingeLabel(section) || '') || 'selected hinges';
             const hardwareKey = `${latchLabel}|||${hingeLabel}`;
-            replacementWalkGateHardware.set(hardwareKey, (replacementWalkGateHardware.get(hardwareKey) || 0) + gateCount);
+            replacementWalkGateHardware.set(hardwareKey, (replacementWalkGateHardware.get(hardwareKey) || 0) + gateAdds.total);
           }
         }
         const useExistingPostsForReplacement = includeRemoval && shouldUseExistingPostsForReplacement(section);
@@ -10708,6 +10742,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const wgr = (isRepair && isWrought) ? i(s.walkGatesRealign) : 0;
       const wgh = (isRepair && isWrought) ? i(s.walkGatesHardware) : 0;
       const wgb = (isRepair && isWrought) ? i(s.walkGatesRebuild) : 0;
+      const wroughtGateAdds = isWood ? { single: 0, double: 0, total: 0 } : wroughtWalkGateAddCounts(s);
       const wsg = isWood ? woodSlidingGateAddCount(s) : 0;
       if (isRepair && (wg || wgr || wgh || wgb)){
         lines.push(`- Walk gates: ${wg}`);
@@ -10717,7 +10752,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       // Add walk gate into existing fence
-      const wga = walkGateAddCount(s);
+      const wga = isWood ? walkGateAddCount(s) : wroughtGateAdds.total;
       if (wga){
         const gateTypeLabel = walkGateAddType(s);
         const gatePostLabel = walkGateAddPostLabel(s);
@@ -10725,10 +10760,16 @@ document.addEventListener('DOMContentLoaded', function(){
         const gatePicketLabel = walkGateAddPicketLabel(s);
         const gateLatchLabel = walkGateAddLatchLabel(s);
         const gateHingeLabel = walkGateAddHingeLabel(s);
-        lines.push(`- Add walk gate(s): ${wga} — ${gateTypeLabel}`);
+        lines.push(`- Add walk gate(s): ${wga}${isWood ? ` — ${gateTypeLabel}` : ''}`);
         if(fenceType === 'wood'){
           lines.push(`  - Post type: ${gatePostLabel}; Frame: ${gateFrameLabel}; Picket width: ${gatePicketLabel}; Hardware: ${gateLatchLabel} + ${gateHingeLabel}`);
         } else {
+          if(wroughtGateAdds.single > 0){
+            lines.push(`  - Single swing gates: ${wroughtGateAdds.single}`);
+          }
+          if(wroughtGateAdds.double > 0){
+            lines.push(`  - Double swing gates: ${wroughtGateAdds.double}`);
+          }
           lines.push(`  - Post: ${gatePostLabel}; Frame: ${gateFrameLabel}; Pickets: ${gatePicketLabel}; Latch: ${gateLatchLabel}; Hinges: ${gateHingeLabel}`);
         }
       }
@@ -10945,11 +10986,8 @@ document.addEventListener('DOMContentLoaded', function(){
         } else {
           totals.walkGateAddsRepair += wga;
         }
-        if(walkGateTypeIsDouble(gateTypeLabel)){
-          totals.walkGateAddsDouble += wga;
-        } else {
-          totals.walkGateAddsSingle += wga;
-        }
+        totals.walkGateAddsSingle += wroughtGateAdds.single;
+        totals.walkGateAddsDouble += wroughtGateAdds.double;
       }
     });
 
@@ -11968,13 +12006,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const wroughtReplacementWalkGateCounts = state.sections.reduce((acc, section)=>{
       if((section?.scopeType || 'repair') !== 'replace') return acc;
       if((section?.fenceType || '').toLowerCase() !== 'wrought iron') return acc;
-      const gateCount = walkGateAddCount(section);
-      if(gateCount <= 0) return acc;
-      if(walkGateTypeIsDouble(walkGateAddType(section))){
-        acc.double += gateCount;
-      } else {
-        acc.single += gateCount;
-      }
+      const gateAdds = wroughtWalkGateAddCounts(section);
+      if(gateAdds.total <= 0) return acc;
+      acc.single += gateAdds.single;
+      acc.double += gateAdds.double;
       return acc;
     }, { single: 0, double: 0 });
     const standaloneSingleWalkGateAdds = Math.max(0, (totals.walkGateAddsSingle || 0) - wroughtReplacementWalkGateCounts.single);
@@ -12763,14 +12798,20 @@ document.addEventListener('DOMContentLoaded', function(){
           const hinges = walkGateAddHingeLabel(s);
           if(latch) latchCounts[latch] = (latchCounts[latch]||0) + addG;
           if(hinges) hingeCounts[hinges] = (hingeCounts[hinges]||0) + addG;
-          const gateType = walkGateAddType(s);
-          const perGateRail = walkGateTypeIsDouble(gateType) ? 4 : 2;
+          const wroughtGateAdds = wroughtWalkGateAddCounts(s);
           const sectionRails = sectionRailSizes(s);
           const frame = walkGateAddFrameLabel(s);
           const railsToCount = sectionRails.length ? sectionRails : (frame ? [frame] : []);
-          railsToCount.forEach(size=>{
-            addRailSticks(size, addG * perGateRail);
-          });
+          if(wroughtGateAdds.single > 0){
+            railsToCount.forEach(size=>{
+              addRailSticks(size, wroughtGateAdds.single * 2);
+            });
+          }
+          if(wroughtGateAdds.double > 0){
+            railsToCount.forEach(size=>{
+              addRailSticks(size, wroughtGateAdds.double * 4);
+            });
+          }
         }
       }
       const woodSlidingGates = woodSlidingGateAddCount(s);
