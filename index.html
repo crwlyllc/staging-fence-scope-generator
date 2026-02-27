@@ -1174,7 +1174,6 @@
             <label class="sp-crew-option"><input type="checkbox" data-crew-member="Jesus" checked /> Jesus</label>
             <label class="sp-crew-option"><input type="checkbox" data-crew-member="JR" checked /> JR</label>
             <label class="sp-crew-option"><input type="checkbox" data-crew-member="Clay" checked /> Clay</label>
-            <label class="sp-crew-option"><input type="checkbox" data-crew-member="Joel" checked /> Joel</label>
           </div>
           <div class="sp-hint" id="sp-crew-members-hint">Select who is assigned to this job. Labor time and schedule update automatically.</div>
         </div>
@@ -1561,7 +1560,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const CREW_MEMBER_BASE_RATES = {
     Jesus: 25,
     Clay: 19,
-    Joel: 18,
     JR: 18,
   };
   const CREW_MEMBER_WELD_PRODUCTIVITY = {
@@ -1580,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', function(){
     maxWelders: 2,
     maxDayHours: 8,
   };
-  const DEFAULT_CREW_MEMBERS = ['Jesus', 'JR', 'Clay', 'Joel'];
+  const DEFAULT_CREW_MEMBERS = ['Jesus', 'JR', 'Clay'];
   const ONSITE_CREW_SIZE_DEFAULT = DEFAULT_CREW_MEMBERS.length;
   let ONSITE_CREW_SIZE = ONSITE_CREW_SIZE_DEFAULT;
   const CREW_ROSTER = {
