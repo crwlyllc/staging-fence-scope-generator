@@ -12015,6 +12015,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const railInstall = addCount(railInstallCount, railSize ? `${railSize} rail` : 'rail', railSize ? `${railSize} rails` : 'rails');
         if(railInstall){
           parts.push(`Install ${railInstall}`);
+          addMat(materials, woodRailMaterialLabel(s), railInstallCount);
           const hours = (railInstallCount * 10) / 60;
           totals.woodRailInstall += railInstallCount;
           woodHelperHours += hours;
