@@ -1625,6 +1625,14 @@ document.addEventListener('DOMContentLoaded', function(){
     shopFabricationCrewHoursPerPanel: 1,
     skidSteerRentalPerDay: 500
   };
+  const CHAIN_LINK_INSTALL_PRODUCTION = {
+    // Field production rates for chain-link install/replacement scope.
+    layoutCrewHoursPerSection: 0.5,
+    setCrewHoursPerPost: 0.2,
+    stretchCrewHoursPerLf: 0.02,
+    tensionCrewHoursPerTerminalPost: 0.08,
+    gateCrewHoursPerOpening: 0.75
+  };
 
   const NOTES_DATA_VERSION = 1;
   const NOTES_DATA_START = '[[SP_SCOPE_DATA_START]]';
@@ -13109,6 +13117,32 @@ document.addEventListener('DOMContentLoaded', function(){
       manHours += postInstallManHours;
       helperHours += postInstallManHours;
     }
+    const chainLinkInstallScopeSections = state.sections.filter(section=>{
+      const fenceType = String(section?.fenceType || '').toLowerCase();
+      if(fenceType !== 'chain link') return false;
+      const scopeType = String(section?.scopeType || 'repair').toLowerCase();
+      if(scopeType !== 'install' && scopeType !== 'replace') return false;
+      return Math.max(0, parseFloat(section?.length || 0) || 0) > 0;
+    });
+    const chainLinkInstallTotalLf = chainLinkInstallScopeSections.reduce((sum, section)=>{
+      return sum + Math.max(0, parseFloat(section?.length || 0) || 0);
+    }, 0);
+    const chainLinkGateOpenings = chainLinkInstallScopeSections.reduce((sum, section)=>{
+      return sum + walkGateAddCount(section);
+    }, 0);
+    const chainLinkPostsToSet = Math.max(0, (totals.chainLinkLinePosts || 0) + (totals.chainLinkLineEndPosts || 0));
+    let chainLinkInstallManHours = 0;
+    if(chainLinkInstallScopeSections.length > 0){
+      const layoutCrewHours = chainLinkInstallScopeSections.length * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.layoutCrewHoursPerSection || 0) || 0);
+      const setCrewHours = chainLinkPostsToSet * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.setCrewHoursPerPost || 0) || 0);
+      const stretchCrewHours = chainLinkInstallTotalLf * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.stretchCrewHoursPerLf || 0) || 0);
+      const tensionCrewHours = (totals.chainLinkLineEndPosts || 0) * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.tensionCrewHoursPerTerminalPost || 0) || 0);
+      const gateCrewHours = chainLinkGateOpenings * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.gateCrewHoursPerOpening || 0) || 0);
+      const totalCrewHours = layoutCrewHours + setCrewHours + stretchCrewHours + tensionCrewHours + gateCrewHours;
+      chainLinkInstallManHours = totalCrewHours * ONSITE_CREW_SIZE;
+      manHours += chainLinkInstallManHours;
+      helperHours += chainLinkInstallManHours;
+    }
     // Do not apply a per-post concrete cure wait to wrought post installs.
     // Wood same-day cure wait is handled separately in woodInstallPlan.
     const cutWeldWelderHours = totals.postsRealignCutWeld * (20/60);
@@ -14812,6 +14846,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const postHelperManHours =
       postReplacementCrewManHours +
       postInstallManHours +
+      chainLinkInstallManHours +
       cureManHours +
       concreteRealignHelperManHours +
       cutWeldHelperHours +
@@ -14856,6 +14891,22 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if(installPostSummaryConcrete) postTaskParts.push(`set ${installPostSummaryConcrete} new posts in concrete`);
     if(installPostSummaryAnchored) postTaskParts.push(`anchor ${installPostSummaryAnchored} new posts to concrete`);
+    if(chainLinkInstallTotalLf > 0){
+      const chainLinkTaskParts = [];
+      const lengthLabel = formatFtValue(chainLinkInstallTotalLf);
+      if(lengthLabel){
+        chainLinkTaskParts.push(`install about ${lengthLabel}ft of chain link fabric`);
+      }
+      if(chainLinkPostsToSet > 0){
+        chainLinkTaskParts.push(`set ${chainLinkPostsToSet} chain link posts (${totals.chainLinkLinePosts || 0} line posts and ${totals.chainLinkLineEndPosts || 0} line-end posts)`);
+      }
+      if(chainLinkGateOpenings > 0){
+        chainLinkTaskParts.push(`frame ${chainLinkGateOpenings} walk gate ${plural(chainLinkGateOpenings, 'opening')}`);
+      }
+      if(chainLinkTaskParts.length){
+        postTaskParts.push(chainLinkTaskParts.join(', '));
+      }
+    }
     if(wroughtPanelInstallReturnNextDay){
       postTaskParts.push('return another day to install panels');
     }
@@ -15588,7 +15639,25 @@ document.addEventListener('DOMContentLoaded', function(){
     const replacementUsingExistingPosts = replacementSectionsOnly.filter(section=> shouldUseExistingPostsForReplacement(section));
     if (nonWoodReplacementSections.length > 0) sub.push('- Sections to replace: '+nonWoodReplacementSections.length);
     if (nonWoodInstallSections.length > 0) sub.push('- New sections to install: '+nonWoodInstallSections.length);
+    if (totals.chainLinkReplaceSections > 0) sub.push('- Chain link sections to replace: '+totals.chainLinkReplaceSections);
+    if (totals.chainLinkInstallSections > 0) sub.push('- New chain link sections to install: '+totals.chainLinkInstallSections);
+    if (totals.chainLinkFabricRolls > 0) sub.push(`- Chain link fabric rolls (${CHAIN_LINK_ROLL_LENGTH_FT}ft): ${totals.chainLinkFabricRolls}`);
+    if (totals.chainLinkLinePosts > 0) sub.push(`- Chain link line posts: ${totals.chainLinkLinePosts}`);
+    if (totals.chainLinkLineEndPosts > 0) sub.push(`- Chain link line-end post kits: ${totals.chainLinkLineEndPosts}`);
+    if (totals.chainLinkGatePosts > 0) sub.push(`- Chain link gate posts (included in line-end count): ${totals.chainLinkGatePosts}`);
     if (replacementUsingExistingPosts.length > 0) sub.push('- Replacement sections using existing posts: '+replacementUsingExistingPosts.length);
+    const chainLinkReplacementSections = replacementGroups.get('chain link') || [];
+    if (chainLinkReplacementSections.length > 0){
+      const detail = buildInstallServiceDescription(chainLinkReplacementSections, true) || fenceTypeDefaultDetail('chain link', true);
+      const sentence = ensureSentence(detail);
+      if(sentence) sub.push(`- ${sentence}`);
+    }
+    const chainLinkInstallSections = installGroups.get('chain link') || [];
+    if (chainLinkInstallSections.length > 0){
+      const detail = buildInstallServiceDescription(chainLinkInstallSections, false) || fenceTypeDefaultDetail('chain link', false);
+      const sentence = ensureSentence(detail);
+      if(sentence) sub.push(`- ${sentence}`);
+    }
     const woodScopeServiceLines = [];
     const woodReplacementSections = replacementGroups.get('wood') || [];
     if (woodReplacementSections.length > 0){
