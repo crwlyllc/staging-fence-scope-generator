@@ -1289,7 +1289,7 @@
               <input class="sp-input sp-service-option-input" id="sp-service-option-number" type="number" inputmode="numeric" min="1" step="1" value="1" placeholder="1" />
               <button class="sp-btn primary" id="sp-push-service-hcp" type="button" disabled>Push Line Items to HCP</button>
             </div>
-            <div class="sp-hint">Choose which estimate option should receive these line items (Option 1, 2, 3...).</div>
+            <div class="sp-hint">Choose which estimate option should receive pushes (line items and notes) (Option 1, 2, 3...).</div>
           </div>
         </div>
         <div class="sp-service-list" id="sp-service-lines"></div>
@@ -16916,6 +16916,15 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
 
+    const optionNumber = parsePositiveInt(serviceOptionInput && serviceOptionInput.value || '');
+    if(!optionNumber){
+      alert('Please enter a valid estimate option number (Option 1, 2, 3, etc).');
+      if(serviceOptionInput){
+        serviceOptionInput.focus();
+      }
+      return;
+    }
+
     const notes = (notesEl && notesEl.value || '').trim();
     const notesSub = (notesSubEl && notesSubEl.value || '').trim();
     const serviceLinesPayload = buildServiceLinesPayload()
@@ -16925,6 +16934,11 @@ document.addEventListener('DOMContentLoaded', function(){
       }));
     if(!notes){
       alert('There are no notes to send yet. Generate notes first.');
+      return;
+    }
+
+    const confirmMessage = `Send notes to Housecall Pro (Estimate ${estimateNumber}, Option ${optionNumber})?`;
+    if(!confirm(confirmMessage)){
       return;
     }
 
@@ -16945,6 +16959,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const estimateId = getEstimateIdForPayload(estimateNumber);
       const payload = {
         estimateNumber,
+        optionNumber,
+        optionId: String(optionNumber),
+        optionLabel: `Option ${optionNumber}`,
+        option_number: optionNumber,
         notes,
         notesSub,
         reloadKey,
@@ -16985,7 +17003,7 @@ document.addEventListener('DOMContentLoaded', function(){
         throw new Error(text || `Request failed with status ${response.status}`);
       }
 
-      alert('Notes sent to Housecall Pro.');
+      alert(`Notes sent to Housecall Pro option ${optionNumber}.`);
     }catch(err){
       console.error('Failed to push notes to HCP', err);
       alert('Failed to push notes to Housecall Pro. Please try again.');
