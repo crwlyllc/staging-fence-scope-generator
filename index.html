@@ -1627,11 +1627,11 @@ document.addEventListener('DOMContentLoaded', function(){
   };
   const CHAIN_LINK_INSTALL_PRODUCTION = {
     // Field production rates for chain-link install/replacement scope.
-    layoutCrewHoursPerSection: 0.5,
-    setCrewHoursPerPost: 0.2,
-    stretchCrewHoursPerLf: 0.02,
-    tensionCrewHoursPerTerminalPost: 0.08,
-    gateCrewHoursPerOpening: 0.75
+    layoutCrewHoursPerJob: 1,
+    digCrewHoursPerPostHand: 0.25,
+    digCrewHoursPerPostSkid: (5 / 60),
+    setCrewHoursPerPost: 0.125,
+    fabricCrewHoursPer100Lf: 3
   };
 
   const NOTES_DATA_VERSION = 1;
@@ -13124,24 +13124,54 @@ document.addEventListener('DOMContentLoaded', function(){
       if(scopeType !== 'install' && scopeType !== 'replace') return false;
       return Math.max(0, parseFloat(section?.length || 0) || 0) > 0;
     });
-    const chainLinkInstallTotalLf = chainLinkInstallScopeSections.reduce((sum, section)=>{
-      return sum + Math.max(0, parseFloat(section?.length || 0) || 0);
-    }, 0);
-    const chainLinkGateOpenings = chainLinkInstallScopeSections.reduce((sum, section)=>{
-      return sum + walkGateAddCount(section);
-    }, 0);
-    const chainLinkPostsToSet = Math.max(0, (totals.chainLinkLinePosts || 0) + (totals.chainLinkLineEndPosts || 0));
-    let chainLinkInstallManHours = 0;
-    if(chainLinkInstallScopeSections.length > 0){
-      const layoutCrewHours = chainLinkInstallScopeSections.length * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.layoutCrewHoursPerSection || 0) || 0);
-      const setCrewHours = chainLinkPostsToSet * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.setCrewHoursPerPost || 0) || 0);
-      const stretchCrewHours = chainLinkInstallTotalLf * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.stretchCrewHoursPerLf || 0) || 0);
-      const tensionCrewHours = (totals.chainLinkLineEndPosts || 0) * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.tensionCrewHoursPerTerminalPost || 0) || 0);
-      const gateCrewHours = chainLinkGateOpenings * Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.gateCrewHoursPerOpening || 0) || 0);
-      const totalCrewHours = layoutCrewHours + setCrewHours + stretchCrewHours + tensionCrewHours + gateCrewHours;
-      chainLinkInstallManHours = totalCrewHours * ONSITE_CREW_SIZE;
-      manHours += chainLinkInstallManHours;
-      helperHours += chainLinkInstallManHours;
+    const chainLinkInstallSectionLayouts = chainLinkInstallScopeSections.map(section=>{
+      const lengthFt = Math.max(0, parseFloat(section?.length || 0) || 0);
+      const gateCount = walkGateAddCount(section);
+      const postLayout = chainLinkPostLayout(lengthFt, gateCount);
+      const wallLengthFt = Math.max(0, parseFloat(section?.retainingWallLength || 0) || 0);
+      const wallHeightFt = Math.max(0, parseFloat(section?.retainingWallHeight || 0) || 0);
+      const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(section);
+      const retainingWallPosts = (wallLengthFt > 0 && wallHeightFt > 0)
+        ? Math.max(0, Math.ceil(wallLengthFt / CHAIN_LINK_POST_SPACING_FT) + 1)
+        : 0;
+      const postsInRetainingWall = Math.min(postLayout.totalPosts, retainingWallPosts);
+      const postsToSet = useExistingPostsForReplacement
+        ? 0
+        : Math.max(0, postLayout.totalPosts - postsInRetainingWall);
+      return { lengthFt, gateCount, postsToSet };
+    });
+    const chainLinkInstallTotalLf = chainLinkInstallSectionLayouts.reduce((sum, item)=> sum + (item.lengthFt || 0), 0);
+    const chainLinkGateOpenings = chainLinkInstallSectionLayouts.reduce((sum, item)=> sum + (item.gateCount || 0), 0);
+    const chainLinkPostsToSet = chainLinkInstallSectionLayouts.reduce((sum, item)=> sum + (item.postsToSet || 0), 0);
+    let chainLinkPostManHours = 0;
+    if(chainLinkPostsToSet > 0){
+      const maxCrewDayHours = Math.max(0.25, CREW_SETTINGS.maxDayHours || 13);
+      const layoutCrewHoursPerJob = Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.layoutCrewHoursPerJob || 1) || 0);
+      const digCrewHoursPerPostHand = Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.digCrewHoursPerPostHand || 0.25) || 0);
+      const digCrewHoursPerPostSkid = Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.digCrewHoursPerPostSkid || (5 / 60)) || 0);
+      const setCrewHoursPerPost = Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.setCrewHoursPerPost || 0.125) || 0);
+      const layoutCrewHours = layoutCrewHoursPerJob;
+      const digCrewHoursHand = chainLinkPostsToSet * digCrewHoursPerPostHand;
+      const setCrewHours = chainLinkPostsToSet * setCrewHoursPerPost;
+      let crewHours = layoutCrewHours + digCrewHoursHand + setCrewHours;
+      if(crewHours > maxCrewDayHours){
+        const digCrewHoursSkid = chainLinkPostsToSet * digCrewHoursPerPostSkid;
+        crewHours = layoutCrewHours + digCrewHoursSkid + setCrewHours;
+        const skidDays = Math.max(1, Math.ceil(crewHours / maxCrewDayHours));
+        addMat(materials, 'Skid steer rental', skidDays);
+      }
+      chainLinkPostManHours = crewHours * ONSITE_CREW_SIZE;
+      manHours += chainLinkPostManHours;
+      helperHours += chainLinkPostManHours;
+    }
+    const chainLinkFabricCrewHoursPer100Lf = Math.max(0, Number(CHAIN_LINK_INSTALL_PRODUCTION.fabricCrewHoursPer100Lf || 3) || 0);
+    const chainLinkFabricCrewHours = chainLinkInstallTotalLf > 0
+      ? (chainLinkInstallTotalLf / 100) * chainLinkFabricCrewHoursPer100Lf
+      : 0;
+    const chainLinkFabricManHours = chainLinkFabricCrewHours * ONSITE_CREW_SIZE;
+    if(chainLinkFabricManHours > 0){
+      manHours += chainLinkFabricManHours;
+      helperHours += chainLinkFabricManHours;
     }
     // Do not apply a per-post concrete cure wait to wrought post installs.
     // Wood same-day cure wait is handled separately in woodInstallPlan.
@@ -14842,11 +14872,12 @@ document.addEventListener('DOMContentLoaded', function(){
       ? formatTaskHours(woodInstallPlan.cureWaitCrewHours)
       : '';
     const wroughtPanelInstallReturnNextDay = wroughtInstallPanelCrewHours > 0 && installPostsNeedingCrew > 0;
+    const chainLinkFabricReturnNextDay = chainLinkFabricManHours > 0 && chainLinkPostsToSet > 0;
 
     const postHelperManHours =
       postReplacementCrewManHours +
       postInstallManHours +
-      chainLinkInstallManHours +
+      chainLinkPostManHours +
       cureManHours +
       concreteRealignHelperManHours +
       cutWeldHelperHours +
@@ -14891,18 +14922,9 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if(installPostSummaryConcrete) postTaskParts.push(`set ${installPostSummaryConcrete} new posts in concrete`);
     if(installPostSummaryAnchored) postTaskParts.push(`anchor ${installPostSummaryAnchored} new posts to concrete`);
-    if(chainLinkInstallTotalLf > 0){
+    if(chainLinkPostsToSet > 0){
       const chainLinkTaskParts = [];
-      const lengthLabel = formatFtValue(chainLinkInstallTotalLf);
-      if(lengthLabel){
-        chainLinkTaskParts.push(`install about ${lengthLabel}ft of chain link fabric`);
-      }
-      if(chainLinkPostsToSet > 0){
-        chainLinkTaskParts.push(`set ${chainLinkPostsToSet} chain link posts (${totals.chainLinkLinePosts || 0} line posts and ${totals.chainLinkLineEndPosts || 0} line-end posts)`);
-      }
-      if(chainLinkGateOpenings > 0){
-        chainLinkTaskParts.push(`frame ${chainLinkGateOpenings} walk gate ${plural(chainLinkGateOpenings, 'opening')}`);
-      }
+      chainLinkTaskParts.push(`set ${chainLinkPostsToSet} chain link posts (${totals.chainLinkLinePosts || 0} line posts and ${totals.chainLinkLineEndPosts || 0} line-end posts)`);
       if(chainLinkTaskParts.length){
         postTaskParts.push(chainLinkTaskParts.join(', '));
       }
@@ -15153,6 +15175,45 @@ document.addEventListener('DOMContentLoaded', function(){
         stageTitleBase = 'Weld repairs';
       }
       pushStage(stageTitleBase, postAndWeldLines);
+    }
+    if(chainLinkFabricManHours > 0){
+      const chainLinkFabricCrewCount = Math.max(1, helperLaneFullCrew);
+      const chainLinkFabricCrewNames = pickCrewNames(chainLinkFabricCrewCount, []);
+      const chainLinkFabricBaseStartGate = chainLinkFabricCrewNames.reduce((max, name)=>{
+        return Math.max(max, getPersonAvailableAt(name));
+      }, Math.max(stageOneEndAt, postLaneReadyAt));
+      const dayBlock = Math.max(0.25, Number(HOURS_PER_PERSON || CREW_SETTINGS.maxDayHours || 13) || 13);
+      let chainLinkFabricStartGate = chainLinkFabricBaseStartGate;
+      if(chainLinkFabricReturnNextDay){
+        chainLinkFabricStartGate = Math.ceil(chainLinkFabricBaseStartGate / dayBlock) * dayBlock;
+        if(chainLinkFabricStartGate <= chainLinkFabricBaseStartGate + 1e-9){
+          chainLinkFabricStartGate += dayBlock;
+        }
+      }
+      const chainLinkFabricSchedule = scheduleWorkByAvailability({
+        names: chainLinkFabricCrewNames,
+        totalHours: chainLinkFabricManHours,
+        earliestStart: chainLinkFabricStartGate
+      });
+      const chainLinkFabricLineNames = chainLinkFabricSchedule.participants.length
+        ? chainLinkFabricSchedule.participants
+        : chainLinkFabricCrewNames;
+      if(chainLinkFabricSchedule.workDone > 0){
+        reserveScheduledPeople(chainLinkFabricSchedule);
+      }
+      const chainLinkFabricDuration = chainLinkFabricSchedule.workDone > 0
+        ? chainLinkFabricSchedule.elapsed
+        : chainLinkFabricCrewHours;
+      const chainLinkLengthLabel = formatFtValue(chainLinkInstallTotalLf);
+      const chainLinkLengthPhrase = chainLinkLengthLabel ? `about ${chainLinkLengthLabel}ft of ` : '';
+      const chainLinkGatePhrase = chainLinkGateOpenings > 0
+        ? ` and frame ${chainLinkGateOpenings} walk gate ${plural(chainLinkGateOpenings, 'opening')}`
+        : '';
+      const chainLinkFabricLine = `${formatNameList(chainLinkFabricLineNames)}: stretch and install ${chainLinkLengthPhrase}chain link fabric${chainLinkGatePhrase} (${formatTaskHours(chainLinkFabricDuration)}).`;
+      const chainLinkDaySeparationLine = chainLinkFabricReturnNextDay
+        ? 'Posts are set on day 1; fabric install is scheduled the next day after concrete cure. Fabric labor uses 3 crew-hours per 100ft.'
+        : 'Fabric labor uses 3 crew-hours per 100ft.';
+      pushStage('Chain link fabric install', [chainLinkFabricLine, chainLinkDaySeparationLine]);
     }
     if(wroughtInstallPanelCrewHours > 0){
       const panelCrewCount = Math.max(1, helperLaneFullCrew);
