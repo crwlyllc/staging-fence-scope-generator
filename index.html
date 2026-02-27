@@ -2971,6 +2971,7 @@ document.addEventListener('DOMContentLoaded', function(){
       walkGatesAdd: 0,
       walkGatesAddSingle: 0,
       walkGatesAddDouble: 0,
+      walkGateAdditions: [],
       walkAddType: WALK_GATE_TYPES[0],
       walkAddPostSize: '2x2',
       walkAddFrameSize: SEED.railSize[0],
@@ -3109,6 +3110,7 @@ document.addEventListener('DOMContentLoaded', function(){
       walkGatesAdd: 0,
       walkGatesAddSingle: 0,
       walkGatesAddDouble: 0,
+      walkGateAdditions: [],
       walkAddType: WALK_GATE_TYPES[0],
       walkAddPostSize: section.postSize || '2x2',
       walkAddFrameSize: SEED.railSize[0],
@@ -3140,6 +3142,7 @@ document.addEventListener('DOMContentLoaded', function(){
       Number(section.walkGatesAdd||0) === 0 &&
       Number(section.walkGatesAddSingle||0) === 0 &&
       Number(section.walkGatesAddDouble||0) === 0 &&
+      (!section.walkGateAdditions || section.walkGateAdditions.length === 0) &&
       Number(section.woodSlidingGatesAdd||0) === 0 &&
       Number(section.driveGateChainReplace||0) === 0 &&
       Number(section.driveGateOperatorReplace||0) === 0 &&
@@ -4993,38 +4996,13 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
 
         <!-- Add Wrought Iron Walk Gates (into existing fence) -->
-        <div class="sp-field col-3" data-wrought-only>
-          <label class="sp-label"># Single Swing Gates to Add</label>
-          ${numberControl('walkGatesAddSingle','0')}
-        </div>
-        <div class="sp-field col-3" data-wrought-only>
-          <label class="sp-label"># Double Swing Gates to Add</label>
-          ${numberControl('walkGatesAddDouble','0')}
-        </div>
-        <div class="sp-field col-12" data-wrought-only data-wg-add-wrap style="display:none">
-          <div class="sp-grid">
-            <div class="sp-field col-3">
-              <label class="sp-label">Gate Post Size</label>
-              <select class="sp-select" data-field="walkAddPostSize">${createSelect(SEED.postSize)}</select>
-            </div>
-            <div class="sp-field col-3">
-              <label class="sp-label">Gate Frame Size</label>
-              <select class="sp-select" data-field="walkAddFrameSize">${createSelect(SEED.railSize)}</select>
-            </div>
-            <div class="sp-field col-3" data-wg-add-pickets>
-              <label class="sp-label">Gate Picket Size</label>
-              <select class="sp-select" data-field="walkAddPicketSize">${createSelect(SEED.picketSize)}</select>
-            </div>
-            <div class="sp-field col-3">
-              <label class="sp-label">Latch Type</label>
-              <select class="sp-select" data-field="walkAddLatch">${createSelect(GATE.latchTypes)}</select>
-            </div>
-            <div class="sp-field col-3">
-              <label class="sp-label">Hinges</label>
-              <select class="sp-select" data-field="walkAddHinges">${createSelect(GATE.hingeTypes)}</select>
-            </div>
+        <div class="sp-field col-12" data-wrought-only>
+          <label class="sp-label">Walk Gates to Add</label>
+          <div data-wrought-wg-additions></div>
+          <div class="sp-row" style="margin-top:6px">
+            <button class="sp-btn ghost" type="button" data-wrought-wg-addition-add>+ Add Wrought Gate Type</button>
+            <span class="sp-hint">Single swing: 2 labor hours, 1 post, and 2× 12ft rails per rail size. Double swing: 3 labor hours, 1 post, and 4× 12ft rails per rail size. For install/replace sections set to Anchored, use 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per gate post; otherwise use 1 bag concrete per gate post.</span>
           </div>
-          <div class="sp-hint">Single swing: adds 2 labor hours, 1 post, and 2× 12ft rails per rail size. Double swing: adds 3 labor hours, 1 post, and 4× 12ft rails per rail size. For install/replace sections set to Anchored, use 1x ${POST_ANCHOR_PLATE_LABEL} and 4x ${POST_ANCHOR_HARDWARE_LABEL}s per gate post; otherwise use 1 bag concrete per gate post. Legacy gate type field remains supported for imported snapshots.</div>
         </div>
 
         <!-- Add a Wood Walk Gate -->
@@ -5155,7 +5133,7 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodPost','woodType','woodFinish','woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodAddKickBoard',
     'woodAddTopCap','woodAddTrim','woodRepairStain','woodRepairStainBrand','walkLatch','walkHinges','walkRebuildFrame',
     'walkRebuildPicket','walkRebuildLatch','walkRebuildHinges','walkAddType','walkAddPostSize','walkAddFrameSize',
-    'walkAddPicketSize','walkAddLatch','walkAddHinges','walkGatesAddSingle','walkGatesAddDouble','woodWalkAddType','woodWalkAddPostType','woodWalkAddFrameSize',
+    'walkAddPicketSize','walkAddLatch','walkAddHinges','walkGatesAddSingle','walkGatesAddDouble','walkGateAdditions','woodWalkAddType','woodWalkAddPostType','woodWalkAddFrameSize',
     'woodWalkAddPicketWidth','driveGateChainReplace','driveGateOperatorReplace','driveGateOperatorType',
     'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
     'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap','woodWalkGatesAdd','woodSlidingGatesAdd','woodSlidingGateLengthFt',
@@ -5534,6 +5512,24 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
 
+    const walkGateAdditions = [];
+    const wroughtGateCont = card.querySelector('[data-wrought-wg-additions]');
+    if(wroughtGateCont){
+      const rows = Array.from(wroughtGateCont.querySelectorAll('[data-wrought-wg-add-row]'));
+      rows.forEach(row=>{
+        const qty = parseInt((row.querySelector('[data-wrought-wg-add-qty] input')?.value)||'0',10) || 0;
+        const type = (row.querySelector('[data-wrought-wg-add-type]')?.value) || WALK_GATE_TYPES[0];
+        const postSize = (row.querySelector('[data-wrought-wg-add-post]')?.value) || SEED.postSize[0];
+        const frameSize = (row.querySelector('[data-wrought-wg-add-frame]')?.value) || SEED.railSize[0];
+        const picketSize = (row.querySelector('[data-wrought-wg-add-picket]')?.value) || SEED.picketSize[0];
+        const latch = (row.querySelector('[data-wrought-wg-add-latch]')?.value) || ((GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
+        const hinges = (row.querySelector('[data-wrought-wg-add-hinges]')?.value) || ((GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+        if(qty > 0){
+          walkGateAdditions.push({ qty, type, postSize, frameSize, picketSize, latch, hinges });
+        }
+      });
+    }
+
     const currentFenceType = val('fenceType') || 'Wrought Iron';
     const normalizedFence = currentFenceType.toLowerCase();
     const scopeTypeValue = val('scopeType') || 'repair';
@@ -5671,6 +5667,7 @@ document.addEventListener('DOMContentLoaded', function(){
       walkGatesAdd: val('walkGatesAdd'),
       walkGatesAddSingle: val('walkGatesAddSingle'),
       walkGatesAddDouble: val('walkGatesAddDouble'),
+      walkGateAdditions,
       walkAddType: val('walkAddType'),
       walkAddPostSize: val('walkAddPostSize'),
       walkAddFrameSize: val('walkAddFrameSize'),
@@ -5869,17 +5866,10 @@ document.addEventListener('DOMContentLoaded', function(){
     set('walkRebuildHinges', data.walkRebuildHinges || (GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
 
     const legacyWroughtGateCount = data.walkGatesAdd || '';
-    const legacyWroughtGateType = data.walkAddType || WALK_GATE_TYPES[0];
-    const derivedLegacySingle = walkGateTypeIsDouble(legacyWroughtGateType) ? '' : legacyWroughtGateCount;
-    const derivedLegacyDouble = walkGateTypeIsDouble(legacyWroughtGateType) ? legacyWroughtGateCount : '';
-    const splitSingleValue = parseInt(data.walkGatesAddSingle || 0, 10) || 0;
-    const splitDoubleValue = parseInt(data.walkGatesAddDouble || 0, 10) || 0;
-    const legacyWroughtGateCountValue = parseInt(legacyWroughtGateCount || 0, 10) || 0;
-    const shouldUseSplitCounts = (splitSingleValue + splitDoubleValue) > 0 || legacyWroughtGateCountValue <= 0;
     set('walkGatesAdd', legacyWroughtGateCount);
-    set('walkGatesAddSingle', shouldUseSplitCounts ? data.walkGatesAddSingle : derivedLegacySingle);
-    set('walkGatesAddDouble', shouldUseSplitCounts ? data.walkGatesAddDouble : derivedLegacyDouble);
-    set('walkAddType', legacyWroughtGateType);
+    set('walkGatesAddSingle', data.walkGatesAddSingle || '');
+    set('walkGatesAddDouble', data.walkGatesAddDouble || '');
+    set('walkAddType', data.walkAddType || WALK_GATE_TYPES[0]);
     set('walkAddPostSize', data.walkAddPostSize || data.postSize || '2x2');
     set('walkAddFrameSize', data.walkAddFrameSize || SEED.railSize[0]);
     set('walkAddPicketSize', data.walkAddPicketSize || SEED.picketSize[0]);
@@ -5912,6 +5902,7 @@ document.addEventListener('DOMContentLoaded', function(){
     renderPostReplacementControls(card, data);
     renderPostRealignControls(card, data);
     renderWoodPostRealignControls(card, data);
+    renderWroughtGateAdditionsControls(card, data);
     // NEW: render finial rows
     renderFinialsControls(card, data);
     renderPuppyInsertControls(card, data);
@@ -6832,6 +6823,140 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  function clearLegacyWroughtWalkGateAddFields(section){
+    if(!section) return;
+    section.walkGatesAdd = 0;
+    section.walkGatesAddSingle = 0;
+    section.walkGatesAddDouble = 0;
+  }
+
+  function renderWroughtGateAdditionsControls(card, data){
+    const cont = card.querySelector('[data-wrought-wg-additions]');
+    if(!cont) return;
+    cont.innerHTML = '';
+    const arr = wroughtWalkGateAddEntries(data, { includeZero: true });
+    arr.forEach(item=>{
+      const row = document.createElement('div');
+      row.className = 'sp-grid';
+      row.setAttribute('data-wrought-wg-add-row', '');
+      row.innerHTML = `
+        <div class="sp-field col-2">
+          <label class="sp-label">Qty</label>
+          <div class="sp-number" data-wrought-wg-add-qty>
+            <button type="button" class="sp-step" data-dir="-1" aria-label="decrement">–</button>
+            <input type="number" inputmode="numeric" step="1" min="0" value="${item.qty||0}" />
+            <button type="button" class="sp-step" data-dir="1" aria-label="increment">+</button>
+          </div>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Gate Type</label>
+          <select class="sp-select" data-wrought-wg-add-type>${createSelect(WALK_GATE_TYPES)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Post Size</label>
+          <select class="sp-select" data-wrought-wg-add-post>${createSelect(SEED.postSize)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Frame Size</label>
+          <select class="sp-select" data-wrought-wg-add-frame>${createSelect(SEED.railSize)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Picket Size</label>
+          <select class="sp-select" data-wrought-wg-add-picket>${createSelect(SEED.picketSize)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Latch</label>
+          <select class="sp-select" data-wrought-wg-add-latch>${createSelect(GATE.latchTypes)}</select>
+        </div>
+        <div class="sp-field col-2">
+          <label class="sp-label">Hinges</label>
+          <select class="sp-select" data-wrought-wg-add-hinges>${createSelect(GATE.hingeTypes)}</select>
+        </div>
+        <div class="sp-field col-2" style="align-self:end">
+          <button class="sp-btn danger" data-wrought-wg-add-remove type="button">Remove</button>
+        </div>`;
+      cont.appendChild(row);
+      const typeSel = row.querySelector('[data-wrought-wg-add-type]');
+      const postSel = row.querySelector('[data-wrought-wg-add-post]');
+      const frameSel = row.querySelector('[data-wrought-wg-add-frame]');
+      const picketSel = row.querySelector('[data-wrought-wg-add-picket]');
+      const latchSel = row.querySelector('[data-wrought-wg-add-latch]');
+      const hingesSel = row.querySelector('[data-wrought-wg-add-hinges]');
+      if(typeSel) typeSel.value = item.type || WALK_GATE_TYPES[0];
+      if(postSel) postSel.value = item.postSize || SEED.postSize[0];
+      if(frameSel) frameSel.value = item.frameSize || SEED.railSize[0];
+      if(picketSel) picketSel.value = item.picketSize || SEED.picketSize[0];
+      if(latchSel) latchSel.value = item.latch || ((GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
+      if(hingesSel) hingesSel.value = item.hinges || ((GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+    });
+
+    const addBtn = card.querySelector('[data-wrought-wg-addition-add]');
+    if(addBtn){
+      addBtn.onclick = ()=>{
+        const secId = card.getAttribute('data-id');
+        const s = state.sections.find(x=>x.id===secId);
+        if(!s) return;
+        clearLegacyWroughtWalkGateAddFields(s);
+        if(!Array.isArray(s.walkGateAdditions)) s.walkGateAdditions = [];
+        s.walkGateAdditions.push(defaultWroughtWalkGateAddition(s));
+        renderWroughtGateAdditionsControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      };
+    }
+
+    cont.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-wrought-wg-add-remove]');
+      if(!btn) return;
+      const rows = Array.from(cont.querySelectorAll('[data-wrought-wg-add-row]'));
+      const row = btn.closest('[data-wrought-wg-add-row]');
+      const idx = rows.indexOf(row);
+      const secId = card.getAttribute('data-id');
+      const s = state.sections.find(x=>x.id===secId);
+      if(!s || !Array.isArray(s.walkGateAdditions)) return;
+      if(idx >= 0){
+        clearLegacyWroughtWalkGateAddFields(s);
+        s.walkGateAdditions.splice(idx, 1);
+        renderWroughtGateAdditionsControls(card, s);
+        attachNumberHandlers(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('change', (e)=>{
+      if(e.target.matches('[data-wrought-wg-add-type], [data-wrought-wg-add-post], [data-wrought-wg-add-frame], [data-wrought-wg-add-picket], [data-wrought-wg-add-latch], [data-wrought-wg-add-hinges]')){
+        persistWroughtGateAdditionsFromDOM(card);
+        persist();
+      }
+    });
+
+    cont.addEventListener('input', (e)=>{
+      if(e.target.closest('[data-wrought-wg-add-qty]')){
+        persistWroughtGateAdditionsFromDOM(card);
+        persist();
+      }
+    });
+  }
+
+  function persistWroughtGateAdditionsFromDOM(card){
+    const secId = card.getAttribute('data-id');
+    const s = state.sections.find(x=>x.id===secId);
+    if(!s) return;
+    const cont = card.querySelector('[data-wrought-wg-additions]');
+    const rows = cont ? Array.from(cont.querySelectorAll('[data-wrought-wg-add-row]')) : [];
+    s.walkGateAdditions = rows.map(row=>{
+      const qty = parseInt((row.querySelector('[data-wrought-wg-add-qty] input')?.value)||'0',10) || 0;
+      const type = (row.querySelector('[data-wrought-wg-add-type]')?.value) || WALK_GATE_TYPES[0];
+      const postSize = (row.querySelector('[data-wrought-wg-add-post]')?.value) || SEED.postSize[0];
+      const frameSize = (row.querySelector('[data-wrought-wg-add-frame]')?.value) || SEED.railSize[0];
+      const picketSize = (row.querySelector('[data-wrought-wg-add-picket]')?.value) || SEED.picketSize[0];
+      const latch = (row.querySelector('[data-wrought-wg-add-latch]')?.value) || ((GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
+      const hinges = (row.querySelector('[data-wrought-wg-add-hinges]')?.value) || ((GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+      return { qty, type, postSize, frameSize, picketSize, latch, hinges };
+    });
+    clearLegacyWroughtWalkGateAddFields(s);
+  }
+
   // === NEW: finial row rendering & persistence ===
   // === PANEL REPLACEMENTS: row rendering & persistence ===
   function renderPanelsControls(card, data){
@@ -7592,10 +7717,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const wg = getN('walkGates');
     const hw = getN('walkGatesHardware');
     const rb = getN('walkGatesRebuild');
-    const add = getN('walkGatesAdd');
-    const addSingle = getN('walkGatesAddSingle');
-    const addDouble = getN('walkGatesAddDouble');
-    const addTotal = addSingle + addDouble + add;
     const woodAdd = getN('woodWalkGatesAdd');
     const woodSlidingAdd = getN('woodSlidingGatesAdd');
     const scopeSel = card.querySelector('[data-field="scopeType"]');
@@ -7610,9 +7731,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(hwWrap){ hwWrap.style.display = (!isInstall && wg>0 && hw>0) ? 'block' : 'none'; }
     const rbWrap = card.querySelector('[data-wg-rebuild-wrap]');
     if(rbWrap){ rbWrap.style.display = (!isInstall && wg>0 && rb>0) ? 'block' : 'none'; }
-
-    const addWrap = card.querySelector('[data-wg-add-wrap]');
-    if(addWrap){ addWrap.style.display = (!isWood && addTotal>0) ? 'block' : 'none'; }
     const woodAddWrap = card.querySelector('[data-wood-wg-add-wrap]');
     if(woodAddWrap){ woodAddWrap.style.display = (isWood && woodAdd>0) ? 'block' : 'none'; }
     const woodSlidingLengthWrap = card.querySelector('[data-wood-sliding-gate-length-wrap]');
@@ -8160,20 +8278,86 @@ document.addEventListener('DOMContentLoaded', function(){
   function walkGateTypeIsDouble(typeLabel){
     return /double/i.test(String(typeLabel || ''));
   }
-  function wroughtWalkGateAddCounts(section){
+  function normalizeWroughtWalkGateType(value){
+    const raw = String(value || '').trim();
+    if(!raw) return WALK_GATE_TYPES[0];
+    const direct = WALK_GATE_TYPES.find(item=>item.toLowerCase() === raw.toLowerCase());
+    if(direct) return direct;
+    return walkGateTypeIsDouble(raw) ? WALK_GATE_TYPES[1] : WALK_GATE_TYPES[0];
+  }
+  function defaultWroughtWalkGateAddition(section){
+    const defaultPost = section?.postSize || SEED.postSize[0] || '2x2';
+    const defaultFrame = (Array.isArray(section?.rails) && section.rails[0]?.size)
+      || section?.walkAddFrameSize
+      || SEED.railSize[0];
+    const defaultPicket = section?.picketSize || section?.walkAddPicketSize || SEED.picketSize[0];
+    const defaultLatch = section?.walkAddLatch || ((GATE.latchTypes && GATE.latchTypes[0]) || 'Gravity Latch');
+    const defaultHinges = section?.walkAddHinges || ((GATE.hingeTypes && GATE.hingeTypes[0]) || 'Door Hinges');
+    return {
+      qty: 1,
+      type: WALK_GATE_TYPES[0],
+      postSize: defaultPost,
+      frameSize: defaultFrame,
+      picketSize: defaultPicket,
+      latch: defaultLatch,
+      hinges: defaultHinges
+    };
+  }
+  function normalizeWroughtWalkGateAddition(entry, section){
+    const defaults = defaultWroughtWalkGateAddition(section);
+    const qty = Math.max(0, parseInt(entry?.qty || 0, 10) || 0);
+    const type = normalizeWroughtWalkGateType(entry?.type || entry?.walkAddType || defaults.type);
+    const postSize = entry?.postSize || entry?.walkAddPostSize || defaults.postSize;
+    const frameSize = entry?.frameSize || entry?.walkAddFrameSize || defaults.frameSize;
+    const picketSize = entry?.picketSize || entry?.walkAddPicketSize || defaults.picketSize;
+    const latch = entry?.latch || entry?.walkAddLatch || defaults.latch;
+    const hinges = entry?.hinges || entry?.walkAddHinges || defaults.hinges;
+    return { qty, type, postSize, frameSize, picketSize, latch, hinges };
+  }
+  function legacyWroughtWalkGateAddEntries(section){
+    const base = defaultWroughtWalkGateAddition(section);
     const single = Math.max(0, parseInt(section?.walkGatesAddSingle || 0, 10) || 0);
     const double = Math.max(0, parseInt(section?.walkGatesAddDouble || 0, 10) || 0);
     if(single > 0 || double > 0){
-      return { single, double, total: single + double };
+      const rows = [];
+      if(single > 0){
+        rows.push({ ...base, qty: single, type: WALK_GATE_TYPES[0] });
+      }
+      if(double > 0){
+        rows.push({ ...base, qty: double, type: WALK_GATE_TYPES[1] });
+      }
+      return rows;
     }
     const legacyTotal = Math.max(0, parseInt(section?.walkGatesAdd || 0, 10) || 0);
     if(legacyTotal <= 0){
-      return { single: 0, double: 0, total: 0 };
+      return [];
     }
-    if(walkGateTypeIsDouble(section?.walkAddType || WALK_GATE_TYPES[0])){
-      return { single: 0, double: legacyTotal, total: legacyTotal };
+    const legacyType = normalizeWroughtWalkGateType(section?.walkAddType || WALK_GATE_TYPES[0]);
+    return [{ ...base, qty: legacyTotal, type: legacyType }];
+  }
+  function wroughtWalkGateAddEntries(section, opts={}){
+    const includeZero = !!opts.includeZero;
+    let rows = Array.isArray(section?.walkGateAdditions)
+      ? section.walkGateAdditions.map(item=>normalizeWroughtWalkGateAddition(item, section))
+      : [];
+    if(!rows.length){
+      rows = legacyWroughtWalkGateAddEntries(section);
     }
-    return { single: legacyTotal, double: 0, total: legacyTotal };
+    return includeZero ? rows : rows.filter(row=>(parseInt(row?.qty || 0, 10) || 0) > 0);
+  }
+  function wroughtWalkGateAddCounts(section){
+    const rows = wroughtWalkGateAddEntries(section);
+    return rows.reduce((acc, row)=>{
+      const qty = Math.max(0, parseInt(row?.qty || 0, 10) || 0);
+      if(qty <= 0) return acc;
+      if(walkGateTypeIsDouble(row?.type || WALK_GATE_TYPES[0])){
+        acc.double += qty;
+      } else {
+        acc.single += qty;
+      }
+      acc.total += qty;
+      return acc;
+    }, { single: 0, double: 0, total: 0 });
   }
   function walkGateAddCount(section){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
@@ -8186,37 +8370,43 @@ document.addEventListener('DOMContentLoaded', function(){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
       return section?.woodWalkAddType || section?.walkAddType || WALK_GATE_TYPES[0];
     }
-    return section?.walkAddType || WALK_GATE_TYPES[0];
+    const first = wroughtWalkGateAddEntries(section, { includeZero: true })[0];
+    return first?.type || section?.walkAddType || WALK_GATE_TYPES[0];
   }
   function walkGateAddPostLabel(section){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
       return normalizeWoodGatePostType(section?.woodWalkAddPostType || section?.woodPost || WOOD_GATE_POST_TYPES[1]);
     }
-    return section?.walkAddPostSize || '';
+    const first = wroughtWalkGateAddEntries(section, { includeZero: true })[0];
+    return first?.postSize || section?.walkAddPostSize || '';
   }
   function walkGateAddFrameLabel(section){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
       return normalizeWoodGateFrameSize(section?.woodWalkAddFrameSize || section?.woodRailSize || WOOD_RAIL_SIZES[1]);
     }
-    return section?.walkAddFrameSize || '';
+    const first = wroughtWalkGateAddEntries(section, { includeZero: true })[0];
+    return first?.frameSize || section?.walkAddFrameSize || '';
   }
   function walkGateAddPicketLabel(section){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
       return normalizeWoodGatePicketWidth(section?.woodWalkAddPicketWidth || section?.woodPicketWidth || WOOD_PICKET_WIDTHS[2]);
     }
-    return section?.walkAddPicketSize || '';
+    const first = wroughtWalkGateAddEntries(section, { includeZero: true })[0];
+    return first?.picketSize || section?.walkAddPicketSize || '';
   }
   function walkGateAddLatchLabel(section){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
       return 'wood walk gate latch';
     }
-    return section?.walkAddLatch || '';
+    const first = wroughtWalkGateAddEntries(section, { includeZero: true })[0];
+    return first?.latch || section?.walkAddLatch || '';
   }
   function walkGateAddHingeLabel(section){
     if((section?.fenceType || '').toLowerCase() === 'wood'){
       return 'wood walk gate hinge';
     }
-    return section?.walkAddHinges || '';
+    const first = wroughtWalkGateAddEntries(section, { includeZero: true })[0];
+    return first?.hinges || section?.walkAddHinges || '';
   }
   function woodSlidingGateAddCount(section){
     if((section?.fenceType || '').toLowerCase() !== 'wood'){
@@ -9550,15 +9740,20 @@ document.addEventListener('DOMContentLoaded', function(){
 
       sections.forEach(section=>{
         if(includeRemoval && !isWood){
-          const gateAdds = wroughtWalkGateAddCounts(section);
-          if(gateAdds.total > 0){
-            replacementWalkGateSingle += gateAdds.single;
-            replacementWalkGateDouble += gateAdds.double;
-            const latchLabel = normalizeLabelText(walkGateAddLatchLabel(section) || '') || 'selected latch';
-            const hingeLabel = normalizeLabelText(walkGateAddHingeLabel(section) || '') || 'selected hinges';
+          const gateRows = wroughtWalkGateAddEntries(section);
+          gateRows.forEach(row=>{
+            const qty = Math.max(0, parseInt(row?.qty || 0, 10) || 0);
+            if(qty <= 0) return;
+            if(walkGateTypeIsDouble(row?.type || WALK_GATE_TYPES[0])){
+              replacementWalkGateDouble += qty;
+            } else {
+              replacementWalkGateSingle += qty;
+            }
+            const latchLabel = normalizeLabelText(row?.latch || '') || 'selected latch';
+            const hingeLabel = normalizeLabelText(row?.hinges || '') || 'selected hinges';
             const hardwareKey = `${latchLabel}|||${hingeLabel}`;
-            replacementWalkGateHardware.set(hardwareKey, (replacementWalkGateHardware.get(hardwareKey) || 0) + gateAdds.total);
-          }
+            replacementWalkGateHardware.set(hardwareKey, (replacementWalkGateHardware.get(hardwareKey) || 0) + qty);
+          });
         }
         const useExistingPostsForReplacement = includeRemoval && shouldUseExistingPostsForReplacement(section);
         if(useExistingPostsForReplacement){
@@ -10112,9 +10307,22 @@ document.addEventListener('DOMContentLoaded', function(){
           : '';
 
         const gateAddsForInstall = walkGateAddCount(s);
-        const gatePostKey = postSizeKey(s.walkAddPostSize || s.postSize);
-        if(!useExistingPostsForReplacement && gateAddsForInstall>0 && gatePostKey){
-          installCounts[gatePostKey] = (installCounts[gatePostKey]||0) + gateAddsForInstall;
+        if(!useExistingPostsForReplacement && gateAddsForInstall > 0){
+          const gateRows = wroughtWalkGateAddEntries(s);
+          if(gateRows.length){
+            gateRows.forEach(row=>{
+              const qty = Math.max(0, parseInt(row?.qty || 0, 10) || 0);
+              if(qty <= 0) return;
+              const gatePostKey = postSizeKey(row?.postSize || s.postSize);
+              if(!gatePostKey) return;
+              installCounts[gatePostKey] = (installCounts[gatePostKey] || 0) + qty;
+            });
+          } else {
+            const gatePostKey = postSizeKey(s.walkAddPostSize || s.postSize);
+            if(gatePostKey){
+              installCounts[gatePostKey] = (installCounts[gatePostKey] || 0) + gateAddsForInstall;
+            }
+          }
         }
         if(!useExistingPostsForReplacement){
           addPostCounts(totals.postsInstall, installCounts);
@@ -10743,6 +10951,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const wgh = (isRepair && isWrought) ? i(s.walkGatesHardware) : 0;
       const wgb = (isRepair && isWrought) ? i(s.walkGatesRebuild) : 0;
       const wroughtGateAdds = isWood ? { single: 0, double: 0, total: 0 } : wroughtWalkGateAddCounts(s);
+      const wroughtGateRows = isWood ? [] : wroughtWalkGateAddEntries(s);
       const wsg = isWood ? woodSlidingGateAddCount(s) : 0;
       if (isRepair && (wg || wgr || wgh || wgb)){
         lines.push(`- Walk gates: ${wg}`);
@@ -10755,13 +10964,13 @@ document.addEventListener('DOMContentLoaded', function(){
       const wga = isWood ? walkGateAddCount(s) : wroughtGateAdds.total;
       if (wga){
         const gateTypeLabel = walkGateAddType(s);
-        const gatePostLabel = walkGateAddPostLabel(s);
-        const gateFrameLabel = walkGateAddFrameLabel(s);
-        const gatePicketLabel = walkGateAddPicketLabel(s);
-        const gateLatchLabel = walkGateAddLatchLabel(s);
-        const gateHingeLabel = walkGateAddHingeLabel(s);
         lines.push(`- Add walk gate(s): ${wga}${isWood ? ` — ${gateTypeLabel}` : ''}`);
         if(fenceType === 'wood'){
+          const gatePostLabel = walkGateAddPostLabel(s);
+          const gateFrameLabel = walkGateAddFrameLabel(s);
+          const gatePicketLabel = walkGateAddPicketLabel(s);
+          const gateLatchLabel = walkGateAddLatchLabel(s);
+          const gateHingeLabel = walkGateAddHingeLabel(s);
           lines.push(`  - Post type: ${gatePostLabel}; Frame: ${gateFrameLabel}; Picket width: ${gatePicketLabel}; Hardware: ${gateLatchLabel} + ${gateHingeLabel}`);
         } else {
           if(wroughtGateAdds.single > 0){
@@ -10770,7 +10979,12 @@ document.addEventListener('DOMContentLoaded', function(){
           if(wroughtGateAdds.double > 0){
             lines.push(`  - Double swing gates: ${wroughtGateAdds.double}`);
           }
-          lines.push(`  - Post: ${gatePostLabel}; Frame: ${gateFrameLabel}; Pickets: ${gatePicketLabel}; Latch: ${gateLatchLabel}; Hinges: ${gateHingeLabel}`);
+          wroughtGateRows.forEach(row=>{
+            const qty = Math.max(0, parseInt(row?.qty || 0, 10) || 0);
+            if(qty <= 0) return;
+            const type = row?.type || WALK_GATE_TYPES[0];
+            lines.push(`  - ${qty} × ${type}: Post ${row?.postSize || '-'}; Frame ${row?.frameSize || '-'}; Pickets ${row?.picketSize || '-'}; Latch ${row?.latch || '-'}; Hinges ${row?.hinges || '-'}`);
+          });
         }
       }
       if(wsg > 0){
@@ -12651,25 +12865,29 @@ document.addEventListener('DOMContentLoaded', function(){
       addRawSticksForPosts('raw4x4', nInstall4x4, installStickLengthFt, isCustomInstallSection);
 
       const isWoodSection = (s.fenceType || '').toLowerCase() === 'wood';
-      const addG = !isWoodSection ? walkGateAddCount(s) : 0;
-      const gatePostSize = (s.walkAddPostSize||'').trim();
+      const gateRows = isWoodSection ? [] : wroughtWalkGateAddEntries(s);
       const gateStickLengthFt = isCustomInstallSection ? installStickLengthFt : 12;
-      if(addG>0 && gatePostSize === '1 1/2" x 1 1/2"'){
-        addRawSticksForPosts('raw1p5', addG, gateStickLengthFt, isCustomInstallSection);
-      }
-      if(addG>0 && gatePostSize === '2x2'){
-        if(isCustomInstallSection){
-          addRawSticksForPosts('raw2x2', addG, gateStickLengthFt, true);
-        } else {
-          posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + addG;
+      gateRows.forEach(row=>{
+        const qty = Math.max(0, parseInt(row?.qty || 0, 10) || 0);
+        if(qty <= 0) return;
+        const gatePostSize = String(row?.postSize || '').trim();
+        if(gatePostSize === '1 1/2" x 1 1/2"'){
+          addRawSticksForPosts('raw1p5', qty, gateStickLengthFt, isCustomInstallSection);
         }
-      }
-      if(addG>0 && gatePostSize === '3x3'){
-        addRawSticksForPosts('raw3x3', addG, gateStickLengthFt, isCustomInstallSection);
-      }
-      if(addG>0 && gatePostSize === '4x4'){
-        addRawSticksForPosts('raw4x4', addG, gateStickLengthFt, isCustomInstallSection);
-      }
+        if(gatePostSize === '2x2'){
+          if(isCustomInstallSection){
+            addRawSticksForPosts('raw2x2', qty, gateStickLengthFt, true);
+          } else {
+            posts2x2ByLenCalc[postLen] = (posts2x2ByLenCalc[postLen]||0) + qty;
+          }
+        }
+        if(gatePostSize === '3x3'){
+          addRawSticksForPosts('raw3x3', qty, gateStickLengthFt, isCustomInstallSection);
+        }
+        if(gatePostSize === '4x4'){
+          addRawSticksForPosts('raw4x4', qty, gateStickLengthFt, isCustomInstallSection);
+        }
+      });
     });
     Object.keys(posts2x2ByLenCalc).sort((a,b)=>parseInt(a,10)-parseInt(b,10)).forEach(len=>{
       addMat(materials, `2x2x${len} posts`, posts2x2ByLenCalc[len]);
@@ -12794,24 +13012,22 @@ document.addEventListener('DOMContentLoaded', function(){
             addMat(materials, `wood kick board (${size})`, addG * leafCount * stack);
           }
         } else {
-          const latch = walkGateAddLatchLabel(s);
-          const hinges = walkGateAddHingeLabel(s);
-          if(latch) latchCounts[latch] = (latchCounts[latch]||0) + addG;
-          if(hinges) hingeCounts[hinges] = (hingeCounts[hinges]||0) + addG;
-          const wroughtGateAdds = wroughtWalkGateAddCounts(s);
+          const gateRows = wroughtWalkGateAddEntries(s);
           const sectionRails = sectionRailSizes(s);
-          const frame = walkGateAddFrameLabel(s);
-          const railsToCount = sectionRails.length ? sectionRails : (frame ? [frame] : []);
-          if(wroughtGateAdds.single > 0){
+          gateRows.forEach(row=>{
+            const qty = Math.max(0, parseInt(row?.qty || 0, 10) || 0);
+            if(qty <= 0) return;
+            const latch = row?.latch || '';
+            const hinges = row?.hinges || '';
+            if(latch) latchCounts[latch] = (latchCounts[latch]||0) + qty;
+            if(hinges) hingeCounts[hinges] = (hingeCounts[hinges]||0) + qty;
+            const frame = row?.frameSize || walkGateAddFrameLabel(s);
+            const railsToCount = sectionRails.length ? sectionRails : (frame ? [frame] : []);
+            const railMultiplier = walkGateTypeIsDouble(row?.type || WALK_GATE_TYPES[0]) ? 4 : 2;
             railsToCount.forEach(size=>{
-              addRailSticks(size, wroughtGateAdds.single * 2);
+              addRailSticks(size, qty * railMultiplier);
             });
-          }
-          if(wroughtGateAdds.double > 0){
-            railsToCount.forEach(size=>{
-              addRailSticks(size, wroughtGateAdds.double * 4);
-            });
-          }
+          });
         }
       }
       const woodSlidingGates = woodSlidingGateAddCount(s);
