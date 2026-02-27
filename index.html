@@ -9976,11 +9976,6 @@ document.addEventListener('DOMContentLoaded', function(){
       if(isChainLink){
         let totalLength = 0;
         const heights = new Set();
-        let totalFabricRolls = 0;
-        let totalLinePosts = 0;
-        let totalLineEndPosts = 0;
-        let totalGatePosts = 0;
-        let totalPosts = 0;
         let totalGates = 0;
         let reuseSections = 0;
         let newPostSections = 0;
@@ -9989,7 +9984,6 @@ document.addEventListener('DOMContentLoaded', function(){
           const len = Math.max(0, parseFloat(section?.length || 0) || 0);
           totalLength += len;
           heights.add(normalizeChainLinkHeight(section?.height || CHAIN_LINK_DEFAULT_HEIGHT));
-          totalFabricRolls += chainLinkFabricRollCount(len);
           const gateCount = walkGateAddCount(section);
           totalGates += gateCount;
           const useExistingPostsForReplacement = includeRemoval && shouldUseExistingPostsForReplacement(section);
@@ -9998,25 +9992,17 @@ document.addEventListener('DOMContentLoaded', function(){
             return;
           }
           newPostSections += 1;
-          const layout = chainLinkPostLayout(len, gateCount);
-          totalLinePosts += layout.linePosts;
-          totalLineEndPosts += layout.lineEndPosts;
-          totalGatePosts += layout.gatePosts;
-          totalPosts += layout.totalPosts;
         });
 
         const actionPrefix = includeRemoval ? 'Remove existing fence and install' : 'Install';
         const lengthLabel = formatFtValue(totalLength);
         const heightLabel = joinParts(Array.from(heights));
         const firstSentence = `${actionPrefix} ${lengthLabel ? `${lengthLabel}ft of ` : ''}${heightLabel ? `${heightLabel} tall ` : ''}chain link fence.`;
-        const fabricSentence = totalFabricRolls > 0
-          ? `Fabric material includes ${totalFabricRolls} roll${totalFabricRolls === 1 ? '' : 's'} (${CHAIN_LINK_ROLL_LENGTH_FT}ft each).`
-          : '';
         let postsSentence = '';
         if(reuseSections > 0 && newPostSections === 0){
           postsSentence = 'Use existing posts on all replacement sections (no new post set).';
-        } else if(totalPosts > 0){
-          postsSentence = `Set posts ${CHAIN_LINK_POST_SPACING_FT}ft on center with line-end posts at both ends and every ${CHAIN_LINK_TERMINAL_INTERVAL_FT}ft. Add 2 line-end gate posts per gate. New posts: ${totalPosts} (${totalLinePosts} line posts, ${totalLineEndPosts} line-end posts; ${totalGatePosts} gate posts included).`;
+        } else if(newPostSections > 0){
+          postsSentence = `Posts will be dug about 3ft deep, set in concrete, and spaced about ${CHAIN_LINK_POST_SPACING_FT}ft apart.`;
         }
         const gateSentence = totalGates > 0
           ? `Includes ${describeCount(totalGates, 'walk gate', 'walk gates')}.`
@@ -10024,7 +10010,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const mixedPostHandlingSentence = (reuseSections > 0 && newPostSections > 0)
           ? 'Replacement sections marked to use existing posts exclude new post materials.'
           : '';
-        return [firstSentence, fabricSentence, postsSentence, gateSentence, mixedPostHandlingSentence].filter(Boolean).join(' ');
+        return [firstSentence, postsSentence, gateSentence, mixedPostHandlingSentence].filter(Boolean).join(' ');
       }
       const WOOD_RAIL_COUNT = 3;
       const parseStackCount = (value)=>{
