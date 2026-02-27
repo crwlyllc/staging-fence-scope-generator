@@ -7538,6 +7538,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const normalized = normalizeLabelText(value || '').toLowerCase().replace(/\s+/g, '');
     if(normalized === '4ft' || normalized === '4') return '4ft';
     if(normalized === '5ft' || normalized === '5') return '5ft';
+    if(normalized === '6ft' || normalized === '6') return '6ft';
     return CHAIN_LINK_DEFAULT_HEIGHT;
   }
 
@@ -9706,12 +9707,14 @@ document.addEventListener('DOMContentLoaded', function(){
     const SERVICE_NAME_TO_BUCKET = {
       'Wrought Iron Fence Installation': 'installation',
       'Wood Fence Installation': 'woodInstallation',
+      'Chain Link Fence Installation': 'woodInstallation',
       'Retaining Wall Installation': 'retainingWall',
       'Install New Fence Sections': 'installation',
       'Add Single Walk Gate': 'installation',
       'Add Double Walk Gate': 'installation',
       'Wrought Iron Fence Replacement': 'replacement',
       'Wood Fence Replacement': 'woodInstallation',
+      'Chain Link Fence Replacement': 'woodInstallation',
       'Remove Fence Sections': 'replacement',
       'Surface Preparation & Painting': 'painting',
       'Dig Out Encroaching Soil': 'repairs',
@@ -9750,6 +9753,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const normalizedName = name.trim();
       const bucket = SERVICE_NAME_TO_BUCKET[normalizedName]
         || (/^Fence Installation:/i.test(normalizedName) ? 'woodInstallation' : null)
+        || (/chain link\s+(installation|replacement)/i.test(normalizedName) ? 'woodInstallation' : null)
         || (normalizedName.includes('Paint') ? 'painting' : 'repairs');
       const sentence = ensureSentence(desc);
       if(!sentence) return;
@@ -9903,6 +9907,21 @@ document.addEventListener('DOMContentLoaded', function(){
         return `Fence Installation (${finishPart})`;
       }
       return 'Fence Installation';
+    }
+    function buildChainLinkServiceLineTitle(sections, includeRemoval){
+      const actionLabel = includeRemoval ? 'Replacement' : 'Installation';
+      if(!Array.isArray(sections) || !sections.length){
+        return `Chain Link ${actionLabel}`;
+      }
+      const heights = new Set();
+      sections.forEach(section=>{
+        const heightLabel = normalizeChainLinkHeight(section?.height || CHAIN_LINK_DEFAULT_HEIGHT);
+        if(heightLabel) heights.add(heightLabel);
+      });
+      if(heights.size === 1){
+        return `${Array.from(heights)[0]} Chain Link ${actionLabel}`;
+      }
+      return `Chain Link ${actionLabel}`;
     }
     function groupSectionsByFenceType(sections){
       const map = new Map();
@@ -11740,7 +11759,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const replacementGroups = groupSectionsByFenceType(replacementSectionsOnly);
     replacementGroups.forEach((sections, type)=>{
       const detail = buildInstallServiceDescription(sections, true);
-      addServiceLine(`${fenceTypeLabel(type)} Fence Replacement`, detail || fenceTypeDefaultDetail(type, true));
+      const serviceTitle = type === 'chain link'
+        ? buildChainLinkServiceLineTitle(sections, true)
+        : `${fenceTypeLabel(type)} Fence Replacement`;
+      addServiceLine(serviceTitle, detail || fenceTypeDefaultDetail(type, true));
     });
 
     const installGroups = groupSectionsByFenceType(installSectionsOnly);
@@ -11748,7 +11770,9 @@ document.addEventListener('DOMContentLoaded', function(){
       const detail = buildInstallServiceDescription(sections, false);
       const serviceTitle = type === 'wood'
         ? buildWoodInstallationServiceLineTitle(sections)
-        : `${fenceTypeLabel(type)} Fence Installation`;
+        : (type === 'chain link'
+          ? buildChainLinkServiceLineTitle(sections, false)
+          : `${fenceTypeLabel(type)} Fence Installation`);
       addServiceLine(serviceTitle, detail || fenceTypeDefaultDetail(type, false));
     });
 
