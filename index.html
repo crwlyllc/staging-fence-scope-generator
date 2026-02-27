@@ -1422,6 +1422,23 @@ document.addEventListener('DOMContentLoaded', function(){
     capMaterials:["Cast Iron","Plastic","Metal"],
     capPostSizes:["1 1/2\" x 1 1/2\"","2x2","3x3","4x4"],
   };
+  const CHAIN_LINK_HEIGHT_OPTIONS = ['4ft','5ft','6ft'];
+  const CHAIN_LINK_ROLL_LENGTH_FT = 50;
+  const CHAIN_LINK_POST_SPACING_FT = 10;
+  const CHAIN_LINK_TERMINAL_INTERVAL_FT = 200;
+  const CHAIN_LINK_SALES_TAX_RATE = 0.0825;
+  // Supplier quote includes 5ft and 6ft roll rates; 4ft is estimated linearly from 5ft.
+  const CHAIN_LINK_FABRIC_RATE_PRETAX = {
+    '4ft': 146.58 * (4 / 5),
+    '5ft': 146.58,
+    '6ft': 175.89
+  };
+  const CHAIN_LINK_LINE_POST_RATE_PRETAX = 23.61;
+  const CHAIN_LINK_LINE_END_POST_KIT_RATE_PRETAX = 23.61;
+  function applyChainLinkTax(rate){
+    const base = Number(rate) || 0;
+    return base * (1 + CHAIN_LINK_SALES_TAX_RATE);
+  }
 
   const WOOD_PICKET_WIDTHS = ['3.5"','4"','5.5"','6"'];
   const WOOD_RAIL_SIZES = ['2x3','2x4'];
@@ -1645,6 +1662,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const MAP_POLYLINE_COLORS = {
     wood: '#d97706',
     wroughtIron: '#dc2626',
+    chainLink: '#0284c7',
   };
   const MAP_BASE_POLYLINE_COLOR = '#111827';
   const MAP_BASE_POLYLINE_OPACITY = 0.01;
@@ -2937,7 +2955,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const scope = data.scopeType || 'repair';
     const initialFenceType = data.fenceType || 'Wrought Iron';
     const normalizedType = initialFenceType.toLowerCase();
-    const defaultPainting = normalizedType === 'wood'
+    const defaultPainting = (normalizedType === 'wood' || normalizedType === 'chain link')
       ? 'None'
       : ((scope === 'install' || scope === 'replace') ? 'Spot Paint Welds' : 'Paint Section');
     const base = {
@@ -3085,6 +3103,19 @@ document.addEventListener('DOMContentLoaded', function(){
     merged.wroughtPowderCoatPanels = false;
     merged.wroughtPowderCoatPosts = false;
     merged.woodRepairStainBrand = normalizeWoodStainBrand(merged.woodRepairStainBrand);
+    if(isChainLinkFenceType(merged.fenceType)){
+      if((merged.scopeType || 'repair') === 'repair'){
+        merged.scopeType = 'install';
+      }
+      merged.height = normalizeChainLinkHeight(merged.height || CHAIN_LINK_HEIGHT_OPTIONS[1]);
+      merged.postSpacing = String(CHAIN_LINK_POST_SPACING_FT);
+      merged.postInstallMethod = POST_INSTALL_METHODS[0].value;
+      merged.painting = 'None';
+      merged.paintingApplication = '';
+      merged.paintingPrepExtra = false;
+      merged.paintingCurrentColor = '';
+      merged.paintingTargetColor = '';
+    }
     return merged;
   }
 
@@ -3258,9 +3289,10 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function mapStrokeColorForFenceType(fenceType){
-    return String(fenceType || '').toLowerCase() === 'wood'
-      ? MAP_POLYLINE_COLORS.wood
-      : MAP_POLYLINE_COLORS.wroughtIron;
+    const normalized = String(fenceType || '').toLowerCase();
+    if(normalized === 'wood') return MAP_POLYLINE_COLORS.wood;
+    if(normalized === 'chain link') return MAP_POLYLINE_COLORS.chainLink;
+    return MAP_POLYLINE_COLORS.wroughtIron;
   }
 
   function clearPolylineSegmentStrokes(polyline){
@@ -4354,6 +4386,7 @@ document.addEventListener('DOMContentLoaded', function(){
               <select class="sp-select" data-field="fenceType">
                 <option value="Wrought Iron">Wrought Iron</option>
                 <option value="Wood">Wood</option>
+                <option value="Chain Link">Chain Link</option>
               </select>
             </div>
             <div class="sp-field col-2">
@@ -5150,9 +5183,15 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodPost','woodType','woodFinish','woodAddKickBoard','woodAddTopCap','woodAddTrim',
     'woodKickBoardSize','woodKickBoardStack','woodTopCapSize','woodTrimType','woodRepairStainBrand','useExistingPostsForReplacement','postInstallMethod','woodInstallPostSpacing','woodReplacementPostSpacing'
   ];
+  const BULK_CHAIN_LINK_FIELDS = [
+    'fenceType','scopeType','height','useExistingPostsForReplacement','postInstallMethod','walkGateAdditions'
+  ];
 
   function normalizeBulkFenceType(value){
-    return String(value || '').toLowerCase() === 'wood' ? 'wood' : 'wrought iron';
+    const normalized = String(value || '').toLowerCase().trim();
+    if(normalized === 'wood') return 'wood';
+    if(normalized === 'chain link') return 'chain link';
+    return 'wrought iron';
   }
 
   function cloneRailsForBulk(rails, railsCount){
@@ -5184,8 +5223,11 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     const normalizedFenceType = normalizeBulkFenceType(source.fenceType);
     const isWood = normalizedFenceType === 'wood';
-    const fenceType = isWood ? 'Wood' : 'Wrought Iron';
-    const fields = isWood ? BULK_WOOD_FIELDS : BULK_WROUGHT_FIELDS;
+    const isChainLink = normalizedFenceType === 'chain link';
+    const fenceType = isWood ? 'Wood' : (isChainLink ? 'Chain Link' : 'Wrought Iron');
+    const fields = isWood
+      ? BULK_WOOD_FIELDS
+      : (isChainLink ? BULK_CHAIN_LINK_FIELDS : BULK_WROUGHT_FIELDS);
     const values = {};
 
     fields.forEach(field=>{
@@ -5199,7 +5241,7 @@ document.addEventListener('DOMContentLoaded', function(){
       values[field] = source[field];
     });
 
-    values.scopeType = values.scopeType || source.scopeType || 'repair';
+    values.scopeType = values.scopeType || source.scopeType || (isChainLink ? 'install' : 'repair');
     values.postInstallMethod = normalizePostInstallMethod(source.postInstallMethod);
 
     if(isWood){
@@ -5218,6 +5260,16 @@ document.addEventListener('DOMContentLoaded', function(){
       values.woodTopCapSize = source.woodTopCapSize || '2x6';
       values.woodTrimType = source.woodTrimType || '1x4';
       values.woodRepairStainBrand = normalizeWoodStainBrand(source.woodRepairStainBrand);
+    }else if(isChainLink){
+      values.height = normalizeChainLinkHeight(source.height || CHAIN_LINK_HEIGHT_OPTIONS[1]);
+      values.postInstallMethod = POST_INSTALL_METHODS[0].value;
+      values.useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(source.useExistingPostsForReplacement);
+      values.walkGateAdditions = Array.isArray(source.walkGateAdditions)
+        ? source.walkGateAdditions.map(item=>normalizeWroughtWalkGateAddition(item, source))
+        : [];
+      if(values.scopeType === 'repair'){
+        values.scopeType = 'install';
+      }
     }else{
       values.style = source.style || SEED.style[0];
       values.height = source.height || '4ft';
@@ -5534,11 +5586,12 @@ document.addEventListener('DOMContentLoaded', function(){
     const normalizedFence = currentFenceType.toLowerCase();
     const scopeTypeValue = val('scopeType') || 'repair';
     const panelAttachmentValue = val('panelAttachment');
-    const rawPaintingSelection = normalizedFence === 'wood' ? 'None' : val('painting');
+    const isNoPaintFence = normalizedFence === 'wood' || normalizedFence === 'chain link';
+    const rawPaintingSelection = isNoPaintFence ? 'None' : val('painting');
     const wroughtPanelFabrication = normalizeWroughtPanelFabrication(val('wroughtPanelFabrication'));
     const powderCoatPanelsValue = false;
     const powderCoatPostsValue = false;
-    const paintingSelection = normalizedFence === 'wood'
+    const paintingSelection = isNoPaintFence
       ? 'None'
       : effectiveWroughtPaintingSelection({
         fenceType: currentFenceType,
@@ -5548,12 +5601,12 @@ document.addEventListener('DOMContentLoaded', function(){
         wroughtPowderCoatPanels: powderCoatPanelsValue,
         painting: rawPaintingSelection
       });
-    const paintingMethod = normalizedFence === 'wood' ? '' : val('paintingApplication');
+    const paintingMethod = isNoPaintFence ? '' : val('paintingApplication');
     const paintingPrepExtra = paintingSelection === 'Paint Section' ? val('paintingPrepExtra') : false;
-    const paintingCurrentColor = normalizedFence === 'wood'
+    const paintingCurrentColor = isNoPaintFence
       ? ''
       : (val('paintingCurrentColor') || WROUGHT_CURRENT_COLOR_OPTIONS[0]);
-    const paintingTargetColor = normalizedFence === 'wood'
+    const paintingTargetColor = isNoPaintFence
       ? ''
       : (val('paintingTargetColor') || WROUGHT_PAINT_COLOR_OPTIONS[0]);
     updateMapLengthOverrideFromCard(card);
@@ -5570,7 +5623,7 @@ document.addEventListener('DOMContentLoaded', function(){
       woodInstallPostSpacing: normalizeWoodInstallPostSpacing(val('woodInstallPostSpacing')),
       woodReplacementPostSpacing: normalizeWoodReplacementPostSpacing(val('woodReplacementPostSpacing')),
       style: val('style'),
-      height: val('height'),
+      height: normalizedFence === 'chain link' ? normalizeChainLinkHeight(val('height')) : val('height'),
       postSize: val('postSize'),
       postSpacing: val('postSpacing'),
       panelAttachment: panelAttachmentValue,
@@ -5707,6 +5760,19 @@ document.addEventListener('DOMContentLoaded', function(){
 
       notes: val('notes').trim()
     };
+    if(normalizedFence === 'chain link'){
+      if(sectionData.scopeType === 'repair'){
+        sectionData.scopeType = 'install';
+      }
+      sectionData.height = normalizeChainLinkHeight(sectionData.height);
+      sectionData.postSpacing = String(CHAIN_LINK_POST_SPACING_FT);
+      sectionData.postInstallMethod = POST_INSTALL_METHODS[0].value;
+      sectionData.painting = 'None';
+      sectionData.paintingApplication = '';
+      sectionData.paintingPrepExtra = false;
+      sectionData.paintingCurrentColor = '';
+      sectionData.paintingTargetColor = '';
+    }
     return sanitizeWroughtFieldsForFenceType(sectionData);
   }
 
@@ -5766,10 +5832,17 @@ document.addEventListener('DOMContentLoaded', function(){
     set('woodInstallPostSpacing', normalizeWoodInstallPostSpacing(data.woodInstallPostSpacing));
     set('woodReplacementPostSpacing', normalizeWoodReplacementPostSpacing(data.woodReplacementPostSpacing));
     set('style', data.style||SEED.style[0]);
-    set('height', data.height||'4ft');
+    const normalizedFenceType = (data.fenceType || 'Wrought Iron').toLowerCase();
+    set('height', normalizedFenceType === 'chain link'
+      ? normalizeChainLinkHeight(data.height || CHAIN_LINK_HEIGHT_OPTIONS[1])
+      : (data.height || '4ft'));
     set('postSize', data.postSize||'2x2');
     set('postSpacing', data.postSpacing||'8');
     set('panelAttachment', data.panelAttachment||'Welding');
+    if(normalizedFenceType === 'chain link'){
+      set('postSpacing', String(CHAIN_LINK_POST_SPACING_FT));
+      set('postInstallMethod', POST_INSTALL_METHODS[0].value);
+    }
     set('wroughtCustomStickLength', normalizeWroughtCustomStickLength(data.wroughtCustomStickLength));
     const panelFabrication = normalizeWroughtPanelFabrication(data.wroughtPanelFabrication);
     set('wroughtPanelFabrication', panelFabrication);
@@ -5788,10 +5861,9 @@ document.addEventListener('DOMContentLoaded', function(){
     set('puppyPicketSize', data.puppyPicketSize || data.picketSize || SEED.picketSize[0]);
     set('puppyPicketHeight', data.puppyPicketHeight || '');
     set('puppyPicketReplace', data.puppyPicketReplace || '');
-    const normalizedFenceType = (data.fenceType || 'Wrought Iron').toLowerCase();
     const scopeForPaint = data.scopeType || 'repair';
     const attachmentMethod = data.panelAttachment || 'Welding';
-    const defaultPainting = normalizedFenceType === 'wood'
+    const defaultPainting = (normalizedFenceType === 'wood' || normalizedFenceType === 'chain link')
       ? 'None'
       : (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
         ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
@@ -7438,9 +7510,62 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
+  function isChainLinkFenceType(value){
+    return String(value || '').toLowerCase().trim() === 'chain link';
+  }
+
+  function normalizeChainLinkHeight(value){
+    const normalized = normalizeLabelText(value || '').toLowerCase().replace(/\s+/g, '');
+    if(normalized === '4ft' || normalized === '4') return '4ft';
+    if(normalized === '5ft' || normalized === '5') return '5ft';
+    return '6ft';
+  }
+
+  function syncScopeOptionsForFenceType(card){
+    const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
+    const isChainLink = isChainLinkFenceType(fenceType);
+    const scopeSel = card.querySelector('[data-field="scopeType"]');
+    if(!scopeSel) return;
+    const repairOption = scopeSel.querySelector('option[value="repair"]');
+    if(repairOption){
+      repairOption.disabled = isChainLink;
+      repairOption.hidden = isChainLink;
+    }
+    if(isChainLink && scopeSel.value === 'repair'){
+      scopeSel.value = 'install';
+    }
+  }
+
+  function syncHeightOptionsForFenceType(card){
+    const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
+    const isChainLink = isChainLinkFenceType(fenceType);
+    const heightSel = card.querySelector('[data-field="height"]');
+    if(!heightSel) return;
+    const desiredOptions = isChainLink ? CHAIN_LINK_HEIGHT_OPTIONS : SEED.height;
+    const currentOptions = Array.from(heightSel.options).map(option=>option.value);
+    const optionsChanged = currentOptions.length !== desiredOptions.length
+      || currentOptions.some((value, idx)=>value !== desiredOptions[idx]);
+    const priorValue = heightSel.value;
+    if(optionsChanged){
+      heightSel.innerHTML = createSelect(desiredOptions);
+    }
+    if(isChainLink){
+      heightSel.value = normalizeChainLinkHeight(priorValue || CHAIN_LINK_HEIGHT_OPTIONS[1]);
+    } else if(desiredOptions.includes(priorValue)){
+      heightSel.value = priorValue;
+    } else {
+      heightSel.value = desiredOptions[0];
+    }
+  }
+
   function updateInstallConditional(card){
     const scopeSel = card.querySelector('[data-field="scopeType"]');
-    const scope = scopeSel ? scopeSel.value : 'repair';
+    const initialScope = scopeSel ? scopeSel.value : 'repair';
+    const fenceTypeValue = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
+    if(isChainLinkFenceType(fenceTypeValue) && scopeSel && initialScope === 'repair'){
+      scopeSel.value = 'install';
+    }
+    const scope = scopeSel ? scopeSel.value : initialScope;
     const isInstall = scope === 'install' || scope === 'replace';
     const isReplace = scope === 'replace';
     card.querySelectorAll('[data-install-only]').forEach(el=>{
@@ -7476,6 +7601,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
     const isWrought = fenceType === 'wrought iron';
     const isWood = fenceType === 'wood';
+    const isChainLink = isChainLinkFenceType(fenceType);
     const useExistingPostsSel = card.querySelector('[data-field="useExistingPostsForReplacement"]');
     const useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(useExistingPostsSel ? useExistingPostsSel.value : 'no') === 'yes';
     const postInstallMethodWrap = card.querySelector('[data-post-install-method-wrap]');
@@ -7484,8 +7610,15 @@ document.addEventListener('DOMContentLoaded', function(){
     const woodInstallPostSpacingSel = card.querySelector('[data-field="woodInstallPostSpacing"]');
     const existingPostSpacingWrap = card.querySelector('[data-existing-post-spacing-wrap]');
     const existingPostSpacingSel = card.querySelector('[data-field="woodReplacementPostSpacing"]');
+    const postSpacingSel = card.querySelector('[data-field="postSpacing"]');
     if(postInstallMethodSel){
       postInstallMethodSel.value = normalizePostInstallMethod(postInstallMethodSel.value);
+      if(isChainLink){
+        postInstallMethodSel.value = POST_INSTALL_METHODS[0].value;
+        postInstallMethodSel.disabled = true;
+      } else {
+        postInstallMethodSel.disabled = false;
+      }
     }
     if(woodInstallPostSpacingSel){
       woodInstallPostSpacingSel.value = normalizeWoodInstallPostSpacing(woodInstallPostSpacingSel.value);
@@ -7493,8 +7626,16 @@ document.addEventListener('DOMContentLoaded', function(){
     if(existingPostSpacingSel){
       existingPostSpacingSel.value = normalizeWoodReplacementPostSpacing(existingPostSpacingSel.value);
     }
+    if(postSpacingSel){
+      if(isChainLink){
+        postSpacingSel.value = String(CHAIN_LINK_POST_SPACING_FT);
+        postSpacingSel.disabled = true;
+      } else {
+        postSpacingSel.disabled = false;
+      }
+    }
     if(postInstallMethodWrap){
-      const showPostInstallMethod = isInstall && !(isReplace && useExistingPostsForReplacement);
+      const showPostInstallMethod = !isChainLink && isInstall && !(isReplace && useExistingPostsForReplacement);
       postInstallMethodWrap.style.display = showPostInstallMethod ? '' : 'none';
     }
     if(woodInstallPostSpacingWrap){
@@ -7529,7 +7670,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSel = card.querySelector('[data-field="painting"]');
     if(paintingSel){
       const currentVal = paintingSel.value;
-      if(isWood && currentVal !== 'None'){
+      if((isWood || isChainLink) && currentVal !== 'None'){
         paintingSel.value = 'None';
         paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
       } else if(isInstall && isWrought){
@@ -7561,13 +7702,17 @@ document.addEventListener('DOMContentLoaded', function(){
     const typeSel = card.querySelector('[data-field="fenceType"]');
     const fenceType = (typeSel?.value || 'Wrought Iron').toLowerCase();
     const isWood = fenceType === 'wood';
+    const isChainLink = isChainLinkFenceType(fenceType);
+    const noPaintFence = isWood || isChainLink;
+    syncScopeOptionsForFenceType(card);
+    syncHeightOptionsForFenceType(card);
     card.classList.toggle('is-wood', isWood);
     card.classList.toggle('is-wrought', !isWood);
     const paintingField = card.querySelector('[data-field="painting"]');
     const paintingWrap = paintingField?.closest('.sp-field');
     const paintingAppWrap = card.querySelector('[data-painting-application]');
     const paintingPrepWrap = card.querySelector('[data-painting-prep]');
-    if(isWood){
+    if(noPaintFence){
       if(paintingField && paintingField.value !== 'None'){
         paintingField.value = 'None';
         paintingField.dispatchEvent(new Event('change', { bubbles: true }));
@@ -7648,7 +7793,9 @@ document.addEventListener('DOMContentLoaded', function(){
       mapLengthOverride: existing.mapLengthOverride,
       collapsed: existing.collapsed
     } : { id: secId, scopeType: 'repair' };
-    const fenceType = normalizedType === 'wood' ? 'Wood' : 'Wrought Iron';
+    const fenceType = normalizedType === 'wood'
+      ? 'Wood'
+      : (normalizedType === 'chain link' ? 'Chain Link' : 'Wrought Iron');
     const fresh = createSectionBase({ ...preserved, fenceType });
     if(existingIdx >= 0){
       state.sections.splice(existingIdx, 1, fresh);
@@ -7946,7 +8093,10 @@ document.addEventListener('DOMContentLoaded', function(){
             return;
           }
           const sourceLabel = (source.label || '').trim();
-          const sourceFence = normalizeBulkFenceType(source.fenceType) === 'wood' ? 'wood' : 'wrought iron';
+          const normalizedSourceFence = normalizeBulkFenceType(source.fenceType);
+          const sourceFence = normalizedSourceFence === 'wood'
+            ? 'wood'
+            : (normalizedSourceFence === 'chain link' ? 'chain link' : 'wrought iron');
           const sourceTitle = sourceLabel ? `Section ${idx+1} - ${sourceLabel}` : `Section ${idx+1}`;
           const ok = confirm(`Apply ${sourceFence} basic settings from ${sourceTitle} to all ${state.sections.length} sections?`);
           if(!ok){
@@ -8408,6 +8558,44 @@ document.addEventListener('DOMContentLoaded', function(){
     const first = wroughtWalkGateAddEntries(section, { includeZero: true })[0];
     return first?.hinges || section?.walkAddHinges || '';
   }
+  function chainLinkFabricRollCount(lengthFt){
+    const runLength = Math.max(0, Number(lengthFt) || 0);
+    if(runLength <= 0) return 0;
+    return Math.max(1, Math.ceil(runLength / CHAIN_LINK_ROLL_LENGTH_FT));
+  }
+  function chainLinkFabricMaterialLabel(height){
+    const normalizedHeight = normalizeChainLinkHeight(height);
+    return `Chain link fabric roll ${CHAIN_LINK_ROLL_LENGTH_FT}ft (${normalizedHeight})`;
+  }
+  function chainLinkPostLayout(lengthFt, gateCount){
+    const runLength = Math.max(0, Number(lengthFt) || 0);
+    const gates = Math.max(0, parseInt(gateCount, 10) || 0);
+    if(runLength <= 0){
+      return {
+        spanCount: 0,
+        linePosts: 0,
+        lineEndPosts: gates * 2,
+        lineEndPostsAlongRun: 0,
+        gatePosts: gates * 2,
+        totalPosts: gates * 2
+      };
+    }
+    const spanCount = Math.max(1, Math.ceil(runLength / CHAIN_LINK_POST_SPACING_FT));
+    const basePosts = spanCount + 1;
+    const interiorLineEndPosts = Math.floor(Math.max(0, runLength - 1) / CHAIN_LINK_TERMINAL_INTERVAL_FT);
+    const lineEndPostsAlongRun = 2 + interiorLineEndPosts;
+    const gatePosts = gates * 2;
+    const linePosts = Math.max(0, basePosts - lineEndPostsAlongRun);
+    const lineEndPosts = lineEndPostsAlongRun + gatePosts;
+    return {
+      spanCount,
+      linePosts,
+      lineEndPosts,
+      lineEndPostsAlongRun,
+      gatePosts,
+      totalPosts: linePosts + lineEndPosts
+    };
+  }
   function woodSlidingGateAddCount(section){
     if((section?.fenceType || '').toLowerCase() !== 'wood'){
       return 0;
@@ -8718,6 +8906,11 @@ document.addEventListener('DOMContentLoaded', function(){
     'Round Steel posts': 23.61,
     '9ft round steel posts': 23.61,
     '12ft round steel posts': 31.82,
+    'Chain link line posts': applyChainLinkTax(CHAIN_LINK_LINE_POST_RATE_PRETAX),
+    'Chain link line end post kits (includes tension band set)': applyChainLinkTax(CHAIN_LINK_LINE_END_POST_KIT_RATE_PRETAX),
+    'Chain link fabric roll 50ft (4ft)': applyChainLinkTax(CHAIN_LINK_FABRIC_RATE_PRETAX['4ft']),
+    'Chain link fabric roll 50ft (5ft)': applyChainLinkTax(CHAIN_LINK_FABRIC_RATE_PRETAX['5ft']),
+    'Chain link fabric roll 50ft (6ft)': applyChainLinkTax(CHAIN_LINK_FABRIC_RATE_PRETAX['6ft']),
     'Postmaster posts': 50,
     'Dome cap post cap': 1.13,
     'Flat cap post cap': 1.13,
@@ -9620,6 +9813,10 @@ document.addEventListener('DOMContentLoaded', function(){
       return 'Wrought Iron';
     }
     function fenceTypeDefaultDetail(type, includeRemoval){
+      if(String(type||'').toLowerCase() === 'chain link'){
+        const actionPrefix = includeRemoval ? 'Remove existing fence and install new' : 'Install';
+        return `${actionPrefix} chain link fence with posts set ${CHAIN_LINK_POST_SPACING_FT}ft on center. Fabric is estimated in ${CHAIN_LINK_ROLL_LENGTH_FT}ft rolls by section height, with line-end posts at both ends, every ${CHAIN_LINK_TERMINAL_INTERVAL_FT}ft, and as gate posts when gates are included.`;
+      }
       const actionPrefix = includeRemoval ? 'Remove existing fence and install new' : 'Install';
       const label = fenceTypeLabel(type);
       const postsSentence = includeRemoval
@@ -9711,6 +9908,60 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!Array.isArray(sections) || !sections.length) return '';
       const fenceType = (sections[0]?.fenceType || 'Wrought Iron').toLowerCase();
       const isWood = fenceType === 'wood';
+      const isChainLink = fenceType === 'chain link';
+      if(isChainLink){
+        let totalLength = 0;
+        const heights = new Set();
+        let totalFabricRolls = 0;
+        let totalLinePosts = 0;
+        let totalLineEndPosts = 0;
+        let totalGatePosts = 0;
+        let totalPosts = 0;
+        let totalGates = 0;
+        let reuseSections = 0;
+        let newPostSections = 0;
+
+        sections.forEach(section=>{
+          const len = Math.max(0, parseFloat(section?.length || 0) || 0);
+          totalLength += len;
+          heights.add(normalizeChainLinkHeight(section?.height || CHAIN_LINK_HEIGHT_OPTIONS[1]));
+          totalFabricRolls += chainLinkFabricRollCount(len);
+          const gateCount = walkGateAddCount(section);
+          totalGates += gateCount;
+          const useExistingPostsForReplacement = includeRemoval && shouldUseExistingPostsForReplacement(section);
+          if(useExistingPostsForReplacement){
+            reuseSections += 1;
+            return;
+          }
+          newPostSections += 1;
+          const layout = chainLinkPostLayout(len, gateCount);
+          totalLinePosts += layout.linePosts;
+          totalLineEndPosts += layout.lineEndPosts;
+          totalGatePosts += layout.gatePosts;
+          totalPosts += layout.totalPosts;
+        });
+
+        const actionPrefix = includeRemoval ? 'Remove existing fence and install' : 'Install';
+        const lengthLabel = formatFtValue(totalLength);
+        const heightLabel = joinParts(Array.from(heights));
+        const firstSentence = `${actionPrefix} ${lengthLabel ? `${lengthLabel}ft of ` : ''}${heightLabel ? `${heightLabel} tall ` : ''}chain link fence.`;
+        const fabricSentence = totalFabricRolls > 0
+          ? `Fabric material includes ${totalFabricRolls} roll${totalFabricRolls === 1 ? '' : 's'} (${CHAIN_LINK_ROLL_LENGTH_FT}ft each).`
+          : '';
+        let postsSentence = '';
+        if(reuseSections > 0 && newPostSections === 0){
+          postsSentence = 'Use existing posts on all replacement sections (no new post set).';
+        } else if(totalPosts > 0){
+          postsSentence = `Set posts ${CHAIN_LINK_POST_SPACING_FT}ft on center with line-end posts at both ends and every ${CHAIN_LINK_TERMINAL_INTERVAL_FT}ft. Add 2 line-end gate posts per gate. New posts: ${totalPosts} (${totalLinePosts} line posts, ${totalLineEndPosts} line-end posts; ${totalGatePosts} gate posts included).`;
+        }
+        const gateSentence = totalGates > 0
+          ? `Includes ${describeCount(totalGates, 'walk gate', 'walk gates')}.`
+          : '';
+        const mixedPostHandlingSentence = (reuseSections > 0 && newPostSections > 0)
+          ? 'Replacement sections marked to use existing posts exclude new post materials.'
+          : '';
+        return [firstSentence, fabricSentence, postsSentence, gateSentence, mixedPostHandlingSentence].filter(Boolean).join(' ');
+      }
       const WOOD_RAIL_COUNT = 3;
       const parseStackCount = (value)=>{
         const stack = parseInt(value, 10) || 0;
@@ -10094,6 +10345,8 @@ document.addEventListener('DOMContentLoaded', function(){
       prefabPanelTypesRepair: new Map(),
       installSections:0, replaceSections:0,
       wroughtInstallSections:0, wroughtReplaceSections:0,
+      chainLinkInstallSections:0, chainLinkReplaceSections:0,
+      chainLinkFabricRolls:0, chainLinkLinePosts:0, chainLinkLineEndPosts:0, chainLinkGatePosts:0,
       removalLf:0, removalCost:0,
       postsInstall: zeroPostCounts(),
       postsInstallConcrete: zeroPostCounts(),
@@ -10244,6 +10497,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const fenceType = (s.fenceType || '').toLowerCase();
       const isWood = fenceType === 'wood';
       const isWrought = fenceType === 'wrought iron';
+      const isChainLink = fenceType === 'chain link';
       const isInstall = scopeType === 'install' || scopeType === 'replace';
       const isRepair = !isInstall;
       const woodRailLengthFt = (isWood && isInstall) ? woodInstallRailLengthFt(s) : 0;
@@ -10266,6 +10520,8 @@ document.addEventListener('DOMContentLoaded', function(){
       if(scopeType === 'replace'){ totals.replaceSections += 1; }
       if(isWrought && scopeType === 'install'){ totals.wroughtInstallSections += 1; }
       if(isWrought && scopeType === 'replace'){ totals.wroughtReplaceSections += 1; }
+      if(isChainLink && scopeType === 'install'){ totals.chainLinkInstallSections += 1; }
+      if(isChainLink && scopeType === 'replace'){ totals.chainLinkReplaceSections += 1; }
       if(isWood && scopeType === 'replace'){
         const removalLengthFt = Math.max(0, parseFloat(s.length || 0) || 0);
         if(removalLengthFt > 0){
@@ -10274,6 +10530,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       let installInfo = null;
+      let chainLinkInstallInfo = null;
       if(isInstall && isWrought){
         const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(s);
         const postInstallMethod = normalizePostInstallMethod(s.postInstallMethod);
@@ -10381,6 +10638,46 @@ document.addEventListener('DOMContentLoaded', function(){
           installInfo.autoCaps = autoCaps;
         }
       }
+      if(isInstall && isChainLink){
+        const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(s);
+        const lengthFt = Math.max(0, parseFloat(s.length || 0) || 0);
+        const heightLabel = normalizeChainLinkHeight(s.height || CHAIN_LINK_HEIGHT_OPTIONS[1]);
+        const gateCount = walkGateAddCount(s);
+        const fabricRolls = chainLinkFabricRollCount(lengthFt);
+        const postLayout = chainLinkPostLayout(lengthFt, gateCount);
+        chainLinkInstallInfo = {
+          lengthFt,
+          height: heightLabel,
+          gateCount,
+          fabricRolls,
+          useExistingPosts: useExistingPostsForReplacement,
+          linePosts: postLayout.linePosts,
+          lineEndPosts: postLayout.lineEndPosts,
+          lineEndPostsAlongRun: postLayout.lineEndPostsAlongRun,
+          gatePosts: postLayout.gatePosts,
+          totalPosts: postLayout.totalPosts
+        };
+        if(fabricRolls > 0){
+          addMat(materials, chainLinkFabricMaterialLabel(heightLabel), fabricRolls);
+          totals.chainLinkFabricRolls += fabricRolls;
+        }
+        if(!useExistingPostsForReplacement){
+          if(postLayout.linePosts > 0){
+            addMat(materials, 'Chain link line posts', postLayout.linePosts);
+            totals.chainLinkLinePosts += postLayout.linePosts;
+          }
+          if(postLayout.lineEndPosts > 0){
+            addMat(materials, 'Chain link line end post kits (includes tension band set)', postLayout.lineEndPosts);
+            totals.chainLinkLineEndPosts += postLayout.lineEndPosts;
+          }
+          if(postLayout.gatePosts > 0){
+            totals.chainLinkGatePosts += postLayout.gatePosts;
+          }
+          if(postLayout.totalPosts > 0){
+            addMat(materials, 'Maximizer bags of concrete', postLayout.totalPosts);
+          }
+        }
+      }
 
       if(isInstall && (fenceType === 'wrought iron' || fenceType === 'wood')){
         const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
@@ -10458,7 +10755,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const scopeLabel = (()=>{
         if(scopeType === 'install') return 'Install new section';
         if(scopeType !== 'replace') return 'Repair existing section';
-        if(!isWrought) return 'Remove & replace section';
+        if(!isWrought){
+          if(isChainLink) return 'Remove and replace chain link fence section.';
+          return 'Remove & replace section';
+        }
 
         const lengthValue = formatFtValue(s.length);
         const lengthLabel = lengthValue || numOrDash(s.length);
@@ -10516,7 +10816,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return post;
       };
 
-      const skipStyleDetails = isWood && isRepair;
+      const skipStyleDetails = (isWood && isRepair) || isChainLink;
       if(!skipStyleDetails){
         lines.push(`- Style: ${isWood ? woodStyle : s.style}`);
         lines.push(`- Height: ${isWood ? woodHeight : s.height}`);
@@ -10582,6 +10882,11 @@ document.addEventListener('DOMContentLoaded', function(){
           }
         }
       }
+      if(isChainLink){
+        const chainLinkHeight = chainLinkInstallInfo?.height || normalizeChainLinkHeight(s.height || CHAIN_LINK_HEIGHT_OPTIONS[1]);
+        lines.push(`- Height: ${chainLinkHeight}`);
+        lines.push(`- Post spacing: ${CHAIN_LINK_POST_SPACING_FT} ft`);
+      }
       const braceLine = braceLineParts.length ? `- Diagonal brace additions: ${braceLineParts.join('; ')} (4 ft each)` : '';
       if(braceLine && !isRepair){
         lines.push(braceLine);
@@ -10611,6 +10916,19 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         if(scopeType === 'replace' && installInfo.lengthFt > 0){
           lines.push(`- Remove existing section (${installInfo.lengthFt} lf) and haul away (sub paid $${money(installInfo.removalCost)})`);
+        }
+      }
+      if(isInstall && chainLinkInstallInfo){
+        lines.push(`- Fabric rolls (${CHAIN_LINK_ROLL_LENGTH_FT}ft): ${chainLinkInstallInfo.fabricRolls}`);
+        if(chainLinkInstallInfo.gateCount > 0){
+          lines.push(`- Walk gates to include: ${chainLinkInstallInfo.gateCount} (2 line-end posts per gate)`);
+        }
+        if(chainLinkInstallInfo.useExistingPosts){
+          lines.push('- Use existing posts: yes (no new posts/materials for posts)');
+        } else {
+          lines.push(`- Line posts: ${chainLinkInstallInfo.linePosts}`);
+          lines.push(`- Line-end posts (includes tension band sets): ${chainLinkInstallInfo.lineEndPosts}`);
+          lines.push(`- Total posts to set: ${chainLinkInstallInfo.totalPosts}`);
         }
       }
 
@@ -11134,7 +11452,7 @@ document.addEventListener('DOMContentLoaded', function(){
             addMat(materials, `picket plugs (${sizeLabel})`, qty * 25);
           });
         }
-        if(!isWood){
+        if(isWrought){
           totals.wiPickets    += picketReplaceCount;
           if(picketReplaceCount > 0){
             const picketSizeNormalized = normalizeSize(s.picketSize);
@@ -11231,6 +11549,12 @@ document.addEventListener('DOMContentLoaded', function(){
       if (t.digOut)        lines.push(`- Dig out: ${t.digOut} lf`);
       if (t.replaceSections) lines.push(`- Sections to replace: ${t.replaceSections}`);
       if (t.installSections) lines.push(`- New sections to install: ${t.installSections}`);
+      if (t.chainLinkReplaceSections) lines.push(`- Chain link sections to replace: ${t.chainLinkReplaceSections}`);
+      if (t.chainLinkInstallSections) lines.push(`- New chain link sections to install: ${t.chainLinkInstallSections}`);
+      if (t.chainLinkFabricRolls) lines.push(`- Chain link fabric rolls (${CHAIN_LINK_ROLL_LENGTH_FT}ft): ${t.chainLinkFabricRolls}`);
+      if (t.chainLinkLinePosts) lines.push(`- Chain link line posts: ${t.chainLinkLinePosts}`);
+      if (t.chainLinkLineEndPosts) lines.push(`- Chain link line-end post kits: ${t.chainLinkLineEndPosts}`);
+      if (t.chainLinkGatePosts) lines.push(`- Chain link gate posts (included in line-end count): ${t.chainLinkGatePosts}`);
       const removalCrewLf = Math.max(0, parseFloat(woodInstallPlan.removalLf || 0) || 0);
       const removalTotalLf = Math.max(0, (t.removalLf || 0) + removalCrewLf);
       if (removalTotalLf > 0){
