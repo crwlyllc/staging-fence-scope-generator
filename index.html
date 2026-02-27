@@ -12000,6 +12000,15 @@ document.addEventListener('DOMContentLoaded', function(){
         if(railInstall){
           parts.push(`Install ${railInstall}`);
           addMat(materials, woodRailMaterialLabel(s), railInstallCount);
+          const railTieSelection = (s.woodRepairPostInstallTie || s.woodRepairPostReplaceTie || defaultTieForWoodPost(s.woodPost) || '');
+          const railTieLabel = normalizeLabelText(railTieSelection);
+          const tiesPerRail = 2;
+          const lagScrewsPerTie = 4;
+          const totalRailTies = railInstallCount * tiesPerRail;
+          if(totalRailTies > 0 && railTieLabel && !isNoTiesSelection(railTieLabel)){
+            addMat(materials, `Simpson ${railTieLabel}`, totalRailTies);
+            addMat(materials, 'lag screws', totalRailTies * lagScrewsPerTie);
+          }
           const hours = (railInstallCount * 10) / 60;
           totals.woodRailInstall += railInstallCount;
           woodHelperHours += hours;
