@@ -293,6 +293,7 @@
   .sp-card:not(.is-wrought) [data-wrought-only]{ display:none !important; }
   .sp-card:not(.is-wood) [data-wood-only]{ display:none !important; }
   .sp-card:not(.is-chain-link) [data-chain-link-only]{ display:none !important; }
+  .sp-card:not(.is-handrail) [data-handrail-only]{ display:none !important; }
   .sp-card.is-wood [data-metal-only]{ display:none !important; }
 
   .sp-modal{
@@ -1451,6 +1452,8 @@ document.addEventListener('DOMContentLoaded', function(){
   ];
   const POST_ANCHOR_PLATE_LABEL = '4x4 anchor plate';
   const POST_ANCHOR_HARDWARE_LABEL = 'concrete anchor';
+  const HANDRAIL_STEEL_SIZE = '2x2';
+  const HANDRAIL_STEEL_LABEL = '2x2 Steel';
   const WROUGHT_PANEL_FABRICATION_ON_SITE = 'On Site';
   const WROUGHT_PANEL_FABRICATION_ORDER_TMI = 'Order Custom Panels (TMI)';
   const WROUGHT_PANEL_FABRICATION_OPTIONS = [
@@ -1672,6 +1675,7 @@ document.addEventListener('DOMContentLoaded', function(){
     wood: '#d97706',
     wroughtIron: '#dc2626',
     chainLink: '#0284c7',
+    handrail: '#7c3aed',
   };
   const MAP_BASE_POLYLINE_COLOR = '#111827';
   const MAP_BASE_POLYLINE_OPACITY = 0.01;
@@ -2964,7 +2968,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const scope = data.scopeType || 'repair';
     const initialFenceType = data.fenceType || 'Wrought Iron';
     const normalizedType = initialFenceType.toLowerCase();
-    const defaultPainting = (normalizedType === 'wood' || normalizedType === 'chain link')
+    const isHandrail = normalizedType === 'handrail';
+    const defaultPainting = (normalizedType === 'wood' || normalizedType === 'chain link' || isHandrail)
       ? 'None'
       : ((scope === 'install' || scope === 'replace') ? 'Spot Paint Welds' : 'Paint Section');
     const base = {
@@ -2980,6 +2985,8 @@ document.addEventListener('DOMContentLoaded', function(){
       puppyPicketHeight: '',
       puppyPicketReplace: 0,
       postSize: '2x2',
+      handrailPostSize: HANDRAIL_STEEL_SIZE,
+      handrailRailSize: HANDRAIL_STEEL_SIZE,
       postReplacements: [],
       postRealignments: [],
       weldRedos: 0,
@@ -3024,7 +3031,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postInstallMethod: POST_INSTALL_METHODS[0].value,
       woodInstallPostSpacing: '8',
       woodReplacementPostSpacing: '8',
-      scopeType: 'repair',
+      scopeType: isHandrail ? 'install' : 'repair',
       postSpacing: '8',
       panelAttachment: 'Welding',
       wroughtCustomStickLength: '12',
@@ -3124,6 +3131,38 @@ document.addEventListener('DOMContentLoaded', function(){
       merged.paintingPrepExtra = false;
       merged.paintingCurrentColor = '';
       merged.paintingTargetColor = '';
+    }
+    if(isHandrailFenceType(merged.fenceType)){
+      if((merged.scopeType || 'repair') === 'repair'){
+        merged.scopeType = 'install';
+      }
+      merged.style = 'Handrail';
+      merged.postSize = HANDRAIL_STEEL_SIZE;
+      merged.handrailPostSize = HANDRAIL_STEEL_SIZE;
+      merged.handrailRailSize = HANDRAIL_STEEL_SIZE;
+      merged.painting = 'None';
+      merged.paintingApplication = '';
+      merged.paintingPrepExtra = false;
+      merged.paintingCurrentColor = '';
+      merged.paintingTargetColor = '';
+      const handrailRailCount = Math.max(1, parseInt(merged.railsCount, 10) || 2);
+      merged.railsCount = handrailRailCount;
+      merged.rails = Array.from({ length: handrailRailCount }, ()=>({
+        size: HANDRAIL_STEEL_SIZE,
+        stacked: false,
+        size2: HANDRAIL_STEEL_SIZE,
+        patches: 0,
+        replacements: 0
+      }));
+      merged.railSize = HANDRAIL_STEEL_SIZE;
+      merged.railStacked = false;
+      merged.railSize2 = HANDRAIL_STEEL_SIZE;
+      merged.picketSize = '';
+      merged.picketHeight = 0;
+      merged.puppy = 'None';
+      merged.puppyPicketSize = '';
+      merged.puppyPicketHeight = 0;
+      merged.puppyPicketReplace = 0;
     }
     return merged;
   }
@@ -3301,6 +3340,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const normalized = String(fenceType || '').toLowerCase();
     if(normalized === 'wood') return MAP_POLYLINE_COLORS.wood;
     if(normalized === 'chain link') return MAP_POLYLINE_COLORS.chainLink;
+    if(normalized === 'handrail') return MAP_POLYLINE_COLORS.handrail;
     return MAP_POLYLINE_COLORS.wroughtIron;
   }
 
@@ -4396,6 +4436,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 <option value="Wrought Iron">Wrought Iron</option>
                 <option value="Wood">Wood</option>
                 <option value="Chain Link">Chain Link</option>
+                <option value="Handrail">Handrail</option>
               </select>
             </div>
             <div class="sp-field col-2">
@@ -4708,6 +4749,34 @@ document.addEventListener('DOMContentLoaded', function(){
                 <input class="sp-input" data-field="retainingWallHeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g., 2.5" />
                 <div class="sp-hint">In-House 4 pours the wall only at $35/sq ft ($1,500 min) including wall materials & labor; Jesus' crew installs the fence. Posts in the wall are set during the pour (no extra concrete bags).</div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sp-scope-group col-12 is-handrail" data-section-detail data-handrail-only>
+          <div class="sp-scope-head">
+            <div class="sp-scope-pill">Handrail</div>
+            <div>
+              <div class="sp-scope-title">Handrail Installation</div>
+              <div class="sp-scope-sub"></div>
+            </div>
+          </div>
+          <div class="sp-grid sp-scope-grid">
+            <div class="sp-field col-3">
+              <label class="sp-label">Post Size</label>
+              <select class="sp-select" data-field="handrailPostSize">
+                <option value="${HANDRAIL_STEEL_SIZE}">${HANDRAIL_STEEL_LABEL}</option>
+              </select>
+            </div>
+            <div class="sp-field col-3">
+              <label class="sp-label">Railing Size</label>
+              <select class="sp-select" data-field="handrailRailSize">
+                <option value="${HANDRAIL_STEEL_SIZE}">${HANDRAIL_STEEL_LABEL}</option>
+              </select>
+            </div>
+            <div class="sp-field col-6">
+              <label class="sp-label">Notes</label>
+              <div class="sp-hint">Handrail currently supports ${HANDRAIL_STEEL_LABEL} posts and ${HANDRAIL_STEEL_LABEL} railing only.</div>
             </div>
           </div>
         </div>
@@ -5185,7 +5254,8 @@ document.addEventListener('DOMContentLoaded', function(){
     'woodWalkAddPicketWidth','driveGateChainReplace','driveGateOperatorReplace','driveGateOperatorType',
     'driveGateOperatorPower','driveGateOperatorInstall','driveGateOperatorInstallType','driveGateOperatorInstallPower',
     'driveGateOperatorInstallPlatform','woodRepairPostReplaceTie','woodRepairPostReplaceCap','woodWalkGatesAdd','woodSlidingGatesAdd','woodSlidingGateLengthFt',
-    'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie','useExistingPostsForReplacement','postInstallMethod','woodInstallPostSpacing','woodReplacementPostSpacing'
+    'woodPostRealignments','woodRepairPostInstallMethod','woodRepairPostInstallTie','useExistingPostsForReplacement','postInstallMethod','woodInstallPostSpacing','woodReplacementPostSpacing',
+    'handrailPostSize','handrailRailSize'
   ];
 
   const BULK_WROUGHT_FIELDS = [
@@ -5201,11 +5271,15 @@ document.addEventListener('DOMContentLoaded', function(){
   const BULK_CHAIN_LINK_FIELDS = [
     'fenceType','scopeType','height','useExistingPostsForReplacement','postInstallMethod','walkGatesAdd'
   ];
+  const BULK_HANDRAIL_FIELDS = [
+    'fenceType','scopeType','height','postSize','postSpacing','useExistingPostsForReplacement','postInstallMethod','handrailPostSize','handrailRailSize'
+  ];
 
   function normalizeBulkFenceType(value){
     const normalized = String(value || '').toLowerCase().trim();
     if(normalized === 'wood') return 'wood';
     if(normalized === 'chain link') return 'chain link';
+    if(normalized === 'handrail') return 'handrail';
     return 'wrought iron';
   }
 
@@ -5239,10 +5313,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const normalizedFenceType = normalizeBulkFenceType(source.fenceType);
     const isWood = normalizedFenceType === 'wood';
     const isChainLink = normalizedFenceType === 'chain link';
-    const fenceType = isWood ? 'Wood' : (isChainLink ? 'Chain Link' : 'Wrought Iron');
+    const isHandrail = normalizedFenceType === 'handrail';
+    const fenceType = isWood ? 'Wood' : (isChainLink ? 'Chain Link' : (isHandrail ? 'Handrail' : 'Wrought Iron'));
     const fields = isWood
       ? BULK_WOOD_FIELDS
-      : (isChainLink ? BULK_CHAIN_LINK_FIELDS : BULK_WROUGHT_FIELDS);
+      : (isChainLink ? BULK_CHAIN_LINK_FIELDS : (isHandrail ? BULK_HANDRAIL_FIELDS : BULK_WROUGHT_FIELDS));
     const values = {};
 
     fields.forEach(field=>{
@@ -5256,7 +5331,7 @@ document.addEventListener('DOMContentLoaded', function(){
       values[field] = source[field];
     });
 
-    values.scopeType = values.scopeType || source.scopeType || (isChainLink ? 'install' : 'repair');
+    values.scopeType = values.scopeType || source.scopeType || ((isChainLink || isHandrail) ? 'install' : 'repair');
     values.postInstallMethod = normalizePostInstallMethod(source.postInstallMethod);
 
     if(isWood){
@@ -5280,6 +5355,17 @@ document.addEventListener('DOMContentLoaded', function(){
       values.walkGatesAdd = chainLinkWalkGateCount(source);
       values.postInstallMethod = POST_INSTALL_METHODS[0].value;
       values.useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(source.useExistingPostsForReplacement);
+      if(values.scopeType === 'repair'){
+        values.scopeType = 'install';
+      }
+    }else if(isHandrail){
+      values.height = source.height || '4ft';
+      values.postSize = HANDRAIL_STEEL_SIZE;
+      values.postSpacing = source.postSpacing || '8';
+      values.useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(source.useExistingPostsForReplacement);
+      values.postInstallMethod = normalizePostInstallMethod(source.postInstallMethod);
+      values.handrailPostSize = HANDRAIL_STEEL_SIZE;
+      values.handrailRailSize = HANDRAIL_STEEL_SIZE;
       if(values.scopeType === 'repair'){
         values.scopeType = 'install';
       }
@@ -5599,7 +5685,10 @@ document.addEventListener('DOMContentLoaded', function(){
     const normalizedFence = currentFenceType.toLowerCase();
     const scopeTypeValue = val('scopeType') || 'repair';
     const panelAttachmentValue = val('panelAttachment');
-    const isNoPaintFence = normalizedFence === 'wood' || normalizedFence === 'chain link';
+    const isHandrail = isHandrailFenceType(normalizedFence);
+    const isNoPaintFence = normalizedFence === 'wood' || normalizedFence === 'chain link' || isHandrail;
+    const handrailPostSize = isHandrail ? HANDRAIL_STEEL_SIZE : '';
+    const handrailRailSize = isHandrail ? HANDRAIL_STEEL_SIZE : '';
     const rawPaintingSelection = isNoPaintFence ? 'None' : val('painting');
     const wroughtPanelFabrication = normalizeWroughtPanelFabrication(val('wroughtPanelFabrication'));
     const powderCoatPanelsValue = false;
@@ -5637,7 +5726,9 @@ document.addEventListener('DOMContentLoaded', function(){
       woodReplacementPostSpacing: normalizeWoodReplacementPostSpacing(val('woodReplacementPostSpacing')),
       style: val('style'),
       height: normalizedFence === 'chain link' ? normalizeChainLinkHeight(val('height')) : val('height'),
-      postSize: val('postSize'),
+      postSize: isHandrail ? handrailPostSize : val('postSize'),
+      handrailPostSize,
+      handrailRailSize,
       postSpacing: val('postSpacing'),
       panelAttachment: panelAttachmentValue,
       wroughtCustomStickLength: val('wroughtCustomStickLength') || '12',
@@ -5789,6 +5880,38 @@ document.addEventListener('DOMContentLoaded', function(){
       sectionData.paintingCurrentColor = '';
       sectionData.paintingTargetColor = '';
     }
+    if(isHandrail){
+      if(sectionData.scopeType === 'repair'){
+        sectionData.scopeType = 'install';
+      }
+      sectionData.style = 'Handrail';
+      sectionData.postSize = HANDRAIL_STEEL_SIZE;
+      sectionData.handrailPostSize = HANDRAIL_STEEL_SIZE;
+      sectionData.handrailRailSize = HANDRAIL_STEEL_SIZE;
+      sectionData.painting = 'None';
+      sectionData.paintingApplication = '';
+      sectionData.paintingPrepExtra = false;
+      sectionData.paintingCurrentColor = '';
+      sectionData.paintingTargetColor = '';
+      const handrailRailCount = Math.max(1, parseInt(sectionData.railsCount, 10) || 2);
+      sectionData.railsCount = handrailRailCount;
+      sectionData.rails = Array.from({ length: handrailRailCount }, ()=>({
+        size: HANDRAIL_STEEL_SIZE,
+        stacked: false,
+        size2: HANDRAIL_STEEL_SIZE,
+        patches: 0,
+        replacements: 0
+      }));
+      sectionData.railSize = HANDRAIL_STEEL_SIZE;
+      sectionData.railStacked = false;
+      sectionData.railSize2 = HANDRAIL_STEEL_SIZE;
+      sectionData.picketSize = '';
+      sectionData.picketHeight = 0;
+      sectionData.puppy = 'None';
+      sectionData.puppyPicketSize = '';
+      sectionData.puppyPicketHeight = 0;
+      sectionData.puppyPicketReplace = 0;
+    }
     return sanitizeWroughtFieldsForFenceType(sectionData);
   }
 
@@ -5853,11 +5976,22 @@ document.addEventListener('DOMContentLoaded', function(){
       ? normalizeChainLinkHeight(data.height || CHAIN_LINK_DEFAULT_HEIGHT)
       : (data.height || '4ft'));
     set('postSize', data.postSize||'2x2');
+    set('handrailPostSize', data.handrailPostSize || HANDRAIL_STEEL_SIZE);
+    set('handrailRailSize', data.handrailRailSize || HANDRAIL_STEEL_SIZE);
     set('postSpacing', data.postSpacing||'8');
     set('panelAttachment', data.panelAttachment||'Welding');
     if(normalizedFenceType === 'chain link'){
       set('postSpacing', String(CHAIN_LINK_POST_SPACING_FT));
       set('postInstallMethod', POST_INSTALL_METHODS[0].value);
+    }
+    if(isHandrailFenceType(normalizedFenceType)){
+      if((data.scopeType || 'repair') === 'repair'){
+        set('scopeType', 'install');
+      }
+      set('style', 'Handrail');
+      set('postSize', HANDRAIL_STEEL_SIZE);
+      set('handrailPostSize', HANDRAIL_STEEL_SIZE);
+      set('handrailRailSize', HANDRAIL_STEEL_SIZE);
     }
     set('wroughtCustomStickLength', normalizeWroughtCustomStickLength(data.wroughtCustomStickLength));
     const panelFabrication = normalizeWroughtPanelFabrication(data.wroughtPanelFabrication);
@@ -5879,7 +6013,7 @@ document.addEventListener('DOMContentLoaded', function(){
     set('puppyPicketReplace', data.puppyPicketReplace || '');
     const scopeForPaint = data.scopeType || 'repair';
     const attachmentMethod = data.panelAttachment || 'Welding';
-    const defaultPainting = (normalizedFenceType === 'wood' || normalizedFenceType === 'chain link')
+    const defaultPainting = (normalizedFenceType === 'wood' || normalizedFenceType === 'chain link' || normalizedFenceType === 'handrail')
       ? 'None'
       : (!data.painting && (scopeForPaint === 'install' || scopeForPaint === 'replace'))
         ? (attachmentMethod === 'Brackets' ? 'None' : 'Spot Paint Welds')
@@ -7532,6 +7666,10 @@ document.addEventListener('DOMContentLoaded', function(){
     return String(value || '').toLowerCase().trim() === 'chain link';
   }
 
+  function isHandrailFenceType(value){
+    return String(value || '').toLowerCase().trim() === 'handrail';
+  }
+
   function normalizeChainLinkHeight(value){
     const normalized = normalizeLabelText(value || '').toLowerCase().replace(/\s+/g, '');
     if(normalized === '4ft' || normalized === '4') return '4ft';
@@ -7543,14 +7681,16 @@ document.addEventListener('DOMContentLoaded', function(){
   function syncScopeOptionsForFenceType(card){
     const fenceType = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
     const isChainLink = isChainLinkFenceType(fenceType);
+    const isHandrail = isHandrailFenceType(fenceType);
+    const disableRepair = isChainLink || isHandrail;
     const scopeSel = card.querySelector('[data-field="scopeType"]');
     if(!scopeSel) return;
     const repairOption = scopeSel.querySelector('option[value="repair"]');
     if(repairOption){
-      repairOption.disabled = isChainLink;
-      repairOption.hidden = isChainLink;
+      repairOption.disabled = disableRepair;
+      repairOption.hidden = disableRepair;
     }
-    if(isChainLink && scopeSel.value === 'repair'){
+    if(disableRepair && scopeSel.value === 'repair'){
       scopeSel.value = 'install';
     }
   }
@@ -7581,7 +7721,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const scopeSel = card.querySelector('[data-field="scopeType"]');
     const initialScope = scopeSel ? scopeSel.value : 'repair';
     const fenceTypeValue = (card.querySelector('[data-field="fenceType"]')?.value || '').toLowerCase();
-    if(isChainLinkFenceType(fenceTypeValue) && scopeSel && initialScope === 'repair'){
+    if((isChainLinkFenceType(fenceTypeValue) || isHandrailFenceType(fenceTypeValue)) && scopeSel && initialScope === 'repair'){
       scopeSel.value = 'install';
     }
     const scope = scopeSel ? scopeSel.value : initialScope;
@@ -7621,6 +7761,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const isWrought = fenceType === 'wrought iron';
     const isWood = fenceType === 'wood';
     const isChainLink = isChainLinkFenceType(fenceType);
+    const isHandrail = isHandrailFenceType(fenceType);
     const useExistingPostsSel = card.querySelector('[data-field="useExistingPostsForReplacement"]');
     const useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(useExistingPostsSel ? useExistingPostsSel.value : 'no') === 'yes';
     const postInstallMethodWrap = card.querySelector('[data-post-install-method-wrap]');
@@ -7680,7 +7821,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if(powderPanels){ powderPanels.checked = false; }
       if(powderPosts){ powderPosts.checked = false; }
     }
-    const showRetainingWall = isInstall && (isWrought || isWood || isChainLink);
+    const showRetainingWall = isInstall && (isWrought || isWood || isChainLink || isHandrail);
     const retainingWrap = card.querySelector('[data-retaining-wall]');
     if(retainingWrap){
       retainingWrap.style.display = showRetainingWall ? '' : 'none';
@@ -7689,7 +7830,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const paintingSel = card.querySelector('[data-field="painting"]');
     if(paintingSel){
       const currentVal = paintingSel.value;
-      if((isWood || isChainLink) && currentVal !== 'None'){
+      if((isWood || isChainLink || isHandrail) && currentVal !== 'None'){
         paintingSel.value = 'None';
         paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
       } else if(isInstall && isWrought){
@@ -7710,6 +7851,27 @@ document.addEventListener('DOMContentLoaded', function(){
             paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
           }
         }
+      } else if(isWrought){
+        const desired = 'Paint Section';
+        const autoValues = new Set(['', 'Spot Paint Welds', 'None']);
+        if(autoValues.has(currentVal) && currentVal !== desired){
+          paintingSel.value = desired;
+          paintingSel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }
+    if(isHandrail){
+      const handrailPostSel = card.querySelector('[data-field="handrailPostSize"]');
+      const handrailRailSel = card.querySelector('[data-field="handrailRailSize"]');
+      const postSizeSel = card.querySelector('[data-field="postSize"]');
+      if(handrailPostSel && handrailPostSel.value !== HANDRAIL_STEEL_SIZE){
+        handrailPostSel.value = HANDRAIL_STEEL_SIZE;
+      }
+      if(handrailRailSel && handrailRailSel.value !== HANDRAIL_STEEL_SIZE){
+        handrailRailSel.value = HANDRAIL_STEEL_SIZE;
+      }
+      if(postSizeSel && postSizeSel.value !== HANDRAIL_STEEL_SIZE){
+        postSizeSel.value = HANDRAIL_STEEL_SIZE;
       }
     }
     updatePaintingApplicationUI(card);
@@ -7723,12 +7885,14 @@ document.addEventListener('DOMContentLoaded', function(){
     const isWrought = fenceType === 'wrought iron';
     const isWood = fenceType === 'wood';
     const isChainLink = isChainLinkFenceType(fenceType);
-    const noPaintFence = isWood || isChainLink;
+    const isHandrail = isHandrailFenceType(fenceType);
+    const noPaintFence = isWood || isChainLink || isHandrail;
     syncScopeOptionsForFenceType(card);
     syncHeightOptionsForFenceType(card);
     card.classList.toggle('is-wood', isWood);
     card.classList.toggle('is-wrought', isWrought);
     card.classList.toggle('is-chain-link', isChainLink);
+    card.classList.toggle('is-handrail', isHandrail);
     const paintingField = card.querySelector('[data-field="painting"]');
     const paintingWrap = paintingField?.closest('.sp-field');
     const paintingAppWrap = card.querySelector('[data-painting-application]');
@@ -7744,6 +7908,20 @@ document.addEventListener('DOMContentLoaded', function(){
     }else{
       if(paintingWrap){ paintingWrap.style.display = ''; }
       updatePaintingApplicationUI(card);
+    }
+    if(isHandrail){
+      const handrailDefaults = {
+        handrailPostSize: HANDRAIL_STEEL_SIZE,
+        handrailRailSize: HANDRAIL_STEEL_SIZE,
+        postSize: HANDRAIL_STEEL_SIZE
+      };
+      Object.entries(handrailDefaults).forEach(([field, val])=>{
+        const el = card.querySelector(`[data-field="${field}"]`);
+        if(!el) return;
+        if((el.tagName === 'SELECT' || el.tagName === 'INPUT') && el.value !== val){
+          el.value = val;
+        }
+      });
     }
     if(isWood){
       const defaultWoodPost = 'Round Steel';
@@ -7816,7 +7994,7 @@ document.addEventListener('DOMContentLoaded', function(){
     } : { id: secId, scopeType: 'repair' };
     const fenceType = normalizedType === 'wood'
       ? 'Wood'
-      : (normalizedType === 'chain link' ? 'Chain Link' : 'Wrought Iron');
+      : (normalizedType === 'chain link' ? 'Chain Link' : (normalizedType === 'handrail' ? 'Handrail' : 'Wrought Iron'));
     const fresh = createSectionBase({ ...preserved, fenceType });
     if(existingIdx >= 0){
       state.sections.splice(existingIdx, 1, fresh);
@@ -8117,7 +8295,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const normalizedSourceFence = normalizeBulkFenceType(source.fenceType);
           const sourceFence = normalizedSourceFence === 'wood'
             ? 'wood'
-            : (normalizedSourceFence === 'chain link' ? 'chain link' : 'wrought iron');
+            : (normalizedSourceFence === 'chain link' ? 'chain link' : (normalizedSourceFence === 'handrail' ? 'handrail' : 'wrought iron'));
           const sourceTitle = sourceLabel ? `Section ${idx+1} - ${sourceLabel}` : `Section ${idx+1}`;
           const ok = confirm(`Apply ${sourceFence} basic settings from ${sourceTitle} to all ${state.sections.length} sections?`);
           if(!ok){
@@ -9856,6 +10034,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const normalized = String(type||'').toLowerCase();
       if(normalized === 'wood') return 'Wood';
       if(normalized === 'chain link') return 'Chain Link';
+      if(normalized === 'handrail') return 'Handrail';
       if(normalized === 'vinyl') return 'Vinyl';
       return 'Wrought Iron';
     }
@@ -9971,6 +10150,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const fenceType = (sections[0]?.fenceType || 'Wrought Iron').toLowerCase();
       const isWood = fenceType === 'wood';
       const isChainLink = fenceType === 'chain link';
+      const isHandrail = fenceType === 'handrail';
       if(isChainLink){
         let totalLength = 0;
         const heights = new Set();
@@ -10038,7 +10218,7 @@ document.addEventListener('DOMContentLoaded', function(){
       let anchoredSections = 0;
 
       sections.forEach(section=>{
-        if(includeRemoval && !isWood){
+        if(includeRemoval && !isWood && !isHandrail){
           const gateRows = wroughtWalkGateAddEntries(section);
           gateRows.forEach(row=>{
             const qty = Math.max(0, parseInt(row?.qty || 0, 10) || 0);
@@ -10187,7 +10367,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const heightLabel = joinParts(Array.from(heights).map(h=> `${h} tall`));
         descriptorParts.push(heightLabel);
       }
-      const fenceLabel = isWood ? 'wood fence' : 'wrought iron fence';
+      const fenceLabel = isWood ? 'wood fence' : (isHandrail ? 'handrail' : 'wrought iron fence');
       const styleLabel = styles.size ? `${joinParts(Array.from(styles))} fence` : fenceLabel;
       descriptorParts.push(styleLabel);
       const descriptor = descriptorParts.filter(Boolean).join(' ').trim();
@@ -10200,7 +10380,7 @@ document.addEventListener('DOMContentLoaded', function(){
         .filter(item=>item.length > 0)
         .map(item=>{
           const heightLabel = item.height ? `${item.height} tall` : '';
-          const styleLabel = item.style || (isWood ? 'wood' : 'wrought iron');
+          const styleLabel = item.style || (isWood ? 'wood' : (isHandrail ? 'handrail' : 'wrought iron'));
           const phraseParts = [heightLabel, `${styleLabel}${/fence/i.test(styleLabel)?'':' fence'}`].filter(Boolean);
           const postDetail = item.postSizes.size ? `posts: ${joinParts(Array.from(item.postSizes))}` : '';
           const picketDetail = item.picketSizes.size ? `pickets: ${joinParts(Array.from(item.picketSizes))}` : '';
@@ -10286,7 +10466,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       let replacementWalkGateSentence = '';
-      if(includeRemoval && !isWood){
+      if(includeRemoval && !isWood && !isHandrail){
         const gateParts = [];
         if(replacementWalkGateSingle > 0){
           gateParts.push(describeCount(replacementWalkGateSingle, 'single swing walk gate', 'single swing walk gates'));
@@ -10545,6 +10725,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const fenceType = (s.fenceType || '').toLowerCase();
       const isWood = fenceType === 'wood';
       const isWrought = fenceType === 'wrought iron';
+      const isHandrail = fenceType === 'handrail';
       const isChainLink = fenceType === 'chain link';
       const isInstall = scopeType === 'install' || scopeType === 'replace';
       const isRepair = !isInstall;
@@ -10579,7 +10760,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       let installInfo = null;
       let chainLinkInstallInfo = null;
-      if(isInstall && isWrought){
+      if(isInstall && (isWrought || isHandrail)){
         const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(s);
         const postInstallMethod = normalizePostInstallMethod(s.postInstallMethod);
         const lengthFt = parseInt(s.length||0,10) || 0;
@@ -10735,7 +10916,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
 
-      if(isInstall && (isWrought || isWood || isChainLink)){
+      if(isInstall && (isWrought || isWood || isChainLink || isHandrail)){
         const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
         const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
         if(wallLength > 0 && wallHeight > 0){
@@ -10752,7 +10933,7 @@ document.addEventListener('DOMContentLoaded', function(){
           const useExistingPostsForReplacement = shouldUseExistingPostsForReplacement(s);
           if(!useExistingPostsForReplacement){
             const wallPostCounts = zeroPostCounts();
-            const wallPostKey = isWood ? postSizeKey(s.woodPost) : (isWrought ? postSizeKey(s.postSize) : null);
+            const wallPostKey = isWood ? postSizeKey(s.woodPost) : ((isWrought || isHandrail) ? postSizeKey(s.postSize) : null);
             if(wallPostKey){
               const wallSpanCount = Math.max(1, Math.ceil(wallLength / spacingFtForWall));
               const wallPostsTotal = wallSpanCount > 0 ? wallSpanCount + 1 : 0;
@@ -10815,9 +10996,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const scopeLabel = (()=>{
         if(scopeType === 'install') return 'Install new section';
         if(scopeType !== 'replace') return 'Repair existing section';
-        if(!isWrought){
+        if(!isWrought && !isHandrail){
           if(isChainLink) return 'Remove and replace chain link fence section.';
           return 'Remove & replace section';
+        }
+        if(isHandrail){
+          return 'Remove existing handrail section and install new handrail section.';
         }
 
         const lengthValue = formatFtValue(s.length);
@@ -10876,7 +11060,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return post;
       };
 
-      const skipStyleDetails = (isWood && isRepair) || isChainLink;
+      const skipStyleDetails = (isWood && isRepair) || isChainLink || isHandrail;
       if(!skipStyleDetails){
         lines.push(`- Style: ${isWood ? woodStyle : s.style}`);
         lines.push(`- Height: ${isWood ? woodHeight : s.height}`);
@@ -10954,8 +11138,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
       if(isInstall && installInfo){
         lines.push(`- Post spacing: ${installInfo.spacingFt} ft`);
-        lines.push(`- Panel attachment: ${installInfo.attachment}`);
-        lines.push(`- Panel fabrication: ${installInfo.panelFabrication}`);
+        if(isWrought){
+          lines.push(`- Panel attachment: ${installInfo.attachment}`);
+          lines.push(`- Panel fabrication: ${installInfo.panelFabrication}`);
+        } else if(isHandrail){
+          lines.push(`- Railing size: ${normalizeSize(s.handrailRailSize || HANDRAIL_STEEL_SIZE) || HANDRAIL_STEEL_LABEL}`);
+        }
         if(installInfo.useExistingPosts){
           lines.push('- Use existing posts: yes (no new post set or anchoring)');
         } else {
@@ -10967,10 +11155,10 @@ document.addEventListener('DOMContentLoaded', function(){
             lines.push(`- Post setting method: ${postInstallMethodLabel(postMethod)} (set in concrete 36" deep)`);
           }
         }
-        if(installInfo.finialStyle){
+        if(isWrought && installInfo.finialStyle){
           lines.push(`- Finials: ${installInfo.finialStyle}`);
         }
-        if(Array.isArray(installInfo.autoCaps) && installInfo.autoCaps.length){
+        if(isWrought && Array.isArray(installInfo.autoCaps) && installInfo.autoCaps.length){
           const capParts = installInfo.autoCaps.map(cap=>`${cap.count} × ${cap.material} ${cap.style} (${cap.postSize})`);
           lines.push(`- Post caps: ${capParts.join('; ')}`);
         }
@@ -11483,7 +11671,7 @@ document.addEventListener('DOMContentLoaded', function(){
         addServiceLine('Drive Gate Operator Installation', desc);
       }
 
-      if(isInstall && (fenceType === 'wrought iron' || fenceType === 'wood' || fenceType === 'chain link')){
+      if(isInstall && (fenceType === 'wrought iron' || fenceType === 'wood' || fenceType === 'chain link' || fenceType === 'handrail')){
         const wallLength = parseFloat(s.retainingWallLength || 0) || 0;
         const wallHeight = parseFloat(s.retainingWallHeight || 0) || 0;
         if(wallLength > 0 && wallHeight > 0){
