@@ -12053,6 +12053,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const installGroups = groupSectionsByFenceType(installSectionsOnly);
     installGroups.forEach((sections, type)=>{
+      if(type === 'handrail'){
+        const totalLength = sections.reduce((sum, section)=>
+          sum + (Math.max(0, parseFloat(section?.length || 0) || 0))
+        , 0);
+        const lengthLabel = formatFtValue(totalLength) || '0';
+        addServiceLine(
+          'Handrail Installation',
+          `Install ${lengthLabel}ft of handrail made out of 2x2 posts and 2x2 railing. Posts will be anchored to the concrete, and the railing will be welded to the top of the posts.`
+        );
+        return;
+      }
       const detail = buildInstallServiceDescription(sections, false);
       const serviceTitle = type === 'wood'
         ? buildWoodInstallationServiceLineTitle(sections)
