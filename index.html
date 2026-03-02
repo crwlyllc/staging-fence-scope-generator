@@ -16094,15 +16094,81 @@ document.addEventListener('DOMContentLoaded', function(){
       };
     };
     pushPostReplaceActionLine(totals.postsReplace || zeroPostCounts());
+    const handrailInstallSections = installSectionsOnly.filter(section=> isHandrailFenceType(section?.fenceType || ''));
+    const handrailAnchoredPostCounts = zeroPostCounts();
+    const handrailConcretePostCounts = zeroPostCounts();
+    const handrailLengths = [];
+    const handrailPostSizes = new Set();
+    const handrailRailSizes = new Set();
+    let handrailAnchoredSections = 0;
+    let handrailConcreteSections = 0;
+    handrailInstallSections.forEach(section=>{
+      const lengthFt = Math.max(0, parseFloat(section?.length || 0) || 0);
+      if(lengthFt > 0){
+        handrailLengths.push(lengthFt);
+      }
+      const handrailPostSize = normalizeHandrailSteelSize(section?.handrailPostSize || section?.postSize || '');
+      const handrailRailSize = normalizeHandrailSteelSize(section?.handrailRailSize || section?.railSize || '');
+      if(handrailPostSize) handrailPostSizes.add(handrailPostSize);
+      if(handrailRailSize) handrailRailSizes.add(handrailRailSize);
+      const postCounts = section?._installCalc?.postCounts || {};
+      if(normalizePostInstallMethod(section?.postInstallMethod) === 'anchored'){
+        handrailAnchoredSections += 1;
+        addPostCounts(handrailAnchoredPostCounts, postCounts);
+      } else {
+        handrailConcreteSections += 1;
+        addPostCounts(handrailConcretePostCounts, postCounts);
+      }
+    });
+    const subtractPostCounts = (baseCounts, removeCounts)=>{
+      const result = zeroPostCounts();
+      Object.keys(result).forEach(key=>{
+        const base = parseInt(baseCounts?.[key], 10) || 0;
+        const remove = parseInt(removeCounts?.[key], 10) || 0;
+        result[key] = Math.max(0, base - remove);
+      });
+      return result;
+    };
+    const nonHandrailConcretePostCounts = subtractPostCounts(totals.postsInstallConcrete || zeroPostCounts(), handrailConcretePostCounts);
+    const nonHandrailAnchoredPostCounts = subtractPostCounts(totals.postsInstallAnchored || zeroPostCounts(), handrailAnchoredPostCounts);
     if (totals.postsRealign2x2 > 0) sub.push('- 2x2 posts to realign: '+totals.postsRealign2x2);
     if (totals.postsRealign3x3 > 0) sub.push('- 3x3 posts to realign: '+totals.postsRealign3x3);
     if (totals.postsRealignCutWeld > 0) sub.push('- Posts to realign (cut & weld): '+totals.postsRealignCutWeld);
     if (totals.woodPostRealignCutWeld > 0) sub.push('- Wood posts to realign (cut & weld): '+totals.woodPostRealignCutWeld);
     if (totals.woodPostRealignDig > 0) sub.push('- Wood posts to realign (dig): '+totals.woodPostRealignDig);
-    pushPostLinesSub('Posts to set in concrete (new sections)', totals.postsInstallConcrete || zeroPostCounts());
-    pushPostLinesSub('Posts to anchor (new sections)', totals.postsInstallAnchored || zeroPostCounts());
-    const nonWoodReplacementSections = replacementSectionsOnly.filter(section=> ((section.fenceType || '').toLowerCase() !== 'wood'));
-    const nonWoodInstallSections = installSectionsOnly.filter(section=> ((section.fenceType || '').toLowerCase() !== 'wood'));
+    pushPostLinesSub('Posts to set in concrete (new sections)', nonHandrailConcretePostCounts);
+    pushPostLinesSub('Posts to anchor (new sections)', nonHandrailAnchoredPostCounts);
+    if(handrailInstallSections.length > 0){
+      const sectionCount = handrailInstallSections.length;
+      const postSizeLabel = handrailPostSizes.size ? joinParts(Array.from(handrailPostSizes)) : '2x2';
+      const railSizeLabel = handrailRailSizes.size ? joinParts(Array.from(handrailRailSizes)) : '2x2';
+      let lengthPhrase = '';
+      if(handrailLengths.length > 0){
+        const sameLength = handrailLengths.every(value=> Math.abs(value - handrailLengths[0]) < 0.01);
+        if(sameLength){
+          const eachLabel = formatFtValue(handrailLengths[0]) || '0';
+          lengthPhrase = `, each about ${eachLabel} linear ft`;
+        } else {
+          const totalLabel = formatFtValue(handrailLengths.reduce((sum, value)=> sum + value, 0)) || '0';
+          lengthPhrase = `, totaling about ${totalLabel} linear ft`;
+        }
+      }
+      let postSettingSentence = 'Post setting method varies by section.';
+      if(handrailAnchoredSections > 0 && handrailConcreteSections === 0){
+        postSettingSentence = 'Posts will be anchored to concrete.';
+      } else if(handrailConcreteSections > 0 && handrailAnchoredSections === 0){
+        postSettingSentence = 'Posts will be set in concrete.';
+      }
+      sub.push(`- Install ${sectionCount}x sections of handrails${lengthPhrase}, and using ${postSizeLabel} posts and ${railSizeLabel} railing. ${postSettingSentence}`);
+    }
+    const nonWoodReplacementSections = replacementSectionsOnly.filter(section=>{
+      const type = (section.fenceType || '').toLowerCase();
+      return type !== 'wood' && !isHandrailFenceType(type);
+    });
+    const nonWoodInstallSections = installSectionsOnly.filter(section=>{
+      const type = (section.fenceType || '').toLowerCase();
+      return type !== 'wood' && !isHandrailFenceType(type);
+    });
     const replacementUsingExistingPosts = replacementSectionsOnly.filter(section=> shouldUseExistingPostsForReplacement(section));
     if (nonWoodReplacementSections.length > 0) sub.push('- Sections to replace: '+nonWoodReplacementSections.length);
     if (nonWoodInstallSections.length > 0) sub.push('- New sections to install: '+nonWoodInstallSections.length);
