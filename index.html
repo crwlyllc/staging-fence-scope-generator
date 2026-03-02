@@ -1626,6 +1626,11 @@ document.addEventListener('DOMContentLoaded', function(){
     shopFabricationCrewHoursPerPanel: 1,
     skidSteerRentalPerDay: 500
   };
+  const ANCHORED_POST_PRODUCTION = {
+    // Anchored metal posts: one helper for base plate anchors + one welder to weld post to plate.
+    helperAnchorHoursPerPost: (10 / 60),
+    welderWeldHoursPerPost: (10 / 60)
+  };
   const CHAIN_LINK_INSTALL_PRODUCTION = {
     // Field production rates for chain-link install/replacement scope.
     layoutCrewHoursPerJob: 1,
@@ -13418,13 +13423,20 @@ document.addEventListener('DOMContentLoaded', function(){
       helperHours += postReplacementCrewManHours;
       welderHours += postReplacementWelderHours;
     }
-    const installPostCounts = totals.postsInstall || zeroPostCounts();
+    const installConcreteCounts = totals.postsInstallConcrete || zeroPostCounts();
+    const installAnchoredCountsForLabor = totals.postsInstallAnchored || zeroPostCounts();
     const wallPostCountsForLabor = totals.retainingWallPosts || zeroPostCounts();
-    const installPostsNeedingCrew = (
-      Math.max(0, (installPostCounts.posts1p5 || 0) - (wallPostCountsForLabor.posts1p5 || 0)) +
-      Math.max(0, (installPostCounts.posts2x2 || 0) - (wallPostCountsForLabor.posts2x2 || 0)) +
-      Math.max(0, (installPostCounts.posts3x3 || 0) - (wallPostCountsForLabor.posts3x3 || 0)) +
-      Math.max(0, (installPostCounts.posts4x4 || 0) - (wallPostCountsForLabor.posts4x4 || 0))
+    const concreteInstallPostsNeedingCrew = (
+      Math.max(0, (installConcreteCounts.posts1p5 || 0) - (wallPostCountsForLabor.posts1p5 || 0)) +
+      Math.max(0, (installConcreteCounts.posts2x2 || 0) - (wallPostCountsForLabor.posts2x2 || 0)) +
+      Math.max(0, (installConcreteCounts.posts3x3 || 0) - (wallPostCountsForLabor.posts3x3 || 0)) +
+      Math.max(0, (installConcreteCounts.posts4x4 || 0) - (wallPostCountsForLabor.posts4x4 || 0))
+    );
+    const anchoredInstallPostsNeedingLabor = (
+      Math.max(0, (installAnchoredCountsForLabor.posts1p5 || 0) - (wallPostCountsForLabor.posts1p5 || 0)) +
+      Math.max(0, (installAnchoredCountsForLabor.posts2x2 || 0) - (wallPostCountsForLabor.posts2x2 || 0)) +
+      Math.max(0, (installAnchoredCountsForLabor.posts3x3 || 0) - (wallPostCountsForLabor.posts3x3 || 0)) +
+      Math.max(0, (installAnchoredCountsForLabor.posts4x4 || 0) - (wallPostCountsForLabor.posts4x4 || 0))
     );
     const handrailPostsToWeld = state.sections.reduce((sum, section)=>{
       const fenceType = String(section?.fenceType || '').toLowerCase();
@@ -13445,19 +13457,21 @@ document.addEventListener('DOMContentLoaded', function(){
       welderHours += handrailPostWeldWelderHours;
     }
     let postInstallManHours = 0;
+    let anchoredPostAnchorManHours = 0;
+    let anchoredPostWeldWelderHours = 0;
     let cureManHours = 0;
-    if(installPostsNeedingCrew > 0){
+    if(concreteInstallPostsNeedingCrew > 0){
       const maxCrewDayHours = Math.max(0.25, CREW_SETTINGS.maxDayHours || 13);
       const layoutCrewHoursPerJob = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.layoutCrewHoursPerJob || 1) || 0);
       const digCrewHoursPerPostHand = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.digCrewHoursPerPostHand || 0.25) || 0);
       const digCrewHoursPerPostSkid = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.digCrewHoursPerPostSkid || (5 / 60)) || 0);
       const setCrewHoursPerPost = Math.max(0, Number(WROUGHT_INSTALL_PRODUCTION.setCrewHoursPerPost || 0.125) || 0);
       const layoutCrewHours = layoutCrewHoursPerJob;
-      const digCrewHoursHand = installPostsNeedingCrew * digCrewHoursPerPostHand;
-      const setCrewHours = installPostsNeedingCrew * setCrewHoursPerPost;
+      const digCrewHoursHand = concreteInstallPostsNeedingCrew * digCrewHoursPerPostHand;
+      const setCrewHours = concreteInstallPostsNeedingCrew * setCrewHoursPerPost;
       let crewHours = layoutCrewHours + digCrewHoursHand + setCrewHours;
       if(crewHours > maxCrewDayHours){
-        const digCrewHoursSkid = installPostsNeedingCrew * digCrewHoursPerPostSkid;
+        const digCrewHoursSkid = concreteInstallPostsNeedingCrew * digCrewHoursPerPostSkid;
         crewHours = layoutCrewHours + digCrewHoursSkid + setCrewHours;
         const skidDays = Math.max(1, Math.ceil(crewHours / maxCrewDayHours));
         addMat(materials, 'Skid steer rental', skidDays);
@@ -13465,6 +13479,15 @@ document.addEventListener('DOMContentLoaded', function(){
       postInstallManHours = crewHours * ONSITE_CREW_SIZE;
       manHours += postInstallManHours;
       helperHours += postInstallManHours;
+    }
+    if(anchoredInstallPostsNeedingLabor > 0){
+      const helperAnchorHoursPerPost = Math.max(0, Number(ANCHORED_POST_PRODUCTION.helperAnchorHoursPerPost || (10 / 60)) || 0);
+      const welderWeldHoursPerPost = Math.max(0, Number(ANCHORED_POST_PRODUCTION.welderWeldHoursPerPost || (10 / 60)) || 0);
+      anchoredPostAnchorManHours = anchoredInstallPostsNeedingLabor * helperAnchorHoursPerPost;
+      anchoredPostWeldWelderHours = anchoredInstallPostsNeedingLabor * welderWeldHoursPerPost;
+      manHours += anchoredPostAnchorManHours + anchoredPostWeldWelderHours;
+      helperHours += anchoredPostAnchorManHours;
+      welderHours += anchoredPostWeldWelderHours;
     }
     const chainLinkInstallScopeSections = state.sections.filter(section=>{
       const fenceType = String(section?.fenceType || '').toLowerCase();
@@ -15240,12 +15263,13 @@ document.addEventListener('DOMContentLoaded', function(){
     const woodInstallCureWaitLabel = woodInstallPlan.cureWaitCrewHours > 0
       ? formatTaskHours(woodInstallPlan.cureWaitCrewHours)
       : '';
-    const wroughtPanelInstallReturnNextDay = wroughtInstallPanelCrewHours > 0 && installPostsNeedingCrew > 0;
+    const wroughtPanelInstallReturnNextDay = wroughtInstallPanelCrewHours > 0 && concreteInstallPostsNeedingCrew > 0;
     const chainLinkFabricReturnNextDay = chainLinkFabricManHours > 0 && chainLinkPostsToSet > 0;
 
     const postHelperManHours =
       postReplacementCrewManHours +
       postInstallManHours +
+      anchoredPostAnchorManHours +
       chainLinkPostManHours +
       cureManHours +
       concreteRealignHelperManHours +
@@ -15290,7 +15314,7 @@ document.addEventListener('DOMContentLoaded', function(){
       postTaskParts.push(`run strings and mark ${woodInstallPlan.totalPosts} wood post ${plural(woodInstallPlan.totalPosts, 'location', 'locations')}`);
     }
     if(installPostSummaryConcrete) postTaskParts.push(`set ${installPostSummaryConcrete} new posts in concrete`);
-    if(installPostSummaryAnchored) postTaskParts.push(`anchor ${installPostSummaryAnchored} new posts to concrete`);
+    if(installPostSummaryAnchored) postTaskParts.push(`anchor base plates for ${installPostSummaryAnchored} new posts to concrete`);
     if(chainLinkPostsToSet > 0){
       const chainLinkTaskParts = [];
       chainLinkTaskParts.push(`set ${chainLinkPostsToSet} chain link posts (${totals.chainLinkLinePosts || 0} line posts and ${totals.chainLinkLineEndPosts || 0} line-end posts)`);
@@ -15402,6 +15426,12 @@ document.addEventListener('DOMContentLoaded', function(){
       welderTaskGroups.push({
         hours: handrailPostWeldWelderHours,
         label: `${handrailPostsToWeld}x handrail-to-post ${handrailWeldLabel}`
+      });
+    }
+    if(anchoredPostWeldWelderHours > 0){
+      welderTaskGroups.push({
+        hours: anchoredPostWeldWelderHours,
+        label: `${anchoredInstallPostsNeedingLabor}x post-to-base-plate welds`
       });
     }
     const welderActiveTaskCount = welderTaskGroups.filter(group=> isFinite(group?.hours) && group.hours > 0).length;
