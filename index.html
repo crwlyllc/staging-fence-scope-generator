@@ -9980,6 +9980,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const SERVICE_BUCKET_LABELS = {
       installation: 'Wrought Iron Installation',
       woodInstallation: 'Fence Installation',
+      handrailInstallation: 'Handrail Installation',
       retainingWall: 'Retaining Wall Installation',
       replacement: 'Wrought Iron Replacement',
       repairs: 'Wrought Iron Repairs',
@@ -9999,6 +10000,8 @@ document.addEventListener('DOMContentLoaded', function(){
       'Wrought Iron Fence Installation': 'installation',
       'Wood Fence Installation': 'woodInstallation',
       'Chain Link Fence Installation': 'woodInstallation',
+      'Handrail Installation': 'handrailInstallation',
+      'Handrail Fence Installation': 'handrailInstallation',
       'Retaining Wall Installation': 'retainingWall',
       'Install New Fence Sections': 'installation',
       'Add Single Walk Gate': 'installation',
@@ -10044,6 +10047,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const normalizedName = name.trim();
       const bucket = SERVICE_NAME_TO_BUCKET[normalizedName]
         || (/^Fence Installation:/i.test(normalizedName) ? 'woodInstallation' : null)
+        || (/^Handrail\b/i.test(normalizedName) ? 'handrailInstallation' : null)
         || (/chain link\s+(installation|replacement)/i.test(normalizedName) ? 'woodInstallation' : null)
         || (normalizedName.includes('Paint') ? 'painting' : 'repairs');
       const sentence = ensureSentence(desc);
