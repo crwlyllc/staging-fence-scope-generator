@@ -57,7 +57,7 @@
     {"id": "mat_drive_chain_sliding", "label": "Sliding drive gate chain", "unitPrice": 150.00, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "Sliding drive gate chain"},
     {"id": "mat_panel_mount_bracket_each", "label": "panel mount bracket", "unitPrice": 1.27, "unitType": "each", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "panel mount bracket"},
 
-    {"id": "mat_stain_bucket_5gal_default", "label": "5 gal wood stain bucket", "unitPrice": 124.49, "unitType": "bucket", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "5 gal wood stain bucket"},
+    {"id": "mat_stain_bucket_5gal_default", "label": "5 gal wood stain bucket", "unitPrice": 160.00, "unitType": "bucket", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "5 gal wood stain bucket"},
     {"id": "mat_stain_bucket_5gal_ready_seal", "label": "5 gal wood stain bucket (Ready Seal)", "unitPrice": 160.00, "unitType": "bucket", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "5 gal wood stain bucket (Ready Seal)"},
     {"id": "mat_stain_bucket_5gal_wood_defender", "label": "5 gal wood stain bucket (Wood Defender)", "unitPrice": 185.00, "unitType": "bucket", "vendorId": "vendor_tbd", "pricingSource": "PRICE_MISC", "priceKey": "5 gal wood stain bucket (Wood Defender)"},
 

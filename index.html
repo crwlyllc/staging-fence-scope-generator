@@ -1454,6 +1454,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const POST_ANCHOR_HARDWARE_LABEL = 'concrete anchor';
   const HANDRAIL_STEEL_SIZE = '2x2';
   const HANDRAIL_STEEL_LABEL = '2x2 Steel';
+  const HANDRAIL_STEEL_SIZE_OPTIONS = ['2x2', '1 1/2"', '1"'];
   const WROUGHT_PANEL_FABRICATION_ON_SITE = 'On Site';
   const WROUGHT_PANEL_FABRICATION_ORDER_TMI = 'Order Custom Panels (TMI)';
   const WROUGHT_PANEL_FABRICATION_OPTIONS = [
@@ -1462,7 +1463,7 @@ document.addEventListener('DOMContentLoaded', function(){
   ];
   const WROUGHT_TMI_CUSTOM_PANEL_COST = 300;
   const WOOD_STAIN_BRANDS = ['Ready Seal','Wood Defender','Exterior Paint'];
-  const DEFAULT_WOOD_STAIN_BRAND = WOOD_STAIN_BRANDS[0];
+  const DEFAULT_WOOD_STAIN_BRAND = 'Ready Seal';
   const WOOD_STAIN_BUCKET_COSTS = {
     'Ready Seal': 160,
     'Wood Defender': 185,
@@ -3135,33 +3136,58 @@ document.addEventListener('DOMContentLoaded', function(){
       if((merged.scopeType || 'repair') === 'repair'){
         merged.scopeType = 'install';
       }
+      const handrailPostSize = normalizeHandrailSteelSize(merged.handrailPostSize || merged.postSize);
+      const handrailRailSize = normalizeHandrailSteelSize(
+        merged.handrailRailSize || merged.railSize || (Array.isArray(merged.rails) ? merged.rails[0]?.size : '')
+      );
       merged.style = 'Handrail';
-      merged.postSize = HANDRAIL_STEEL_SIZE;
-      merged.handrailPostSize = HANDRAIL_STEEL_SIZE;
-      merged.handrailRailSize = HANDRAIL_STEEL_SIZE;
+      merged.postSize = handrailPostSize;
+      merged.handrailPostSize = handrailPostSize;
+      merged.handrailRailSize = handrailRailSize;
+      merged.panelAttachment = 'Welding';
       merged.painting = 'None';
       merged.paintingApplication = '';
       merged.paintingPrepExtra = false;
       merged.paintingCurrentColor = '';
       merged.paintingTargetColor = '';
-      const handrailRailCount = Math.max(1, parseInt(merged.railsCount, 10) || 2);
+      const handrailRailCount = 1;
       merged.railsCount = handrailRailCount;
       merged.rails = Array.from({ length: handrailRailCount }, ()=>({
-        size: HANDRAIL_STEEL_SIZE,
+        size: handrailRailSize,
         stacked: false,
-        size2: HANDRAIL_STEEL_SIZE,
+        size2: handrailRailSize,
         patches: 0,
         replacements: 0
       }));
-      merged.railSize = HANDRAIL_STEEL_SIZE;
+      merged.railSize = handrailRailSize;
       merged.railStacked = false;
-      merged.railSize2 = HANDRAIL_STEEL_SIZE;
+      merged.railSize2 = handrailRailSize;
       merged.picketSize = '';
       merged.picketHeight = 0;
       merged.puppy = 'None';
       merged.puppyPicketSize = '';
       merged.puppyPicketHeight = 0;
       merged.puppyPicketReplace = 0;
+      merged.wiPickets = 0;
+      merged.weldRedos = 0;
+      merged.postReplacements = [];
+      merged.postRealignments = [];
+      merged.gapAdditions = [];
+      merged.diagonalBraces = [];
+      merged.walkGates = 0;
+      merged.walkGatesRealign = 0;
+      merged.walkGatesHardware = 0;
+      merged.walkGatesRebuild = 0;
+      merged.walkGatesAdd = 0;
+      merged.walkGatesAddSingle = 0;
+      merged.walkGatesAddDouble = 0;
+      merged.walkGateAdditions = [];
+      merged.finials = [];
+      merged.puppyInserts = [];
+      merged.caps = [];
+      merged.panels = [];
+      merged.retainingWallLength = 0;
+      merged.retainingWallHeight = 0;
     }
     return merged;
   }
@@ -4763,19 +4789,15 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="sp-grid sp-scope-grid">
             <div class="sp-field col-3">
               <label class="sp-label">Post Size</label>
-              <select class="sp-select" data-field="handrailPostSize">
-                <option value="${HANDRAIL_STEEL_SIZE}">${HANDRAIL_STEEL_LABEL}</option>
-              </select>
+              <select class="sp-select" data-field="handrailPostSize">${createSelect(HANDRAIL_STEEL_SIZE_OPTIONS)}</select>
             </div>
             <div class="sp-field col-3">
               <label class="sp-label">Railing Size</label>
-              <select class="sp-select" data-field="handrailRailSize">
-                <option value="${HANDRAIL_STEEL_SIZE}">${HANDRAIL_STEEL_LABEL}</option>
-              </select>
+              <select class="sp-select" data-field="handrailRailSize">${createSelect(HANDRAIL_STEEL_SIZE_OPTIONS)}</select>
             </div>
             <div class="sp-field col-6">
               <label class="sp-label">Notes</label>
-              <div class="sp-hint">Handrail currently supports ${HANDRAIL_STEEL_LABEL} posts and ${HANDRAIL_STEEL_LABEL} railing only.</div>
+              <div class="sp-hint">Handrail supports 2x2, 1 1/2", and 1" steel for posts and railing.</div>
             </div>
           </div>
         </div>
@@ -5358,13 +5380,32 @@ document.addEventListener('DOMContentLoaded', function(){
         values.scopeType = 'install';
       }
     }else if(isHandrail){
+      const handrailPostSize = normalizeHandrailSteelSize(source.handrailPostSize || source.postSize);
+      const handrailRailSize = normalizeHandrailSteelSize(
+        source.handrailRailSize || source.railSize || (Array.isArray(source.rails) ? source.rails[0]?.size : '')
+      );
       values.height = source.height || '4ft';
-      values.postSize = HANDRAIL_STEEL_SIZE;
+      values.style = 'Handrail';
+      values.postSize = handrailPostSize;
       values.postSpacing = source.postSpacing || '8';
       values.useExistingPostsForReplacement = normalizeUseExistingPostsForReplacement(source.useExistingPostsForReplacement);
       values.postInstallMethod = normalizePostInstallMethod(source.postInstallMethod);
-      values.handrailPostSize = HANDRAIL_STEEL_SIZE;
-      values.handrailRailSize = HANDRAIL_STEEL_SIZE;
+      values.handrailPostSize = handrailPostSize;
+      values.handrailRailSize = handrailRailSize;
+      values.panelAttachment = 'Welding';
+      values.railsCount = 1;
+      values.rails = [
+        { size: handrailRailSize, stacked: false, size2: handrailRailSize, patches: 0, replacements: 0 }
+      ];
+      values.railSize = handrailRailSize;
+      values.railStacked = false;
+      values.railSize2 = handrailRailSize;
+      values.picketSize = '';
+      values.picketHeight = 0;
+      values.puppy = 'None';
+      values.puppyPicketSize = '';
+      values.puppyPicketHeight = 0;
+      values.puppyPicketReplace = 0;
       if(values.scopeType === 'repair'){
         values.scopeType = 'install';
       }
@@ -5686,8 +5727,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const panelAttachmentValue = val('panelAttachment');
     const isHandrail = isHandrailFenceType(normalizedFence);
     const isNoPaintFence = normalizedFence === 'wood' || normalizedFence === 'chain link' || isHandrail;
-    const handrailPostSize = isHandrail ? HANDRAIL_STEEL_SIZE : '';
-    const handrailRailSize = isHandrail ? HANDRAIL_STEEL_SIZE : '';
+    const handrailPostSize = isHandrail ? normalizeHandrailSteelSize(val('handrailPostSize') || val('postSize')) : '';
+    const handrailRailSize = isHandrail ? normalizeHandrailSteelSize(val('handrailRailSize')) : '';
     const rawPaintingSelection = isNoPaintFence ? 'None' : val('painting');
     const wroughtPanelFabrication = normalizeWroughtPanelFabrication(val('wroughtPanelFabrication'));
     const powderCoatPanelsValue = false;
@@ -5883,33 +5924,58 @@ document.addEventListener('DOMContentLoaded', function(){
       if(sectionData.scopeType === 'repair'){
         sectionData.scopeType = 'install';
       }
+      const handrailPostSize = normalizeHandrailSteelSize(sectionData.handrailPostSize || sectionData.postSize);
+      const handrailRailSize = normalizeHandrailSteelSize(
+        sectionData.handrailRailSize || sectionData.railSize || (Array.isArray(sectionData.rails) ? sectionData.rails[0]?.size : '')
+      );
       sectionData.style = 'Handrail';
-      sectionData.postSize = HANDRAIL_STEEL_SIZE;
-      sectionData.handrailPostSize = HANDRAIL_STEEL_SIZE;
-      sectionData.handrailRailSize = HANDRAIL_STEEL_SIZE;
+      sectionData.postSize = handrailPostSize;
+      sectionData.handrailPostSize = handrailPostSize;
+      sectionData.handrailRailSize = handrailRailSize;
+      sectionData.panelAttachment = 'Welding';
       sectionData.painting = 'None';
       sectionData.paintingApplication = '';
       sectionData.paintingPrepExtra = false;
       sectionData.paintingCurrentColor = '';
       sectionData.paintingTargetColor = '';
-      const handrailRailCount = Math.max(1, parseInt(sectionData.railsCount, 10) || 2);
+      const handrailRailCount = 1;
       sectionData.railsCount = handrailRailCount;
       sectionData.rails = Array.from({ length: handrailRailCount }, ()=>({
-        size: HANDRAIL_STEEL_SIZE,
+        size: handrailRailSize,
         stacked: false,
-        size2: HANDRAIL_STEEL_SIZE,
+        size2: handrailRailSize,
         patches: 0,
         replacements: 0
       }));
-      sectionData.railSize = HANDRAIL_STEEL_SIZE;
+      sectionData.railSize = handrailRailSize;
       sectionData.railStacked = false;
-      sectionData.railSize2 = HANDRAIL_STEEL_SIZE;
+      sectionData.railSize2 = handrailRailSize;
       sectionData.picketSize = '';
       sectionData.picketHeight = 0;
       sectionData.puppy = 'None';
       sectionData.puppyPicketSize = '';
       sectionData.puppyPicketHeight = 0;
       sectionData.puppyPicketReplace = 0;
+      sectionData.wiPickets = 0;
+      sectionData.weldRedos = 0;
+      sectionData.postReplacements = [];
+      sectionData.postRealignments = [];
+      sectionData.gapAdditions = [];
+      sectionData.diagonalBraces = [];
+      sectionData.walkGates = 0;
+      sectionData.walkGatesRealign = 0;
+      sectionData.walkGatesHardware = 0;
+      sectionData.walkGatesRebuild = 0;
+      sectionData.walkGatesAdd = 0;
+      sectionData.walkGatesAddSingle = 0;
+      sectionData.walkGatesAddDouble = 0;
+      sectionData.walkGateAdditions = [];
+      sectionData.finials = [];
+      sectionData.puppyInserts = [];
+      sectionData.caps = [];
+      sectionData.panels = [];
+      sectionData.retainingWallLength = 0;
+      sectionData.retainingWallHeight = 0;
     }
     return sanitizeWroughtFieldsForFenceType(sectionData);
   }
@@ -5975,8 +6041,8 @@ document.addEventListener('DOMContentLoaded', function(){
       ? normalizeChainLinkHeight(data.height || CHAIN_LINK_DEFAULT_HEIGHT)
       : (data.height || '4ft'));
     set('postSize', data.postSize||'2x2');
-    set('handrailPostSize', data.handrailPostSize || HANDRAIL_STEEL_SIZE);
-    set('handrailRailSize', data.handrailRailSize || HANDRAIL_STEEL_SIZE);
+    set('handrailPostSize', normalizeHandrailSteelSize(data.handrailPostSize || data.postSize));
+    set('handrailRailSize', normalizeHandrailSteelSize(data.handrailRailSize || data.railSize));
     set('postSpacing', data.postSpacing||'8');
     set('panelAttachment', data.panelAttachment||'Welding');
     if(normalizedFenceType === 'chain link'){
@@ -5984,13 +6050,15 @@ document.addEventListener('DOMContentLoaded', function(){
       set('postInstallMethod', POST_INSTALL_METHODS[0].value);
     }
     if(isHandrailFenceType(normalizedFenceType)){
+      const handrailPostSize = normalizeHandrailSteelSize(data.handrailPostSize || data.postSize);
+      const handrailRailSize = normalizeHandrailSteelSize(data.handrailRailSize || data.railSize);
       if((data.scopeType || 'repair') === 'repair'){
         set('scopeType', 'install');
       }
       set('style', 'Handrail');
-      set('postSize', HANDRAIL_STEEL_SIZE);
-      set('handrailPostSize', HANDRAIL_STEEL_SIZE);
-      set('handrailRailSize', HANDRAIL_STEEL_SIZE);
+      set('postSize', handrailPostSize);
+      set('handrailPostSize', handrailPostSize);
+      set('handrailRailSize', handrailRailSize);
     }
     set('wroughtCustomStickLength', normalizeWroughtCustomStickLength(data.wroughtCustomStickLength));
     const panelFabrication = normalizeWroughtPanelFabrication(data.wroughtPanelFabrication);
@@ -6511,7 +6579,10 @@ document.addEventListener('DOMContentLoaded', function(){
       .replace(/×/g,'x')
       .replace(/\s+/g,'')
       .replace(/inch|\"/g,'');
+    if(compact === '11/2' || compact === '1.5') return 'posts1p5';
     if(compact === '11/2x11/2' || compact === '1.5x1.5') return 'posts1p5';
+    // 1" handrail posts currently roll into the 1.5" post bucket for labor/material sizing.
+    if(compact === '1' || compact === '1x1') return 'posts1p5';
     if(compact === '2x2') return 'posts2x2';
     if(compact === '3x3') return 'posts3x3';
     if(compact === '4x4') return 'posts4x4';
@@ -7669,6 +7740,30 @@ document.addEventListener('DOMContentLoaded', function(){
     return String(value || '').toLowerCase().trim() === 'handrail';
   }
 
+  function normalizeHandrailSteelSize(value){
+    const raw = normalizeLabelText(value || '')
+      .replace(/×/g, 'x')
+      .toLowerCase()
+      .trim();
+    if(!raw) return HANDRAIL_STEEL_SIZE;
+    if(raw === '2x2' || raw === '2"' || raw === '2') return '2x2';
+    if(
+      raw === '1 1/2"' ||
+      raw === '1 1/2' ||
+      raw === '1.5' ||
+      raw === '1.5"' ||
+      raw === '1-1/2"' ||
+      raw === '1-1/2' ||
+      raw === '1 1/2x1 1/2' ||
+      raw === '1 1/2" x 1 1/2"'
+    ){
+      return '1 1/2"';
+    }
+    if(raw === '1"' || raw === '1' || raw === '1x1') return '1"';
+    const direct = HANDRAIL_STEEL_SIZE_OPTIONS.find(opt=>opt.toLowerCase() === raw);
+    return direct || HANDRAIL_STEEL_SIZE;
+  }
+
   function normalizeChainLinkHeight(value){
     const normalized = normalizeLabelText(value || '').toLowerCase().replace(/\s+/g, '');
     if(normalized === '4ft' || normalized === '4') return '4ft';
@@ -7820,10 +7915,18 @@ document.addEventListener('DOMContentLoaded', function(){
       if(powderPanels){ powderPanels.checked = false; }
       if(powderPosts){ powderPosts.checked = false; }
     }
-    const showRetainingWall = isInstall && (isWrought || isWood || isChainLink || isHandrail);
+    const showRetainingWall = isInstall && !isHandrail && (isWrought || isWood || isChainLink);
+    const retainingGroup = card.querySelector('[data-retaining-wall-group]');
+    if(retainingGroup){
+      retainingGroup.style.display = showRetainingWall ? '' : 'none';
+    }
     const retainingWrap = card.querySelector('[data-retaining-wall]');
     if(retainingWrap){
       retainingWrap.style.display = showRetainingWall ? '' : 'none';
+    }
+    const gatesGroup = card.querySelector('.sp-scope-group.is-gates');
+    if(gatesGroup){
+      gatesGroup.style.display = isHandrail ? 'none' : '';
     }
 
     const paintingSel = card.querySelector('[data-field="painting"]');
@@ -7863,14 +7966,16 @@ document.addEventListener('DOMContentLoaded', function(){
       const handrailPostSel = card.querySelector('[data-field="handrailPostSize"]');
       const handrailRailSel = card.querySelector('[data-field="handrailRailSize"]');
       const postSizeSel = card.querySelector('[data-field="postSize"]');
-      if(handrailPostSel && handrailPostSel.value !== HANDRAIL_STEEL_SIZE){
-        handrailPostSel.value = HANDRAIL_STEEL_SIZE;
+      const normalizedPost = normalizeHandrailSteelSize((handrailPostSel && handrailPostSel.value) || (postSizeSel && postSizeSel.value));
+      const normalizedRail = normalizeHandrailSteelSize(handrailRailSel ? handrailRailSel.value : '');
+      if(handrailPostSel && handrailPostSel.value !== normalizedPost){
+        handrailPostSel.value = normalizedPost;
       }
-      if(handrailRailSel && handrailRailSel.value !== HANDRAIL_STEEL_SIZE){
-        handrailRailSel.value = HANDRAIL_STEEL_SIZE;
+      if(handrailRailSel && handrailRailSel.value !== normalizedRail){
+        handrailRailSel.value = normalizedRail;
       }
-      if(postSizeSel && postSizeSel.value !== HANDRAIL_STEEL_SIZE){
-        postSizeSel.value = HANDRAIL_STEEL_SIZE;
+      if(postSizeSel && postSizeSel.value !== normalizedPost){
+        postSizeSel.value = normalizedPost;
       }
     }
     updatePaintingApplicationUI(card);
@@ -7909,10 +8014,17 @@ document.addEventListener('DOMContentLoaded', function(){
       updatePaintingApplicationUI(card);
     }
     if(isHandrail){
+      const handrailPostSel = card.querySelector('[data-field="handrailPostSize"]');
+      const handrailRailSel = card.querySelector('[data-field="handrailRailSize"]');
+      const postSizeSel = card.querySelector('[data-field="postSize"]');
+      const normalizedHandrailPost = normalizeHandrailSteelSize(
+        (handrailPostSel && handrailPostSel.value) || (postSizeSel && postSizeSel.value)
+      );
+      const normalizedHandrailRail = normalizeHandrailSteelSize(handrailRailSel ? handrailRailSel.value : '');
       const handrailDefaults = {
-        handrailPostSize: HANDRAIL_STEEL_SIZE,
-        handrailRailSize: HANDRAIL_STEEL_SIZE,
-        postSize: HANDRAIL_STEEL_SIZE
+        handrailPostSize: normalizedHandrailPost,
+        handrailRailSize: normalizedHandrailRail,
+        postSize: normalizedHandrailPost
       };
       Object.entries(handrailDefaults).forEach(([field, val])=>{
         const el = card.querySelector(`[data-field="${field}"]`);
@@ -10846,7 +10958,9 @@ document.addEventListener('DOMContentLoaded', function(){
           installInfo.removalCost = removalCost;
           totals.removalLf += lengthFt;
           totals.removalCost += removalCost;
-          wroughtInstallRemovalPanels += Math.max(1, spanCount);
+          if(isWrought){
+            wroughtInstallRemovalPanels += Math.max(1, spanCount);
+          }
         }
 
         if(isWrought){
@@ -11462,7 +11576,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const panelArr = isRepair && isWrought && Array.isArray(s.panels) ? s.panels : [];
       processPanels(panelArr, '- Panel replacements:', 'repair');
 
-      if(installInfo && installInfo.spanCount > 0){
+      if(isWrought && installInfo && installInfo.spanCount > 0){
         const widthCounts = {};
         installInfo.panelWidths.forEach(w=>{
           widthCounts[w] = (widthCounts[w]||0) + 1;
@@ -11519,8 +11633,8 @@ document.addEventListener('DOMContentLoaded', function(){
       const wgr = (isRepair && isWrought) ? i(s.walkGatesRealign) : 0;
       const wgh = (isRepair && isWrought) ? i(s.walkGatesHardware) : 0;
       const wgb = (isRepair && isWrought) ? i(s.walkGatesRebuild) : 0;
-      const wroughtGateAdds = (isWood || isChainLink) ? { single: 0, double: 0, total: 0 } : wroughtWalkGateAddCounts(s);
-      const wroughtGateRows = (isWood || isChainLink) ? [] : wroughtWalkGateAddEntries(s);
+      const wroughtGateAdds = (isWood || isChainLink || isHandrail) ? { single: 0, double: 0, total: 0 } : wroughtWalkGateAddCounts(s);
+      const wroughtGateRows = (isWood || isChainLink || isHandrail) ? [] : wroughtWalkGateAddEntries(s);
       const wsg = isWood ? woodSlidingGateAddCount(s) : 0;
       if (isRepair && (wg || wgr || wgh || wgb)){
         lines.push(`- Walk gates: ${wg}`);
@@ -13307,9 +13421,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const scopeType = String(section?.scopeType || 'repair').toLowerCase();
       if(scopeType !== 'install' && scopeType !== 'replace') return sum;
       const installCalc = section?._installCalc;
-      if(!installCalc || installCalc.useExistingPosts) return sum;
+      if(!installCalc) return sum;
       const postsTotal = Math.max(0, parseInt(installCalc.postsTotal || 0, 10) || 0);
-      return sum + postsTotal;
+      if(postsTotal > 0) return sum + postsTotal;
+      const spanCount = Math.max(0, parseInt(installCalc.spanCount || 0, 10) || 0);
+      const inferredPosts = spanCount > 0 ? spanCount + 1 : 0;
+      return sum + inferredPosts;
     }, 0);
     const handrailPostWeldWelderHours = handrailPostsToWeld / 3;
     if(handrailPostWeldWelderHours > 0){
@@ -13555,6 +13672,19 @@ document.addEventListener('DOMContentLoaded', function(){
     Object.keys(posts2x2ByLenCalc).sort((a,b)=>parseInt(a,10)-parseInt(b,10)).forEach(len=>{
       addMat(materials, `2x2x${len} posts`, posts2x2ByLenCalc[len]);
     });
+    // Handrail installs use railing steel only (no panel/picket assemblies).
+    state.sections.forEach(s=>{
+      const fenceType = String(s.fenceType || '').toLowerCase();
+      if(fenceType !== 'handrail') return;
+      const scopeType = String(s.scopeType || 'repair').toLowerCase();
+      if(scopeType !== 'install' && scopeType !== 'replace') return;
+      const lengthFt = Math.max(0, parseFloat(s.length || 0) || 0);
+      if(lengthFt <= 0) return;
+      const railSize = normalizeSize(s.handrailRailSize || HANDRAIL_STEEL_SIZE) || HANDRAIL_STEEL_SIZE;
+      const stickLengthFt = wroughtCustomStickLengthFt(s.wroughtCustomStickLength);
+      const railSticks = Math.ceil(lengthFt / Math.max(1, stickLengthFt));
+      addRailSticks(railSize, railSticks, stickLengthFt);
+    });
 
     // Concrete (exclude posts set within retaining walls)
     const wallPostCounts = totals.retainingWallPosts || zeroPostCounts();
@@ -13608,6 +13738,10 @@ document.addEventListener('DOMContentLoaded', function(){
         const sectionFenceType = (s.fenceType || '').toLowerCase();
         const isWoodSection = sectionFenceType === 'wood';
         const isChainLinkSection = sectionFenceType === 'chain link';
+        const isHandrailSection = sectionFenceType === 'handrail';
+        if(isHandrailSection){
+          return;
+        }
         if(isWoodSection){
           const scopeType = String(s.scopeType || 'repair').toLowerCase();
           const isInstallScope = scopeType === 'install' || scopeType === 'replace';
@@ -13739,7 +13873,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const isRepair = scopeType !== 'install' && scopeType !== 'replace';
       const isWrought = (s.fenceType || '').toLowerCase() === 'wrought iron';
       const need = parseInt(s.wiPickets||0,10) || 0;
-      if(need){
+      if(isRepair && isWrought && need){
         let ph = parseInt(s.picketHeight||0,10) || 0; // inches
         if (ph <= 0) {
           const hf = feetFromStr(s.height);
@@ -13791,6 +13925,7 @@ document.addEventListener('DOMContentLoaded', function(){
     function inc(map, key, delta){ if(!key) return; map[key] = (map[key]||0) + (delta||0); }
 
     state.sections.forEach(s=>{
+      if((s.fenceType || '').toLowerCase() !== 'wrought iron') return;
       const rCount = s.railsCount || (s.rails||[]).length || 0;
       for(let i=0;i<rCount;i++){
         const r = (s.rails||[])[i] || {};
@@ -13903,6 +14038,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Finials (descriptive labels) for MATERIALS list
     state.sections.forEach(s=>{
+      if((s.fenceType || '').toLowerCase() !== 'wrought iron') return;
       const arr = Array.isArray(s.finials) ? s.finials : [];
       arr.forEach(f=>{
         const q = parseInt(f?.qty||0,10) || 0; if(!q) return;
@@ -13912,6 +14048,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
     // Caps (descriptive labels) for MATERIALS list
     state.sections.forEach(s=>{
+      if((s.fenceType || '').toLowerCase() !== 'wrought iron') return;
       const arr = Array.isArray(s.caps) ? s.caps : [];
       arr.forEach(c=>{
         const q = parseInt(c?.qty||0,10) || 0; if(!q) return;
