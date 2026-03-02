@@ -38,7 +38,6 @@ mat_drive_power_solar_kit,direct_material,Solar gate power kit,500.0,each,vendor
 mat_drive_chain_sliding,direct_material,Sliding drive gate chain,150.0,each,vendor_tbd,PRICE_MISC,Sliding drive gate chain,
 mat_panel_mount_bracket_each,direct_material,panel mount bracket,1.27,each,vendor_tbd,PRICE_MISC,panel mount bracket,
 mat_stain_bucket_5gal_default,direct_material,5 gal wood stain bucket,124.49,bucket,vendor_tbd,PRICE_MISC,5 gal wood stain bucket,
-mat_stain_bucket_5gal_huemiller,direct_material,5 gal wood stain bucket (HueMiller),124.49,bucket,vendor_tbd,PRICE_MISC,5 gal wood stain bucket (HueMiller),
 mat_stain_bucket_5gal_ready_seal,direct_material,5 gal wood stain bucket (Ready Seal),160.0,bucket,vendor_tbd,PRICE_MISC,5 gal wood stain bucket (Ready Seal),
 mat_stain_bucket_5gal_wood_defender,direct_material,5 gal wood stain bucket (Wood Defender),185.0,bucket,vendor_tbd,PRICE_MISC,5 gal wood stain bucket (Wood Defender),
 mat_wood_picket_default,direct_material,wood picket,3.0,each,vendor_tbd,PRICE_MISC,wood picket,
